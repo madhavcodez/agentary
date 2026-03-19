@@ -293,6 +293,44 @@ SecretAIRY supports [OpenClaw](https://github.com/openclaw) for deep browser-bas
 
 Set `OPENCLAW_URL` in your `.env` to point to a running OpenClaw instance. SecretAIRY falls back to direct HTTP fetching if OpenClaw is unavailable.
 
+## Status: Active Development
+
+> **This project is under heavy active development.** Core infrastructure is built and functional, but several features are still being wired up. Contributions and feedback welcome!
+
+### What Works Today
+| Feature | Status |
+|---------|--------|
+| Resume parsing + profile extraction | **Shipped** |
+| Job ingestion (Greenhouse, Lever, HN) | **Shipped** |
+| AI match scoring (semantic + LLM) | **Shipped** |
+| Deep company research (Gemini + Google Search) | **Shipped** |
+| Contact discovery via Exa API | **Shipped** |
+| Multi-channel outreach generation (call/email/LinkedIn) | **Shipped** |
+| Outbound call initiation via Twilio | **Shipped** |
+| Dashboard with 4-tab outreach hub | **Shipped** |
+| Autopilot orchestrator (manual trigger) | **Shipped** |
+| Policy engine (business hours, limits) | **Shipped** |
+
+### In Progress
+| Feature | Issue | Status |
+|---------|-------|--------|
+| Voice pipeline audio (Gemini Live ↔ Twilio) | [#1](https://github.com/madhavcodez/SecretAIRY/issues/1) | Debugging audio frame routing |
+| Twilio production upgrade | [#2](https://github.com/madhavcodez/SecretAIRY/issues/2) | Trial account limitations |
+| Gmail API send-on-confirm | [#3](https://github.com/madhavcodez/SecretAIRY/issues/3) | OAuth flow needed |
+| OpenClaw deep scraping | [#4](https://github.com/madhavcodez/SecretAIRY/issues/4) | API integration testing |
+| Autopilot cron scheduling | [#5](https://github.com/madhavcodez/SecretAIRY/issues/5) | Business hours enforcement |
+| Phone number enrichment | [#6](https://github.com/madhavcodez/SecretAIRY/issues/6) | Exa contacts lack phone numbers |
+| More job sources | [#7](https://github.com/madhavcodez/SecretAIRY/issues/7) | LinkedIn, Indeed, AngelList |
+| Dashboard polish | [#8](https://github.com/madhavcodez/SecretAIRY/issues/8) | Loading states, analytics |
+| Security hardening | [#9](https://github.com/madhavcodez/SecretAIRY/issues/9) | Key rotation, auth, rate limiting |
+
+### Roadmap
+- **v0.2** — Fix voice pipeline, upgrade Twilio, ship working end-to-end calls
+- **v0.3** — Gmail integration, LinkedIn message automation
+- **v0.4** — Full autopilot with scheduled execution
+- **v0.5** — OpenClaw deep scraping, contact enrichment pipeline
+- **v1.0** — Multi-user support, auth, deployment guide
+
 ## Contributing
 
 1. Fork the repo
