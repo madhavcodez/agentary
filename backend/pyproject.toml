@@ -1,0 +1,9 @@
+[project]
+name = "secretairy"
+version = "0.1.0"
+description = "AI Chief-of-Staff — opportunity scout, research engine, and voice assistant"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
