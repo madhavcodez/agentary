@@ -8,9 +8,11 @@ from .contact import Contact
 from .call_campaign import CallCampaign
 from .call_log import CallLog
 from .research import ResearchResult
+from .user import User
 
 __all__ = [
     "Profile", "Skill", "Experience", "Preference",
     "Opportunity", "Match", "Policy", "ActionLog", "Dossier",
     "Contact", "CallCampaign", "CallLog", "ResearchResult",
+    "User",
 ]

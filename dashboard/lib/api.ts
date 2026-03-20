@@ -17,6 +17,7 @@ import type {
   Profile,
   ResearchResult,
 } from "./types";
+import { type AuthUser, getToken, logout, setToken, setUser } from "./auth";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -25,14 +26,28 @@ async function request<T>(
   options: RequestInit = {},
 ): Promise<T> {
   const url = `${BASE_URL}${path}`;
+  const token = getToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options.headers as Record<string, string>),
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const res = await fetch(url, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
+    headers,
     cache: "no-store",
   });
+
+  if (res.status === 401) {
+    logout();
+    if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+      window.location.href = "/login";
+    }
+    throw new Error("Session expired");
+  }
 
   if (!res.ok) {
     const body = await res.text().catch(() => "Unknown error");
@@ -40,6 +55,62 @@ async function request<T>(
   }
 
   return res.json() as Promise<T>;
+}
+
+// ── Auth ───────────────────────────────────────────────────────────
+
+interface TokenResponse {
+  access_token: string;
+  token_type: string;
+  user: AuthUser;
+}
+
+export async function loginApi(email: string, password: string): Promise<TokenResponse> {
+  const url = `${BASE_URL}/auth/login`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Login failed" }));
+    throw new Error(body.detail || "Invalid credentials");
+  }
+
+  const data = (await res.json()) as TokenResponse;
+  setToken(data.access_token);
+  setUser(data.user);
+  return data;
+}
+
+export async function registerApi(
+  email: string,
+  password: string,
+  name: string,
+): Promise<TokenResponse> {
+  const url = `${BASE_URL}/auth/register`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password, name }),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Registration failed" }));
+    throw new Error(body.detail || "Registration failed");
+  }
+
+  const data = (await res.json()) as TokenResponse;
+  setToken(data.access_token);
+  setUser(data.user);
+  return data;
+}
+
+export async function fetchCurrentUser(): Promise<AuthUser> {
+  return request<AuthUser>("/auth/me");
 }
 
 // ── Health ──────────────────────────────────────────────────────────

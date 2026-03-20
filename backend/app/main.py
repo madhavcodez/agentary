@@ -32,6 +32,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from .api.auth import router as auth_router
 from .api.health import router as health_router
 from .api.profile import router as profile_router
 from .api.opportunities import router as opportunities_router
@@ -45,6 +46,7 @@ from .api.research import router as research_router
 from .api.autopilot import router as autopilot_router
 from .voice.outbound.server import router as outbound_router
 
+app.include_router(auth_router)
 app.include_router(health_router)
 app.include_router(profile_router)
 app.include_router(opportunities_router)

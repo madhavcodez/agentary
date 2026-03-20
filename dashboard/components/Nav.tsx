@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/components/AuthProvider";
 
 const NAV_ITEMS = [
   { href: "/", label: "Profile", icon: ProfileIcon },
@@ -12,6 +13,7 @@ const NAV_ITEMS = [
 
 export default function Nav() {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
 
   function isActive(href: string): boolean {
     if (href === "/") return pathname === "/";
@@ -48,7 +50,20 @@ export default function Nav() {
         })}
       </nav>
 
-      <div className="px-6 py-4 border-t border-gray-800">
+      <div className="px-6 py-4 border-t border-gray-800 space-y-3">
+        {user && (
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-400 truncate max-w-[140px]" title={user.email}>
+              {user.name}
+            </span>
+            <button
+              onClick={logout}
+              className="text-xs text-gray-500 hover:text-red-400 transition-colors"
+            >
+              Sign out
+            </button>
+          </div>
+        )}
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <span className="text-xs text-gray-500">System Active</span>

@@ -25,5 +25,14 @@ class Settings(BaseSettings):
     app_env: str = "dev"
     secret_key: str = "dev-secret-key-change-in-production"
 
+    # JWT / Auth
+    jwt_secret_key: str = ""  # REQUIRED — set via JWT_SECRET_KEY env var
+    jwt_algorithm: str = "HS256"
+    jwt_expire_days: int = 7
+
+    # Email (Resend)
+    resend_api_key: str = ""
+    resend_from_email: str = ""
+
 
 settings = Settings()

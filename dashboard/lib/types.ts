@@ -209,3 +209,17 @@ export interface AutopilotStatus {
   last_result: Record<string, unknown> | null;
   next_scheduled: string | null;
 }
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
+  user: AuthUser;
+}
