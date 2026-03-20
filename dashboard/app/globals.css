@@ -29,3 +29,34 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-gray-600;
 }
+
+/* Scout animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out both;
+}
+
+.animate-slideIn {
+  animation: slideIn 0.25s ease-out both;
+}

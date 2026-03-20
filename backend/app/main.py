@@ -71,6 +71,7 @@ from .api.autopilot import router as autopilot_router
 from .api.analytics import router as analytics_router
 from .voice.outbound.server import router as outbound_router
 from .api.webhooks import router as webhooks_router
+from .api.scout import router as scout_router
 
 app.include_router(auth_router)
 app.include_router(health_router)
@@ -87,3 +88,4 @@ app.include_router(autopilot_router)
 app.include_router(analytics_router)
 app.include_router(outbound_router)
 app.include_router(webhooks_router)
+app.include_router(scout_router)

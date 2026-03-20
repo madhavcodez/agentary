@@ -290,3 +290,57 @@ export interface ScoreBucket {
 export interface ScoreDistribution {
   buckets: ScoreBucket[];
 }
+
+// ── Scout ───────────────────────────────────────────────────────────
+
+export type ScoutStatus = "idle" | "running" | "paused" | "complete" | "error" | "cancelled";
+export type ScoutMode = "rank_all" | "strict_filter";
+
+export interface ScoutJob {
+  id: string;
+  match_id: string;
+  title: string;
+  company: string;
+  location: string;
+  score: number;
+  rationale: string;
+}
+
+export interface ScoutSourceEvent {
+  source: string;
+  status: "fetching" | "done" | "error";
+  jobs_found?: number;
+  error?: string;
+}
+
+export interface ScoutPhaseEvent {
+  phase: string;
+  status: "started" | "done";
+  total_raw?: number;
+  new_jobs?: number;
+  stored?: number;
+  mode?: string;
+  to_score?: number;
+  total?: number;
+  scored?: number;
+}
+
+export interface ScoutFilterEvent {
+  skill: string;
+  matches: number;
+}
+
+export interface ScoutPhaseState {
+  name: string;
+  label: string;
+  status: "pending" | "running" | "done" | "error";
+  events: ScoutLogEntry[];
+}
+
+export interface ScoutLogEntry {
+  id: string;
+  timestamp: number;
+  type: string;
+  message: string;
+  detail?: string;
+}
