@@ -16,10 +16,16 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # email_events table
+    # email_events table (with user_id for multi-tenancy)
     op.create_table(
         "email_events",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column(
+            "user_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("users.id"),
+            nullable=False,
+        ),
         sa.Column(
             "campaign_id",
             postgresql.UUID(as_uuid=True),
@@ -31,11 +37,12 @@ def upgrade() -> None:
         sa.Column("payload", postgresql.JSON, nullable=True),
         sa.Column("created_at", sa.DateTime, nullable=False, server_default=sa.func.now()),
     )
+    op.create_index("ix_email_events_user_id", "email_events", ["user_id"])
     op.create_index("ix_email_events_campaign_id", "email_events", ["campaign_id"])
     op.create_index("ix_email_events_resend_email_id", "email_events", ["resend_email_id"])
     op.create_index("ix_email_events_event_type", "email_events", ["event_type"])
 
-    # email_suppressions table
+    # email_suppressions table (global, not user-scoped)
     op.create_table(
         "email_suppressions",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
@@ -65,4 +72,5 @@ def downgrade() -> None:
     op.drop_index("ix_email_events_event_type", table_name="email_events")
     op.drop_index("ix_email_events_resend_email_id", table_name="email_events")
     op.drop_index("ix_email_events_campaign_id", table_name="email_events")
+    op.drop_index("ix_email_events_user_id", table_name="email_events")
     op.drop_table("email_events")

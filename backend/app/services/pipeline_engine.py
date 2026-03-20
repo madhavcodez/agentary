@@ -1,4 +1,4 @@
-"""Pipeline engine — advances matches through CRM stages.
+"""Pipeline engine -- advances matches through CRM stages.
 
 Only moves forward unless the trigger is ``"manual"``, which
 allows arbitrary stage changes (including backward and to
@@ -45,6 +45,7 @@ def advance_stage(
     match.stage_changed_at = datetime.utcnow()
 
     transition = PipelineTransition(
+        user_id=match.user_id,
         match_id=match_id,
         from_stage=old_stage,
         to_stage=new_stage.value,

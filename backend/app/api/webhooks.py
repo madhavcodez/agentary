@@ -4,7 +4,7 @@ Receives webhook events from Resend (delivered, opened, clicked,
 bounced, complained) and stores them for analytics. Automatically
 manages the suppression list for bounces and complaints.
 
-No auth required — Resend calls this endpoint directly.
+No auth required -- Resend calls this endpoint directly.
 """
 
 from __future__ import annotations
@@ -29,31 +29,32 @@ async def resend_webhook(
     request: Request,
     db: Session = Depends(get_db),
 ) -> dict:
-    """Handle Resend webhook events. No auth required — Resend calls this."""
+    """Handle Resend webhook events. No auth required -- Resend calls this."""
     body = await request.json()
     event_type = body.get("type", "")
     data = body.get("data", {})
 
     resend_email_id = data.get("email_id", "")
 
-    # Store event
-    event = EmailEvent(
-        resend_email_id=resend_email_id,
-        event_type=event_type,
-        payload=data,
-    )
-
-    # Try to link to campaign via resend_email_id
+    # Try to link to campaign via resend_email_id to get user_id
+    campaign = None
     if resend_email_id:
         campaign = (
             db.query(CallCampaign)
             .filter(CallCampaign.resend_email_id == resend_email_id)
             .first()
         )
-        if campaign:
-            event.campaign_id = campaign.id
 
-    db.add(event)
+    # Store event (only if we can determine the user_id from the campaign)
+    if campaign:
+        event = EmailEvent(
+            user_id=campaign.user_id,
+            campaign_id=campaign.id,
+            resend_email_id=resend_email_id,
+            event_type=event_type,
+            payload=data,
+        )
+        db.add(event)
 
     # Handle side effects for bounces and complaints
     if event_type == "email.bounced":

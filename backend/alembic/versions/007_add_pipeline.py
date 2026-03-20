@@ -1,7 +1,7 @@
 """Add pipeline stage columns and transitions table
 
 Revision ID: 007
-Revises: 005
+Revises: 006
 Create Date: 2026-03-19
 """
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 revision = "007"
-down_revision = "005"
+down_revision = "006"
 branch_labels = None
 depends_on = None
 
@@ -40,6 +40,13 @@ def upgrade() -> None:
     op.create_table(
         "pipeline_transitions",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column(
+            "user_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("users.id"),
+            nullable=False,
+            index=True,
+        ),
         sa.Column(
             "match_id",
             postgresql.UUID(as_uuid=True),

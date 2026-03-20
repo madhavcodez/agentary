@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, case, cast, Integer
+from sqlalchemy import cast, func
 from sqlalchemy.orm import Session
 
 from ..deps import get_current_user, get_db

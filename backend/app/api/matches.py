@@ -48,6 +48,33 @@ def list_matches(
     return MatchList(items=items, total=total, page=page, limit=limit)
 
 
+# Static paths MUST be declared before /{match_id} to avoid being
+# swallowed by the path parameter route.
+
+@router.get("/pipeline-summary", response_model=PipelineSummary)
+def pipeline_summary(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    rows = (
+        db.query(Match.pipeline_stage, func.count(Match.id))
+        .filter(Match.user_id == user.id)
+        .group_by(Match.pipeline_stage)
+        .all()
+    )
+    counts = {stage: count for stage, count in rows}
+    return PipelineSummary(
+        lead=counts.get("lead", 0),
+        contacted=counts.get("contacted", 0),
+        aware=counts.get("aware", 0),
+        engaged=counts.get("engaged", 0),
+        meeting=counts.get("meeting", 0),
+        closed_won=counts.get("closed_won", 0),
+        closed_lost=counts.get("closed_lost", 0),
+        paused=counts.get("paused", 0),
+    )
+
+
 @router.get("/{match_id}", response_model=MatchResponse)
 def get_match(
     match_id: UUID,
@@ -83,30 +110,6 @@ def update_match_status(
     db.commit()
     db.refresh(match)
     return match
-
-
-@router.get("/pipeline-summary", response_model=PipelineSummary)
-def pipeline_summary(
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    rows = (
-        db.query(Match.pipeline_stage, func.count(Match.id))
-        .filter(Match.user_id == user.id)
-        .group_by(Match.pipeline_stage)
-        .all()
-    )
-    counts = {stage: count for stage, count in rows}
-    return PipelineSummary(
-        lead=counts.get("lead", 0),
-        contacted=counts.get("contacted", 0),
-        aware=counts.get("aware", 0),
-        engaged=counts.get("engaged", 0),
-        meeting=counts.get("meeting", 0),
-        closed_won=counts.get("closed_won", 0),
-        closed_lost=counts.get("closed_lost", 0),
-        paused=counts.get("paused", 0),
-    )
 
 
 @router.put("/{match_id}/stage", response_model=MatchResponse)
