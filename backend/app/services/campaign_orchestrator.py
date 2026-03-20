@@ -67,7 +67,7 @@ async def process_call_queue(db: Session) -> int:
     initiated = 0
     webhook_base = settings.twilio_webhook_base_url
     if not webhook_base:
-        logger.error("TWILIO_WEBHOOK_BASE_URL not configured — cannot place calls")
+        logger.error("TWILIO_WEBHOOK_BASE_URL not configured -- cannot place calls")
         return 0
 
     for campaign in campaigns:
@@ -85,7 +85,7 @@ async def process_call_queue(db: Session) -> int:
         )
         if recent_to_contact > 0:
             logger.debug(
-                "Skipping campaign %s — contact %s called within %dh cooldown",
+                "Skipping campaign %s -- contact %s called within %dh cooldown",
                 campaign.id,
                 campaign.contact_id,
                 cooldown_hours,
@@ -118,8 +118,9 @@ async def process_call_queue(db: Session) -> int:
             )
             call_sid = result["call_sid"]
 
-            # Create a call log entry
+            # Create a call log entry with user_id from campaign
             log = CallLog(
+                user_id=campaign.user_id,
                 campaign_id=campaign.id,
                 twilio_call_sid=call_sid,
                 started_at=now,
@@ -131,7 +132,7 @@ async def process_call_queue(db: Session) -> int:
             db.commit()
             initiated += 1
             logger.info(
-                "Initiated call for campaign %s → %s (SID: %s)",
+                "Initiated call for campaign %s -> %s (SID: %s)",
                 campaign.id,
                 phone,
                 call_sid,

@@ -12,28 +12,53 @@ logger = logging.getLogger(__name__)
 scheduler = BackgroundScheduler()
 
 
-def _run_ingest():
-    from .ingest.runner import run_all_connectors
+def _get_active_user_ids() -> list:
+    """Fetch all active user IDs from the database."""
+    from ..models.user import User
+
     session = SessionLocal()
     try:
-        count = asyncio.run(run_all_connectors(session))
-        logger.info("Scheduled ingest completed: %d new opportunities", count)
-    except Exception as e:
-        logger.error("Scheduled ingest failed: %s", e)
+        return [
+            row.id
+            for row in session.query(User.id).filter(User.is_active == True).all()
+        ]
     finally:
         session.close()
+
+
+def _run_ingest():
+    from .ingest.runner import run_all_connectors
+
+    user_ids = _get_active_user_ids()
+    for user_id in user_ids:
+        session = SessionLocal()
+        try:
+            count = asyncio.run(run_all_connectors(session, user_id=user_id))
+            logger.info(
+                "Scheduled ingest completed for user %s: %d new opportunities",
+                user_id, count,
+            )
+        except Exception as e:
+            logger.error("Scheduled ingest failed for user %s: %s", user_id, e)
+        finally:
+            session.close()
 
 
 def _run_scoring():
     from .match_engine import score_all_matches
-    session = SessionLocal()
-    try:
-        result = asyncio.run(score_all_matches(session))
-        logger.info("Scheduled scoring completed: %s", result)
-    except Exception as e:
-        logger.error("Scheduled scoring failed: %s", e)
-    finally:
-        session.close()
+
+    user_ids = _get_active_user_ids()
+    for user_id in user_ids:
+        session = SessionLocal()
+        try:
+            result = asyncio.run(score_all_matches(session, user_id=user_id))
+            logger.info(
+                "Scheduled scoring completed for user %s: %s", user_id, result,
+            )
+        except Exception as e:
+            logger.error("Scheduled scoring failed for user %s: %s", user_id, e)
+        finally:
+            session.close()
 
 
 def start_scheduler():

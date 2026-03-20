@@ -1,21 +1,26 @@
 import type {
+  ActivityTimeline,
   AutopilotStatus,
   CallLog,
   Campaign,
   CampaignList,
+  ChannelPerformance,
   Contact,
   ContactList,
   Dossier,
+  FunnelData,
   HealthCheck,
   Match,
   MatchList,
   Opportunity,
   OpportunityList,
+  PipelineSummary,
   Policy,
   PolicyCreate,
   PolicyUpdate,
   Profile,
   ResearchResult,
+  ScoreDistribution,
 } from "./types";
 import { type AuthUser, getToken, logout, setToken, setUser } from "./auth";
 
@@ -363,4 +368,44 @@ export function sendEmail(campaignId: string): Promise<Campaign> {
   return request<Campaign>(`/campaigns/${campaignId}/send-email`, {
     method: "POST",
   });
+}
+
+// ── Pipeline ─────────────────────────────────────────────────────
+
+export function fetchPipelineSummary(): Promise<PipelineSummary> {
+  return request<PipelineSummary>("/matches/pipeline-summary");
+}
+
+export function updateMatchStage(
+  matchId: string,
+  stage: string,
+  trigger: string = "manual",
+): Promise<Match> {
+  return request<Match>(`/matches/${matchId}/stage`, {
+    method: "PUT",
+    body: JSON.stringify({ stage, trigger }),
+  });
+}
+
+// ── Analytics ────────────────────────────────────────────────────
+
+export function fetchFunnel(days: number = 30): Promise<FunnelData> {
+  return request<FunnelData>(`/analytics/funnel?days=${days}`);
+}
+
+export function fetchChannelPerformance(days: number = 30): Promise<ChannelPerformance> {
+  return request<ChannelPerformance>(`/analytics/channel-performance?days=${days}`);
+}
+
+export function fetchActivityTimeline(
+  days: number = 30,
+  granularity: string = "day",
+): Promise<ActivityTimeline> {
+  return request<ActivityTimeline>(
+    `/analytics/activity-timeline?days=${days}&granularity=${granularity}`,
+  );
+}
+
+export function fetchScoreDistribution(): Promise<ScoreDistribution> {
+  return request<ScoreDistribution>("/analytics/score-distribution");
 }

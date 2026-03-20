@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import UUID
+
 from sqlalchemy.orm import Session
 
 from ..models.profile import Experience, Preference, Profile, Skill
@@ -17,8 +19,8 @@ PROFILE_SCHEMA = """{
 }"""
 
 
-async def build_profile(db: Session, resume_text: str) -> Profile:
-    existing = db.query(Profile).first()
+async def build_profile(db: Session, resume_text: str, *, user_id: UUID) -> Profile:
+    existing = db.query(Profile).filter(Profile.user_id == user_id).first()
     if existing:
         db.query(Skill).filter(Skill.profile_id == existing.id).delete()
         db.query(Experience).filter(Experience.profile_id == existing.id).delete()
@@ -30,6 +32,7 @@ async def build_profile(db: Session, resume_text: str) -> Profile:
     data = await gemini.generate_structured(prompt, schema_hint=PROFILE_SCHEMA)
 
     profile = Profile(
+        user_id=user_id,
         name=data.get("name", "Unknown"),
         email=data.get("email"),
         phone=data.get("phone"),

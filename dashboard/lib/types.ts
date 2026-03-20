@@ -65,6 +65,8 @@ export interface Match {
   composite_score: number;
   rationale: string | null;
   status: string;
+  pipeline_stage: string;
+  stage_changed_at: string | null;
   opportunity: Opportunity | null;
   created_at: string;
 }
@@ -222,4 +224,69 @@ export interface TokenResponse {
   access_token: string;
   token_type: string;
   user: AuthUser;
+}
+
+// ── Analytics ────────────────────────────────────────────────────────
+
+export interface PipelineSummary {
+  lead: number;
+  contacted: number;
+  aware: number;
+  engaged: number;
+  meeting: number;
+  closed_won: number;
+  closed_lost: number;
+  paused: number;
+}
+
+export interface FunnelStage {
+  stage: string;
+  count: number;
+  conversion_rate: number;
+}
+
+export interface FunnelData {
+  days: number;
+  total_matches: number;
+  stages: FunnelStage[];
+  closed_lost: number;
+  paused: number;
+}
+
+export interface ChannelPerformance {
+  days: number;
+  email: {
+    sent: number;
+    opened: number;
+    replied: number;
+    open_rate: number;
+    reply_rate: number;
+  };
+  call: {
+    attempted: number;
+    connected: number;
+    rate: number;
+  };
+}
+
+export interface TimelineEntry {
+  date: string;
+  matches_found: number;
+  emails_sent: number;
+  calls_made: number;
+}
+
+export interface ActivityTimeline {
+  days: number;
+  granularity: string;
+  timeline: TimelineEntry[];
+}
+
+export interface ScoreBucket {
+  bucket: string;
+  count: number;
+}
+
+export interface ScoreDistribution {
+  buckets: ScoreBucket[];
 }
