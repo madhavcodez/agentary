@@ -359,9 +359,12 @@ async def outbound_ws(ws: WebSocket, campaign_id: UUID) -> None:
 
         llm = GeminiLiveLLMService(
             api_key=settings.gemini_api_key,
-            model="models/gemini-2.5-flash-native-audio-preview-12-2025",
-            voice_id="Kore",
+            settings=GeminiLiveLLMService.Settings(
+                model="models/gemini-2.5-flash-native-audio-preview-12-2025",
+                voice="Kore",
+            ),
             system_instruction=system_prompt,
+            inference_on_context_initialization=True,
         )
         logger.info("GeminiLiveLLMService created")
 
