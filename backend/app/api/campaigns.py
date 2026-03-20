@@ -242,7 +242,7 @@ async def create_outreach_package(
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
 
-    package = await generate_outreach_package(db, campaign)
+    package = await generate_outreach_package(db, campaign, user_id=user.id)
 
     campaign.email_subject = package.get("email_subject")
     campaign.email_draft = package.get("email_draft")
