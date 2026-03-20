@@ -98,10 +98,16 @@ def build_system_prompt(campaign: Any, script: dict[str, Any]) -> str:
         opportunity_title=opportunity_title,
     )
 
+    opener_text = script.get(
+        "opener",
+        f"Hi, this is SecretAIRY calling on behalf of Madhav Chauhan regarding "
+        f"the {opportunity_title} position at {company}.",
+    )
+
     extra_context = f"""
 
 CALL SCRIPT CONTEXT:
-Opener: {script.get('opener', '')}
+Opener: {opener_text}
 Gatekeeper Script: {script.get('gatekeeper_script', '')}
 Voicemail Script: {script.get('voicemail_script', '')}
 Talking Points:
@@ -109,8 +115,10 @@ Talking Points:
 Scheduling Prompts: {', '.join(script.get('scheduling_prompts', []))}
 Callback Number: {script.get('callback_number', '')}
 
-INSTRUCTIONS:
-- Start with the opener when greeting.
+CRITICAL INSTRUCTIONS:
+- Start the call by saying: "{opener_text}"
+  You MUST speak this opener immediately when the conversation begins.
+  Do NOT wait for the other party to speak first.
 - If you detect a gatekeeper, use the gatekeeper script.
 - If you reach voicemail, use the voicemail script.
 - When pitching, use the talking points.

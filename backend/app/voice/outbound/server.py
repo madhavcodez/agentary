@@ -4,15 +4,18 @@ Connects Twilio Media Streams to Gemini Live via Pipecat for real-time
 voice conversations. The pipeline:
 
     Twilio 8kHz mulaw <-> TwilioFrameSerializer <-> FastAPIWebsocketTransport
-        <-> GeminiLiveLLMService (native audio)
+        <-> TranscriptCaptureProcessor <-> GeminiLiveLLMService (native audio)
 
 TwilioFrameSerializer handles 8kHz <-> internal sample rate conversion.
+The TranscriptCaptureProcessor sits inline and records both user speech
+(TranscriptionFrame) and agent output (TTSTextFrame) so that a full
+transcript is available when the pipeline finishes.
 """
 from __future__ import annotations
 
-import html
 import json
 import logging
+import time
 import traceback
 from datetime import datetime
 from typing import Optional
@@ -21,7 +24,11 @@ from uuid import UUID
 from fastapi import APIRouter, Request, WebSocket
 from fastapi.responses import Response
 
-from pipecat.frames.frames import Frame, TextFrame, TranscriptionFrame
+from pipecat.frames.frames import (
+    Frame,
+    TTSTextFrame,
+    TranscriptionFrame,
+)
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
@@ -37,6 +44,7 @@ from ...config import settings
 from ...database import SessionLocal
 from ...models.call_campaign import CallCampaign
 from ...models.call_log import CallLog
+from ...services.call_post_processor import process_call_result
 from .prompts import build_system_prompt
 
 logger = logging.getLogger(__name__)
@@ -51,25 +59,40 @@ router = APIRouter(prefix="/voice/outbound", tags=["outbound"])
 class TranscriptCaptureProcessor(FrameProcessor):
     """Captures user and agent text flowing through the pipeline.
 
-    Sits inline and forwards every frame unchanged. On TranscriptionFrame
-    (user speech-to-text from Gemini Live) and TextFrame (agent output text),
-    it appends to an internal list.  Call ``get_transcript()`` after the
-    pipeline finishes to retrieve the full conversation.
+    Sits inline and forwards every frame unchanged.  Records:
+    - ``TranscriptionFrame`` -- user speech-to-text produced by Gemini Live.
+    - ``TTSTextFrame`` -- final spoken agent text (one per sentence).
+
+    We intentionally capture ``TTSTextFrame`` rather than the parent
+    ``TextFrame`` because Gemini Live pushes *both* ``LLMTextFrame`` and
+    ``TTSTextFrame`` with the same content; listening on ``TextFrame``
+    would double-count every agent utterance.
+
+    Call ``get_transcript()`` after the pipeline finishes to retrieve the
+    full conversation.
     """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._entries: list[dict[str, str]] = []
+        self._entries: list[dict] = []
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         """Observe transcript-bearing frames and pass them through."""
         await super().process_frame(frame, direction)
 
         if isinstance(frame, TranscriptionFrame):
-            self._entries.append({"role": "user", "text": frame.text})
+            self._entries.append({
+                "role": "user",
+                "text": frame.text,
+                "timestamp": time.time(),
+            })
             logger.debug("Transcript [user]: %s", frame.text)
-        elif isinstance(frame, TextFrame):
-            self._entries.append({"role": "agent", "text": frame.text})
+        elif isinstance(frame, TTSTextFrame):
+            self._entries.append({
+                "role": "agent",
+                "text": frame.text,
+                "timestamp": time.time(),
+            })
             logger.debug("Transcript [agent]: %s", frame.text)
 
         await self.push_frame(frame, direction)
@@ -78,9 +101,14 @@ class TranscriptCaptureProcessor(FrameProcessor):
         """Return the accumulated transcript as a readable string."""
         lines: list[str] = []
         for entry in self._entries:
-            role = entry["role"].upper()
-            lines.append(f"[{role}] {entry['text']}")
+            label = "User" if entry["role"] == "user" else "Agent"
+            lines.append(f"{label}: {entry['text']}")
         return "\n".join(lines)
+
+    @property
+    def has_content(self) -> bool:
+        """Return True if at least one transcript entry was captured."""
+        return len(self._entries) > 0
 
 
 # ---------------------------------------------------------------------------
@@ -89,29 +117,26 @@ class TranscriptCaptureProcessor(FrameProcessor):
 
 @router.api_route("/twiml/{campaign_id}", methods=["GET", "POST"])
 def twiml_endpoint(campaign_id: UUID) -> Response:
-    """Return TwiML that speaks the opener, then connects to the WS stream."""
+    """Return TwiML that connects directly to the WebSocket stream.
+
+    The ``<Say>`` element is intentionally omitted -- Gemini delivers the
+    opener via its system_instruction so the greeting uses the same voice
+    as the rest of the conversation and avoids a collision between Twilio
+    TTS playback and the Media Stream connection.
+    """
     webhook_host = (
         settings.twilio_webhook_base_url
         .replace("https://", "")
         .replace("http://", "")
     )
 
-    db = SessionLocal()
-    try:
-        campaign = db.query(CallCampaign).filter(
-            CallCampaign.id == campaign_id,
-        ).first()
-        opener = "Hello, this is SecretAIRY calling on behalf of Madhav Chauhan."
-        if campaign and campaign.script_json:
-            opener = campaign.script_json.get("opener", opener)
-    finally:
-        db.close()
+    logger.info(
+        "TwiML requested: campaign=%s host=%s", campaign_id, webhook_host,
+    )
 
-    safe_opener = html.escape(opener)
     xml = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         "<Response>\n"
-        f'  <Say voice="Polly.Joanna">{safe_opener}</Say>\n'
         "  <Connect>\n"
         f'    <Stream url="wss://{webhook_host}/voice/outbound/ws/{campaign_id}" />\n'
         "  </Connect>\n"
@@ -193,14 +218,23 @@ async def status_callback(campaign_id: UUID, request: Request) -> dict:
 # WebSocket endpoint — receives the Twilio Media Stream
 # ---------------------------------------------------------------------------
 
-def _save_transcript(
+async def _save_transcript_and_post_process(
     db,
     campaign_id: UUID,
     call_sid: Optional[str],
     transcript_text: str,
 ) -> None:
-    """Persist the transcript to the matching CallLog row."""
+    """Persist the transcript to the matching CallLog row and run post-processing.
+
+    Post-processing uses Gemini to classify the call outcome, generate a
+    summary, and optionally schedule a follow-up campaign.
+    """
     if not call_sid or not transcript_text.strip():
+        logger.info(
+            "No transcript to save (call_sid=%s, text_len=%d)",
+            call_sid,
+            len(transcript_text) if transcript_text else 0,
+        )
         return
     try:
         call_log = (
@@ -211,20 +245,31 @@ def _save_transcript(
             )
             .first()
         )
-        if call_log:
-            call_log.transcript = transcript_text
-            db.commit()
-            logger.info(
-                "Transcript saved for call_sid=%s (%d chars)",
-                call_sid, len(transcript_text),
-            )
-        else:
+        if not call_log:
             logger.warning(
-                "No CallLog found for call_sid=%s — transcript not saved",
+                "No CallLog found for call_sid=%s -- transcript not saved",
                 call_sid,
             )
+            return
+
+        call_log.transcript = transcript_text
+        db.commit()
+        logger.info(
+            "Transcript saved for call_sid=%s (%d chars)",
+            call_sid,
+            len(transcript_text),
+        )
+
+        # Run post-processing (classification, summary, follow-up scheduling)
+        logger.info("Starting post-processing for call_sid=%s", call_sid)
+        await process_call_result(db, call_log, transcript_text)
+        logger.info("Post-processing complete for call_sid=%s", call_sid)
+
     except Exception:
-        logger.error("Failed to save transcript:\n%s", traceback.format_exc())
+        logger.error(
+            "Failed to save transcript / post-process:\n%s",
+            traceback.format_exc(),
+        )
         db.rollback()
 
 
@@ -350,13 +395,24 @@ async def outbound_ws(ws: WebSocket, campaign_id: UUID) -> None:
         logger.error("=== OUTBOUND WS ERROR ===\n%s", traceback.format_exc())
     finally:
         # ------------------------------------------------------------------
-        # 6. Persist transcript and clean up
+        # 6. Persist transcript, run post-processing, and clean up
         # ------------------------------------------------------------------
-        if transcript_capture is not None:
+        if transcript_capture is not None and transcript_capture.has_content:
             transcript_text = transcript_capture.get_transcript()
-            if transcript_text:
-                _save_transcript(db, campaign_id, call_sid, transcript_text)
-                logger.info("Transcript length: %d chars", len(transcript_text))
+            logger.info(
+                "Transcript captured: %d chars, call_sid=%s",
+                len(transcript_text),
+                call_sid,
+            )
+            await _save_transcript_and_post_process(
+                db, campaign_id, call_sid, transcript_text,
+            )
+        else:
+            logger.info(
+                "No transcript captured for campaign=%s call_sid=%s",
+                campaign_id,
+                call_sid,
+            )
 
         db.close()
         logger.info("=== OUTBOUND WS CLOSED: campaign=%s ===", campaign_id)
