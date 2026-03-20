@@ -46,3 +46,23 @@ class AutopilotStatus(BaseModel):
     last_run: datetime | None = None
     last_result: AutopilotRunResult | None = None
     running: bool = False
+
+
+class AutopilotScheduleResponse(BaseModel):
+    autopilot_enabled: bool = False
+    autopilot_cron: str | None = None
+    autopilot_timezone: str = "America/Los_Angeles"
+    autopilot_business_hours_only: bool = True
+
+    model_config = {"from_attributes": True}
+
+
+class AutopilotScheduleUpdate(BaseModel):
+    autopilot_cron: str | None = None
+    autopilot_timezone: str | None = None
+    autopilot_business_hours_only: bool | None = None
+
+
+class AutopilotToggleResponse(BaseModel):
+    autopilot_enabled: bool
+    message: str

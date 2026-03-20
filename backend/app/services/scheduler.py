@@ -2,8 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import datetime
+from uuid import UUID
 
+import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 from ..database import SessionLocal
 
@@ -11,61 +15,197 @@ logger = logging.getLogger(__name__)
 
 scheduler = BackgroundScheduler()
 
-
-def _get_active_user_ids() -> list:
-    """Fetch all active user IDs from the database."""
-    from ..models.user import User
-
-    session = SessionLocal()
-    try:
-        return [
-            row.id
-            for row in session.query(User.id).filter(User.is_active == True).all()
-        ]
-    finally:
-        session.close()
+# Job ID prefix for per-user autopilot jobs
+_AUTOPILOT_JOB_PREFIX = "autopilot_user_"
 
 
 def _run_ingest():
     from .ingest.runner import run_all_connectors
-
-    user_ids = _get_active_user_ids()
-    for user_id in user_ids:
-        session = SessionLocal()
-        try:
-            count = asyncio.run(run_all_connectors(session, user_id=user_id))
-            logger.info(
-                "Scheduled ingest completed for user %s: %d new opportunities",
-                user_id, count,
-            )
-        except Exception as e:
-            logger.error("Scheduled ingest failed for user %s: %s", user_id, e)
-        finally:
-            session.close()
+    session = SessionLocal()
+    try:
+        count = asyncio.run(run_all_connectors(session))
+        logger.info("Scheduled ingest completed: %d new opportunities", count)
+    except Exception as e:
+        logger.error("Scheduled ingest failed: %s", e)
+    finally:
+        session.close()
 
 
 def _run_scoring():
     from .match_engine import score_all_matches
+    session = SessionLocal()
+    try:
+        result = asyncio.run(score_all_matches(session))
+        logger.info("Scheduled scoring completed: %s", result)
+    except Exception as e:
+        logger.error("Scheduled scoring failed: %s", e)
+    finally:
+        session.close()
 
-    user_ids = _get_active_user_ids()
-    for user_id in user_ids:
-        session = SessionLocal()
-        try:
-            result = asyncio.run(score_all_matches(session, user_id=user_id))
+
+def _is_business_hours(timezone_name: str) -> bool:
+    """Check whether the current time is within business hours (8AM-6PM weekdays)."""
+    try:
+        tz = pytz.timezone(timezone_name)
+    except pytz.UnknownTimeZoneError:
+        tz = pytz.timezone("America/Los_Angeles")
+
+    now = datetime.now(tz)
+    # Monday=0 .. Sunday=6
+    if now.weekday() >= 5:
+        return False
+    return 8 <= now.hour < 18
+
+
+def _run_autopilot_for_user(user_id: str):
+    """Execute an autopilot cycle scoped to a single user.
+
+    Respects business-hours-only preference before running.
+    """
+    from .autopilot import run_autopilot_cycle
+
+    session = SessionLocal()
+    try:
+        from ..models.user import User
+
+        user = session.query(User).filter(User.id == user_id).first()
+        if not user:
+            logger.warning("Autopilot job for unknown user %s — removing job", user_id)
+            remove_autopilot_job(user_id)
+            return
+
+        if not user.autopilot_enabled:
+            logger.info("Autopilot disabled for user %s — skipping", user_id)
+            return
+
+        if user.autopilot_business_hours_only and not _is_business_hours(
+            user.autopilot_timezone
+        ):
             logger.info(
-                "Scheduled scoring completed for user %s: %s", user_id, result,
+                "Outside business hours for user %s (tz=%s) — skipping",
+                user_id,
+                user.autopilot_timezone,
             )
-        except Exception as e:
-            logger.error("Scheduled scoring failed for user %s: %s", user_id, e)
-        finally:
-            session.close()
+            return
+
+        result = asyncio.run(run_autopilot_cycle(session, user_id))
+        logger.info("Autopilot cycle completed for user %s: %s", user_id, result)
+    except Exception as e:
+        logger.error("Autopilot cycle failed for user %s: %s", user_id, e)
+    finally:
+        session.close()
+
+
+def _autopilot_job_id(user_id: str | UUID) -> str:
+    """Build a deterministic job ID for a user's autopilot schedule."""
+    return f"{_AUTOPILOT_JOB_PREFIX}{user_id}"
+
+
+def add_autopilot_job(user_id: str | UUID, cron_expr: str, timezone: str) -> None:
+    """Add (or replace) an APScheduler CronTrigger job for a user's autopilot.
+
+    Args:
+        user_id: The user's UUID (string or UUID).
+        cron_expr: Cron expression like "0 9 * * 1-5".
+        timezone: IANA timezone string like "America/Los_Angeles".
+    """
+    job_id = _autopilot_job_id(user_id)
+
+    # Parse cron fields: minute hour day_of_month month day_of_week
+    parts = cron_expr.strip().split()
+    if len(parts) != 5:
+        raise ValueError(
+            f"Invalid cron expression '{cron_expr}': expected 5 fields "
+            "(minute hour day month day_of_week)"
+        )
+
+    try:
+        tz = pytz.timezone(timezone)
+    except pytz.UnknownTimeZoneError:
+        tz = pytz.timezone("America/Los_Angeles")
+
+    trigger = CronTrigger(
+        minute=parts[0],
+        hour=parts[1],
+        day=parts[2],
+        month=parts[3],
+        day_of_week=parts[4],
+        timezone=tz,
+    )
+
+    scheduler.add_job(
+        _run_autopilot_for_user,
+        trigger,
+        args=[str(user_id)],
+        id=job_id,
+        replace_existing=True,
+    )
+    logger.info(
+        "Autopilot job scheduled for user %s: cron=%s tz=%s",
+        user_id,
+        cron_expr,
+        timezone,
+    )
+
+
+def remove_autopilot_job(user_id: str | UUID) -> None:
+    """Remove a user's autopilot job if it exists."""
+    job_id = _autopilot_job_id(user_id)
+    try:
+        scheduler.remove_job(job_id)
+        logger.info("Autopilot job removed for user %s", user_id)
+    except Exception:
+        # Job may not exist; that's fine
+        pass
+
+
+def load_all_autopilot_jobs() -> None:
+    """Load autopilot jobs for all users with autopilot_enabled=True.
+
+    Called once at app startup.
+    """
+    session = SessionLocal()
+    try:
+        from ..models.user import User
+
+        users = (
+            session.query(User)
+            .filter(
+                User.autopilot_enabled == True,  # noqa: E712
+                User.autopilot_cron.isnot(None),
+            )
+            .all()
+        )
+        for user in users:
+            try:
+                add_autopilot_job(
+                    user_id=str(user.id),
+                    cron_expr=user.autopilot_cron,
+                    timezone=user.autopilot_timezone,
+                )
+            except Exception as e:
+                logger.error(
+                    "Failed to load autopilot job for user %s: %s", user.id, e
+                )
+        logger.info("Loaded autopilot jobs for %d users", len(users))
+    except Exception as e:
+        logger.error("Failed to load autopilot jobs: %s", e)
+    finally:
+        session.close()
 
 
 def start_scheduler():
-    scheduler.add_job(_run_ingest, "interval", hours=6, id="ingest_job", replace_existing=True)
-    scheduler.add_job(_run_scoring, "interval", hours=24, id="scoring_job", replace_existing=True)
+    scheduler.add_job(
+        _run_ingest, "interval", hours=6, id="ingest_job", replace_existing=True
+    )
+    scheduler.add_job(
+        _run_scoring, "interval", hours=24, id="scoring_job", replace_existing=True
+    )
     scheduler.start()
     logger.info("Scheduler started: ingest every 6h, scoring every 24h")
+
+    # Load per-user autopilot schedules
+    load_all_autopilot_jobs()
 
 
 def stop_scheduler():
