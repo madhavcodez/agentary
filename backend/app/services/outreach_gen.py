@@ -2,7 +2,7 @@
 
 Generates personalized call scripts, email drafts, and LinkedIn messages
 for a campaign, using research data and profile context. Every piece of
-content is uniquely crafted per opportunity — no templates.
+content is uniquely crafted per opportunity -- no templates.
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ import asyncio
 import json
 import logging
 from typing import Any
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -81,18 +82,18 @@ def _build_context(
 
 
 _CALL_SCRIPT_SCHEMA = """{
-  "opener": "string — warm opening line mentioning the role and company",
-  "gatekeeper_script": "string — what to say to a receptionist",
-  "pitch_points": ["string — key strength relevant to this role"],
-  "voicemail_script": "string — concise voicemail under 30 seconds",
-  "scheduling_prompts": ["string — flexible time offering"],
+  "opener": "string -- warm opening line mentioning the role and company",
+  "gatekeeper_script": "string -- what to say to a receptionist",
+  "pitch_points": ["string -- key strength relevant to this role"],
+  "voicemail_script": "string -- concise voicemail under 30 seconds",
+  "scheduling_prompts": ["string -- flexible time offering"],
   "objection_handlers": {"objection": "response"},
   "callback_number": "string"
 }"""
 
 _EMAIL_SCHEMA = """{
-  "subject": "string — compelling subject line under 60 chars",
-  "body": "string — full email body in plain text"
+  "subject": "string -- compelling subject line under 60 chars",
+  "body": "string -- full email body in plain text"
 }"""
 
 
@@ -126,12 +127,12 @@ async def _gen_email_draft(context: str) -> dict[str, Any]:
 Instructions:
 - Subject line: compelling, under 60 characters, NOT generic ("RE:", "Following up" etc.)
 - Reference SPECIFIC company intel (a recent news item, funding round, product launch, or cultural value).
-- Show you have done your homework — mention something only someone who researched the company would know.
+- Show you have done your homework -- mention something only someone who researched the company would know.
 - Highlight 2-3 candidate strengths that directly align with the role.
 - Be concise: 150-250 words max.
 - Professional but warm tone. Not stiff, not overly casual.
 - End with a clear, low-pressure CTA (e.g., "Would a 15-minute call this week work?").
-- Do NOT use placeholder brackets like [Name] — use actual names from the context.
+- Do NOT use placeholder brackets like [Name] -- use actual names from the context.
 
 Return JSON with "subject" and "body" keys."""
 
@@ -148,7 +149,7 @@ Instructions:
 - STRICT 300 character limit (LinkedIn enforces this).
 - Reference something specific: a mutual interest, the role, or a company achievement.
 - Be genuine, not salesy.
-- Do NOT include "Dear" or formal greetings — LinkedIn messages are casual.
+- Do NOT include "Dear" or formal greetings -- LinkedIn messages are casual.
 - End with a single clear ask.
 
 Return ONLY the message text, no JSON, no quotes around it."""
@@ -173,7 +174,7 @@ Return ONLY the message text, no JSON, no quotes around it."""
 
 
 async def generate_outreach_package(
-    db: Session, campaign: CallCampaign
+    db: Session, campaign: CallCampaign, *, user_id: UUID | None = None
 ) -> dict[str, Any]:
     """Generate all 3 outreach channels for a campaign.
 
@@ -183,25 +184,37 @@ async def generate_outreach_package(
     Args:
         db: Active database session.
         campaign: The CallCampaign to generate content for.
+        user_id: The owning user's ID for scoped queries.
 
     Returns:
         Dict with call_script, email_subject, email_draft,
         linkedin_message, and suggested_sequence.
     """
+    # Resolve user_id from campaign if not provided explicitly
+    resolved_user_id = user_id or campaign.user_id
+
     match: Match | None = (
-        db.query(Match).filter(Match.id == campaign.match_id).first()
+        db.query(Match)
+        .filter(Match.id == campaign.match_id, Match.user_id == resolved_user_id)
+        .first()
     )
     if not match:
         raise ValueError(f"Match {campaign.match_id} not found for campaign")
 
     opp = match.opportunity
-    profile = db.query(Profile).first()
+    profile = (
+        db.query(Profile)
+        .filter(Profile.user_id == resolved_user_id)
+        .first()
+    )
     contact: Contact | None = (
-        db.query(Contact).filter(Contact.id == campaign.contact_id).first()
+        db.query(Contact)
+        .filter(Contact.id == campaign.contact_id, Contact.user_id == resolved_user_id)
+        .first()
     )
     research: ResearchResult | None = (
         db.query(ResearchResult)
-        .filter(ResearchResult.match_id == campaign.match_id)
+        .filter(ResearchResult.match_id == campaign.match_id, ResearchResult.user_id == resolved_user_id)
         .first()
     )
 

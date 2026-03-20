@@ -7,6 +7,7 @@ from google import genai
 from google.genai import types
 
 from ..config import settings
+from .circuit_breakers import gemini_breaker
 
 _client: genai.Client | None = None
 
@@ -18,6 +19,7 @@ def get_client() -> genai.Client:
     return _client
 
 
+@gemini_breaker
 async def embed_text(text: str, task_type: str = "RETRIEVAL_DOCUMENT") -> list[float]:
     client = get_client()
     result = client.models.embed_content(
@@ -28,6 +30,7 @@ async def embed_text(text: str, task_type: str = "RETRIEVAL_DOCUMENT") -> list[f
     return result.embeddings[0].values
 
 
+@gemini_breaker
 async def generate_structured(prompt: str, schema_hint: str = "") -> dict[str, Any]:
     client = get_client()
     system_instruction = "You are an expert data extraction assistant. Return valid JSON only."
@@ -61,6 +64,7 @@ async def generate_structured(prompt: str, schema_hint: str = "") -> dict[str, A
         raise
 
 
+@gemini_breaker
 async def generate_text(prompt: str, system: str = "", model: str = "gemini-2.5-flash") -> str:
     client = get_client()
     response = client.models.generate_content(

@@ -1,4 +1,4 @@
-"""Deep research engine — orchestrates all research sources.
+"""Deep research engine -- orchestrates all research sources.
 
 Runs Gemini Search grounding and Exa contact discovery in parallel,
 stores results in the database, auto-creates Contact records, and
@@ -11,12 +11,14 @@ import asyncio
 import logging
 from datetime import datetime
 from typing import Any
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
 from ...models.contact import Contact
 from ...models.match import Match
 from ...models.research import ResearchResult
+from ..contact_dedup import find_duplicates
 from .exa_search import exa_find_contacts
 from .gemini_search import gemini_research
 
@@ -49,7 +51,9 @@ def _calculate_quality(
     return round(min(score, 1.0), 2)
 
 
-async def deep_research(db: Session, match: Match) -> dict[str, Any]:
+async def deep_research(
+    db: Session, match: Match, *, user_id: UUID | None = None
+) -> dict[str, Any]:
     """Run the full research pipeline for a match.
 
     1. Runs Gemini Search + Exa in parallel.
@@ -60,10 +64,14 @@ async def deep_research(db: Session, match: Match) -> dict[str, Any]:
     Args:
         db: Active database session.
         match: The Match to research (must have .opportunity loaded).
+        user_id: The owning user's ID for scoped queries.
 
     Returns:
         Summary dict with company_intel and contacts_found count.
     """
+    # Resolve user_id from match if not provided explicitly
+    resolved_user_id = user_id or match.user_id
+
     opp = match.opportunity
     company = opp.company
     role = opp.title
@@ -71,7 +79,10 @@ async def deep_research(db: Session, match: Match) -> dict[str, Any]:
     # Check for existing research
     existing = (
         db.query(ResearchResult)
-        .filter(ResearchResult.match_id == match.id)
+        .filter(
+            ResearchResult.match_id == match.id,
+            ResearchResult.user_id == resolved_user_id,
+        )
         .first()
     )
     if existing:
@@ -108,6 +119,7 @@ async def deep_research(db: Session, match: Match) -> dict[str, Any]:
 
     # Persist research result
     research = ResearchResult(
+        user_id=resolved_user_id,
         match_id=match.id,
         company_intel=company_intel,
         contacts_found=exa_contacts,
@@ -117,28 +129,35 @@ async def deep_research(db: Session, match: Match) -> dict[str, Any]:
     )
     db.add(research)
 
-    # Auto-create Contact records from discovered people
+    # Auto-create Contact records from discovered people (fuzzy dedup)
     created_contacts = 0
     for raw in exa_contacts:
         name = raw.get("name", "").strip()
         if not name:
             continue
 
-        existing_contact = (
-            db.query(Contact)
-            .filter(
-                Contact.company == company,
-                Contact.name == name,
-            )
-            .first()
+        email = raw.get("email") or ""
+
+        # Fuzzy duplicate detection replaces exact name match
+        duplicates = find_duplicates(
+            db,
+            name=name,
+            company=company,
+            email=email or None,
+            threshold=85,
+            user_id=str(resolved_user_id) if resolved_user_id else None,
         )
-        if existing_contact:
+        if duplicates:
+            logger.debug(
+                "Skipping duplicate contact '%s' at '%s' — matched %d existing",
+                name, company, len(duplicates),
+            )
             continue
 
         phone = raw.get("phone") or ""
-        email = raw.get("email") or ""
 
         contact = Contact(
+            user_id=resolved_user_id,
             company=company,
             name=name,
             title=raw.get("title", ""),
@@ -157,7 +176,9 @@ async def deep_research(db: Session, match: Match) -> dict[str, Any]:
     try:
         from ..dossier_gen import generate_enriched_dossier
 
-        await generate_enriched_dossier(db, match, company_intel, exa_contacts)
+        await generate_enriched_dossier(
+            db, match, company_intel, exa_contacts, user_id=resolved_user_id
+        )
     except Exception as e:
         logger.warning(
             "Enriched dossier generation failed for match %s: %s",

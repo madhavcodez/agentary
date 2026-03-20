@@ -12,6 +12,7 @@ class CallCampaign(Base):
     __tablename__ = "call_campaigns"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     match_id = Column(
         UUID(as_uuid=True), ForeignKey("matches.id"), nullable=False
     )
@@ -26,6 +27,7 @@ class CallCampaign(Base):
     attempt_count = Column(Integer, default=0)
 
     # Multi-channel outreach fields
+    resend_email_id = Column(String(100), nullable=True, index=True)
     email_subject = Column(String(500), nullable=True)
     email_draft = Column(Text, nullable=True)
     email_sent_at = Column(DateTime, nullable=True)

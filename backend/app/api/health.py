@@ -40,5 +40,12 @@ def health(db: Session = Depends(get_db)) -> dict:
     except Exception as e:
         checks["qdrant"] = f"error: {e}"
 
+    # Circuit breakers
+    from ..services.circuit_breakers import get_breaker_status
+
     all_ok = all(v == "ok" for v in checks.values())
-    return {"status": "ok" if all_ok else "degraded", "checks": checks}
+    return {
+        "status": "ok" if all_ok else "degraded",
+        "checks": checks,
+        "circuit_breakers": get_breaker_status(),
+    }

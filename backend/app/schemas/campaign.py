@@ -25,6 +25,16 @@ class CampaignResponse(BaseModel):
     script_json: dict[str, Any] | None = None
     max_attempts: int
     attempt_count: int
+
+    # Multi-channel outreach fields
+    resend_email_id: str | None = None
+    email_subject: str | None = None
+    email_draft: str | None = None
+    email_sent_at: datetime | None = None
+    linkedin_msg: str | None = None
+    linkedin_sent_at: datetime | None = None
+    outreach_sequence: str | None = None
+
     created_at: datetime
     updated_at: datetime | None = None
 

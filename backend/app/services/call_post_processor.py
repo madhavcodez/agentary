@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 _CLASSIFICATION_SCHEMA = """{
   "outcome": "connected | voicemail | no_answer | busy | failed | callback_scheduled",
   "person_reached": "receptionist | hiring_manager | voicemail | unknown",
-  "summary": "string — 2-3 sentence summary of the call",
+  "summary": "string -- 2-3 sentence summary of the call",
   "next_steps": {
-    "action": "string — follow_up_call | send_email | schedule_interview | none",
+    "action": "string -- follow_up_call | send_email | schedule_interview | none",
     "notes": "string",
     "callback_date": "string ISO date or null"
   }
@@ -49,10 +49,10 @@ TRANSCRIPT:
 {transcript[:4000]}
 
 Based on the transcript, determine:
-1. outcome — what happened on the call
-2. person_reached — who actually answered
-3. summary — 2-3 sentence summary
-4. next_steps — recommended follow-up action
+1. outcome -- what happened on the call
+2. person_reached -- who actually answered
+3. summary -- 2-3 sentence summary
+4. next_steps -- recommended follow-up action
 
 Return ONLY valid JSON matching the schema."""
 
@@ -62,7 +62,7 @@ Return ONLY valid JSON matching the schema."""
         )
     except Exception:
         logger.exception("Failed to classify call %s", call_log.id)
-        call_log.summary = "Classification failed — manual review needed."
+        call_log.summary = "Classification failed -- manual review needed."
         db.commit()
         return
 
@@ -94,6 +94,7 @@ Return ONLY valid JSON matching the schema."""
                 scheduled_at = datetime.utcnow() + timedelta(hours=48)
 
             followup = CallCampaign(
+                user_id=campaign.user_id,
                 match_id=campaign.match_id,
                 contact_id=campaign.contact_id,
                 status="scheduled",
@@ -104,7 +105,8 @@ Return ONLY valid JSON matching the schema."""
             db.add(followup)
             db.commit()
             logger.info(
-                "Follow-up campaign %s created for contact %s",
+                "Follow-up campaign %s created for contact %s (user=%s)",
                 followup.id,
                 campaign.contact_id,
+                campaign.user_id,
             )

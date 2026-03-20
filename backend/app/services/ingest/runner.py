@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -15,7 +16,7 @@ from .yc_hn import YCHNConnector
 logger = logging.getLogger(__name__)
 
 
-async def run_all_connectors(db: Session) -> int:
+async def run_all_connectors(db: Session, *, user_id: UUID) -> int:
     connectors = [
         GreenhouseConnector(),
         LeverConnector(),
@@ -34,10 +35,12 @@ async def run_all_connectors(db: Session) -> int:
         else:
             logger.error("Connector error: %s", result)
 
-    # Dedupe by (source, source_id)
+    # Dedupe by (source, source_id) scoped to user
     existing_ids = {
         (r.source, r.source_id)
-        for r in db.query(Opportunity.source, Opportunity.source_id).all()
+        for r in db.query(Opportunity.source, Opportunity.source_id)
+        .filter(Opportunity.user_id == user_id)
+        .all()
     }
 
     new_opps: list[RawOpportunity] = []
@@ -49,6 +52,7 @@ async def run_all_connectors(db: Session) -> int:
     count = 0
     for raw in new_opps:
         opp = Opportunity(
+            user_id=user_id,
             source=raw.source,
             source_id=raw.source_id,
             company=raw.company,
@@ -77,5 +81,8 @@ async def run_all_connectors(db: Session) -> int:
         count += 1
 
     db.commit()
-    logger.info("Ingested %d new opportunities (total raw: %d)", count, len(all_raw))
+    logger.info(
+        "Ingested %d new opportunities for user %s (total raw: %d)",
+        count, user_id, len(all_raw),
+    )
     return count

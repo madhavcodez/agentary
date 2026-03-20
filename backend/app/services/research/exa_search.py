@@ -14,6 +14,7 @@ from typing import Any
 from exa_py import Exa
 
 from ...config import settings
+from ..circuit_breakers import exa_breaker
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +108,7 @@ def _deduplicate_contacts(contacts: list[dict[str, Any]]) -> list[dict[str, Any]
     return unique
 
 
+@exa_breaker
 async def exa_find_contacts(
     company: str, role: str
 ) -> list[dict[str, Any]]:

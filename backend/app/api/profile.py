@@ -1,33 +1,49 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from ..deps import get_db
+from ..deps import get_current_user, get_db
 from ..models.profile import Experience, Preference, Profile, Skill
+from ..models.user import User
 from ..schemas.profile import ProfileResponse, ProfileUpdate, ResumeUpload
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
 
 @router.get("", response_model=ProfileResponse | None)
-def get_profile(db: Session = Depends(get_db)):
-    profile = db.query(Profile).first()
+def get_profile(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    profile = db.query(Profile).filter(Profile.user_id == user.id).first()
     if not profile:
         raise HTTPException(status_code=404, detail="No profile found. Upload a resume first.")
     return profile
 
 
 @router.post("/resume", response_model=ProfileResponse)
-async def upload_resume(body: ResumeUpload, db: Session = Depends(get_db)):
+async def upload_resume(
+    body: ResumeUpload,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
     from ..services.profile_builder import build_profile
-    profile = await build_profile(db, body.resume_text)
+    profile = await build_profile(db, body.resume_text, user_id=user.id)
     return profile
 
 
 @router.put("", response_model=ProfileResponse)
-def update_profile(body: ProfileUpdate, db: Session = Depends(get_db)):
-    profile = db.query(Profile).first()
+def update_profile(
+    body: ProfileUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    profile = db.query(Profile).filter(Profile.user_id == user.id).first()
     if not profile:
         raise HTTPException(status_code=404, detail="No profile found.")
 

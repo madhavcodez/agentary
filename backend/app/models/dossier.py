@@ -12,6 +12,7 @@ class Dossier(Base):
     __tablename__ = "dossiers"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     match_id = Column(UUID(as_uuid=True), ForeignKey("matches.id"), nullable=False, unique=True)
     content_md = Column(Text, nullable=False)
     sections_json = Column(JSON)

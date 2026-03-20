@@ -12,6 +12,7 @@ class CallLog(Base):
     __tablename__ = "call_logs"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     campaign_id = Column(
         UUID(as_uuid=True), ForeignKey("call_campaigns.id"), nullable=False
     )

@@ -6,6 +6,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, PointStruct, VectorParams
 
 from ..config import settings
+from .circuit_breakers import qdrant_breaker
 
 EMBEDDING_DIM = 3072  # gemini-embedding-001
 
@@ -19,6 +20,7 @@ def get_client() -> QdrantClient:
     return _client
 
 
+@qdrant_breaker
 def ensure_collection(name: str) -> None:
     client = get_client()
     collections = [c.name for c in client.get_collections().collections]
@@ -29,6 +31,7 @@ def ensure_collection(name: str) -> None:
         )
 
 
+@qdrant_breaker
 def upsert_embedding(collection: str, point_id: str, vector: list[float], payload: dict | None = None) -> None:
     ensure_collection(collection)
     client = get_client()
@@ -44,6 +47,7 @@ def upsert_embedding(collection: str, point_id: str, vector: list[float], payloa
     )
 
 
+@qdrant_breaker
 def search_similar(collection: str, vector: list[float], limit: int = 20) -> list[dict]:
     ensure_collection(collection)
     client = get_client()

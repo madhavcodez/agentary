@@ -18,6 +18,8 @@ class MatchResponse(BaseModel):
     composite_score: float
     rationale: str | None = None
     status: str
+    pipeline_stage: str = "lead"
+    stage_changed_at: datetime | None = None
     opportunity: OpportunityResponse | None = None
     created_at: datetime
 

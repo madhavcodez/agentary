@@ -12,6 +12,7 @@ class ResearchResult(Base):
     __tablename__ = "research_results"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     match_id = Column(
         UUID(as_uuid=True),
         ForeignKey("matches.id"),

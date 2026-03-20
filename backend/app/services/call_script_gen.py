@@ -15,12 +15,12 @@ from . import gemini
 logger = logging.getLogger(__name__)
 
 _SCRIPT_SCHEMA = """{
-  "opener": "string — warm opening line referencing the role and company",
-  "gatekeeper_script": "string — what to say if a receptionist or gatekeeper answers",
+  "opener": "string -- warm opening line referencing the role and company",
+  "gatekeeper_script": "string -- what to say if a receptionist or gatekeeper answers",
   "pitch_points": ["string", "string", "string"],
-  "voicemail_script": "string — concise voicemail message",
+  "voicemail_script": "string -- concise voicemail message",
   "scheduling_prompts": ["string", "string"],
-  "callback_number": "string — phone number to leave for callback"
+  "callback_number": "string -- phone number to leave for callback"
 }"""
 
 
@@ -39,22 +39,31 @@ async def generate_call_script(
     Returns:
         A dict matching the script schema.
     """
+    # All queries scoped to the campaign's user_id
+    user_id = campaign.user_id
+
     match: Match | None = (
-        db.query(Match).filter(Match.id == campaign.match_id).first()
+        db.query(Match)
+        .filter(Match.id == campaign.match_id, Match.user_id == user_id)
+        .first()
     )
     if not match:
         raise ValueError(f"Match {campaign.match_id} not found")
 
     opportunity: Opportunity | None = (
         db.query(Opportunity)
-        .filter(Opportunity.id == match.opportunity_id)
+        .filter(Opportunity.id == match.opportunity_id, Opportunity.user_id == user_id)
         .first()
     )
     profile: Profile | None = (
-        db.query(Profile).filter(Profile.id == match.profile_id).first()
+        db.query(Profile)
+        .filter(Profile.id == match.profile_id, Profile.user_id == user_id)
+        .first()
     )
     dossier: Dossier | None = (
-        db.query(Dossier).filter(Dossier.match_id == match.id).first()
+        db.query(Dossier)
+        .filter(Dossier.match_id == match.id, Dossier.user_id == user_id)
+        .first()
     )
 
     company = opportunity.company if opportunity else "the company"
@@ -109,7 +118,7 @@ Return ONLY valid JSON matching the schema."""
 
     # Ensure required keys exist with sensible defaults
     defaults = {
-        "opener": f"Hi, this is SecretAIRY calling on behalf of Madhav Chauhan about the {title} role at {company}.",
+        "opener": f"Hi, this is SecretAIRY calling on behalf of a candidate about the {title} role at {company}.",
         "gatekeeper_script": f"I'm calling regarding the {title} position. Could I speak with the hiring manager?",
         "pitch_points": [
             "Strong AI/ML engineering background",
@@ -117,13 +126,13 @@ Return ONLY valid JSON matching the schema."""
             "Relevant project portfolio",
         ],
         "voicemail_script": (
-            f"Hi, this is a message on behalf of Madhav Chauhan regarding the "
-            f"{title} role at {company}. Madhav is very interested and would love "
+            f"Hi, this is a message on behalf of a candidate regarding the "
+            f"{title} role at {company}. They are very interested and would love "
             f"to discuss further. Please call back at your earliest convenience."
         ),
         "scheduling_prompts": [
             "Would Tuesday or Wednesday work better for a brief call?",
-            "I can work around your schedule — what time suits you?",
+            "I can work around your schedule -- what time suits you?",
         ],
         "callback_number": "+1-000-000-0000",
     }

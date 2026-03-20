@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from typing import Any
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -29,12 +30,25 @@ def _extract_sections(content_md: str) -> dict[str, str]:
     return sections
 
 
-async def generate_dossier(db: Session, match: Match) -> Dossier:
-    existing = db.query(Dossier).filter(Dossier.match_id == match.id).first()
+async def generate_dossier(
+    db: Session, match: Match, *, user_id: UUID | None = None
+) -> Dossier:
+    # Resolve user_id from match if not provided explicitly
+    resolved_user_id = user_id or match.user_id
+
+    existing = (
+        db.query(Dossier)
+        .filter(Dossier.match_id == match.id, Dossier.user_id == resolved_user_id)
+        .first()
+    )
     if existing:
         return existing
 
-    profile = db.query(Profile).filter(Profile.id == match.profile_id).first()
+    profile = (
+        db.query(Profile)
+        .filter(Profile.id == match.profile_id, Profile.user_id == resolved_user_id)
+        .first()
+    )
     opportunity = match.opportunity
 
     prompt = f"""Generate a comprehensive briefing dossier for a job match.
@@ -70,6 +84,7 @@ Write the briefing in markdown with these sections:
     sections = _extract_sections(content_md)
 
     dossier = Dossier(
+        user_id=resolved_user_id,
         match_id=match.id,
         content_md=content_md,
         sections_json=sections,
@@ -85,6 +100,8 @@ async def generate_enriched_dossier(
     match: Match,
     company_intel: dict[str, Any],
     contacts: list[dict[str, Any]],
+    *,
+    user_id: UUID | None = None,
 ) -> Dossier:
     """Generate a dossier enriched with deep research data.
 
@@ -97,11 +114,19 @@ async def generate_enriched_dossier(
         match: The Match to generate a dossier for.
         company_intel: Structured company research from Gemini Search.
         contacts: Contact list from Exa discovery.
+        user_id: The owning user's ID for scoped queries.
 
     Returns:
         The created or updated Dossier.
     """
-    profile = db.query(Profile).filter(Profile.id == match.profile_id).first()
+    # Resolve user_id from match if not provided explicitly
+    resolved_user_id = user_id or match.user_id
+
+    profile = (
+        db.query(Profile)
+        .filter(Profile.id == match.profile_id, Profile.user_id == resolved_user_id)
+        .first()
+    )
     opportunity = match.opportunity
 
     # If research data is empty/errored, fall back to standard dossier
@@ -112,7 +137,7 @@ async def generate_enriched_dossier(
         and "error" not in company_intel.get("company_overview", "").lower()
     )
     if not has_useful_intel:
-        return await generate_dossier(db, match)
+        return await generate_dossier(db, match, user_id=resolved_user_id)
 
     # Build enriched prompt with research data
     intel_summary = (
@@ -190,7 +215,11 @@ Step-by-step outreach strategy using the research and contact information."""
     sections = _extract_sections(content_md)
 
     # Replace existing dossier if one exists
-    existing = db.query(Dossier).filter(Dossier.match_id == match.id).first()
+    existing = (
+        db.query(Dossier)
+        .filter(Dossier.match_id == match.id, Dossier.user_id == resolved_user_id)
+        .first()
+    )
     if existing:
         existing.content_md = content_md
         existing.sections_json = sections
@@ -199,6 +228,7 @@ Step-by-step outreach strategy using the research and contact information."""
         return existing
 
     dossier = Dossier(
+        user_id=resolved_user_id,
         match_id=match.id,
         content_md=content_md,
         sections_json=sections,

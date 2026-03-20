@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -54,12 +55,16 @@ def _passes_hard_filter(title: str, description: str | None) -> bool:
     return role_match
 
 
-async def score_all_matches(db: Session) -> dict:
-    profile = db.query(Profile).first()
+async def score_all_matches(db: Session, *, user_id: UUID) -> dict:
+    profile = db.query(Profile).filter(Profile.user_id == user_id).first()
     if not profile:
         return {"error": "No profile found. Upload a resume first."}
 
-    opportunities = db.query(Opportunity).all()
+    opportunities = (
+        db.query(Opportunity)
+        .filter(Opportunity.user_id == user_id)
+        .all()
+    )
     if not opportunities:
         return {"error": "No opportunities found. Run ingest first."}
 
@@ -75,6 +80,7 @@ async def score_all_matches(db: Session) -> dict:
         existing = db.query(Match).filter(
             Match.opportunity_id == opp.id,
             Match.profile_id == profile.id,
+            Match.user_id == user_id,
         ).first()
         if existing:
             continue
@@ -83,6 +89,7 @@ async def score_all_matches(db: Session) -> dict:
         passes = _passes_hard_filter(opp.title, opp.description)
 
         match = Match(
+            user_id=user_id,
             opportunity_id=opp.id,
             profile_id=profile.id,
             hard_filter_pass="pass" if passes else "fail",

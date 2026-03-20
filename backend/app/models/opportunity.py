@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, String, Text
+from sqlalchemy import Column, DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSON, UUID
 
 from ..database import Base
@@ -11,6 +11,7 @@ class Opportunity(Base):
     __tablename__ = "opportunities"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     source = Column(String(50), nullable=False)
     source_id = Column(String(255), nullable=False)
     company = Column(String(255), nullable=False)

@@ -5,8 +5,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from ..deps import get_db
+from ..deps import get_current_user, get_db
 from ..models.opportunity import Opportunity
+from ..models.user import User
 from ..schemas.opportunity import OpportunityList, OpportunityResponse
 
 router = APIRouter(prefix="/opportunities", tags=["opportunities"])
@@ -20,8 +21,9 @@ def list_opportunities(
     company: str | None = None,
     search: str | None = None,
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
-    query = db.query(Opportunity)
+    query = db.query(Opportunity).filter(Opportunity.user_id == user.id)
 
     if source:
         query = query.filter(Opportunity.source == source)
@@ -39,8 +41,16 @@ def list_opportunities(
 
 
 @router.get("/{opportunity_id}", response_model=OpportunityResponse)
-def get_opportunity(opportunity_id: UUID, db: Session = Depends(get_db)):
-    opp = db.query(Opportunity).filter(Opportunity.id == opportunity_id).first()
+def get_opportunity(
+    opportunity_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    opp = (
+        db.query(Opportunity)
+        .filter(Opportunity.id == opportunity_id, Opportunity.user_id == user.id)
+        .first()
+    )
     if not opp:
         raise HTTPException(status_code=404, detail="Opportunity not found")
     return opp
