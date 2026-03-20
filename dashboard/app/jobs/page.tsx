@@ -1,8 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getToken } from "@/lib/auth";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+function authHeaders(): Record<string, string> {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 export default function JobDatabasePage() {
   const [jobs, setJobs] = useState<any[]>([]);
@@ -19,7 +25,7 @@ export default function JobDatabasePage() {
     if (search) params.set("search", search);
     if (source) params.set("source", source);
 
-    fetch(`${API}/opportunities?${params}`)
+    fetch(`${API}/opportunities?${params}`, { headers: authHeaders() })
       .then((r) => r.json())
       .then((d) => { setJobs(d.items || []); setTotal(d.total || 0); })
       .catch(() => {})

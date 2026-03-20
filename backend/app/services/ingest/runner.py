@@ -35,12 +35,10 @@ async def run_all_connectors(db: Session, *, user_id: UUID) -> int:
         else:
             logger.error("Connector error: %s", result)
 
-    # Dedupe by (source, source_id) scoped to user
+    # Dedupe by (source, source_id) globally — matches the DB unique constraint
     existing_ids = {
         (r.source, r.source_id)
-        for r in db.query(Opportunity.source, Opportunity.source_id)
-        .filter(Opportunity.user_id == user_id)
-        .all()
+        for r in db.query(Opportunity.source, Opportunity.source_id).all()
     }
 
     new_opps: list[RawOpportunity] = []
@@ -63,7 +61,13 @@ async def run_all_connectors(db: Session, *, user_id: UUID) -> int:
             raw_json=raw.raw_json,
         )
         db.add(opp)
-        db.flush()
+        try:
+            db.flush()
+        except Exception as e:
+            # Handle race condition with unique constraint
+            db.rollback()
+            logger.warning("Skipping duplicate opportunity %s/%s: %s", raw.source, raw.source_id, e)
+            continue
 
         # Embed description for vector search
         try:

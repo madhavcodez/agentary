@@ -1,13 +1,20 @@
 from __future__ import annotations
 
+import asyncio
+import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from ..deps import get_current_user, get_db
+from ..database import SessionLocal
 from ..models.match import Match
+
+logger = logging.getLogger(__name__)
+
+_scoring_status: dict[str, str | int] = {"status": "idle", "scored": 0}
 from ..models.pipeline import PipelineStage
 from ..models.user import User
 from ..schemas.match import MatchAction, MatchList, MatchResponse
@@ -148,11 +155,39 @@ def update_stage(
     return match
 
 
+def _run_scoring_background(user_id):
+    """Run match scoring in a background thread with its own DB session."""
+    from ..services.match_engine import score_all_matches
+
+    _scoring_status["status"] = "running"
+    db = SessionLocal()
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(score_all_matches(db, user_id=user_id))
+        loop.close()
+        _scoring_status["status"] = "completed"
+        _scoring_status["scored"] = result.get("scored", 0)
+        logger.info("Background scoring completed: %s", result)
+    except Exception as e:
+        _scoring_status["status"] = f"error: {e}"
+        logger.error("Background scoring failed: %s", e)
+    finally:
+        db.close()
+
+
 @router.post("/score")
 async def score_matches(
-    db: Session = Depends(get_db),
+    background_tasks: BackgroundTasks,
     user: User = Depends(get_current_user),
 ):
-    from ..services.match_engine import score_all_matches
-    result = await score_all_matches(db, user_id=user.id)
-    return result
+    if _scoring_status["status"] == "running":
+        return {"status": "already_running", "detail": "Scoring is already in progress"}
+
+    background_tasks.add_task(_run_scoring_background, user.id)
+    return {"status": "started", "detail": "Scoring started in background."}
+
+
+@router.get("/score/status")
+def scoring_status(user: User = Depends(get_current_user)):
+    return _scoring_status

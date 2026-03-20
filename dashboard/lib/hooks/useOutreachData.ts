@@ -8,8 +8,19 @@ import type {
   ResearchResult,
   AutopilotStatus,
 } from "@/lib/types";
+import { getToken } from "@/lib/auth";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+/** Build headers with auth token for all API requests. */
+function authHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const token = getToken();
+  const headers: Record<string, string> = { ...extra };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
+}
 
 export type Tab = "networking" | "outreach" | "conversations" | "ideas";
 
@@ -138,9 +149,9 @@ export function useOutreachData(
     setLoading(true);
     try {
       const [contactsRes, campaignsRes, matchesRes] = await Promise.all([
-        fetch(`${API}/contacts`).then((r) => r.json()),
-        fetch(`${API}/campaigns`).then((r) => r.json()),
-        fetch(`${API}/matches?limit=50`).then((r) => r.json()),
+        fetch(`${API}/contacts`, { headers: authHeaders() }).then((r) => r.json()),
+        fetch(`${API}/campaigns`, { headers: authHeaders() }).then((r) => r.json()),
+        fetch(`${API}/matches?limit=50`, { headers: authHeaders() }).then((r) => r.json()),
       ]);
       setContacts(contactsRes.items ?? []);
       setCampaigns(campaignsRes.items ?? []);
@@ -158,7 +169,7 @@ export function useOutreachData(
 
   const loadAutopilotStatus = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/autopilot/status`);
+      const res = await fetch(`${API}/autopilot/status`, { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
         setAutopilotStatus(data);
@@ -191,7 +202,7 @@ export function useOutreachData(
     try {
       const res = await fetch(`${API}/contacts`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(contactForm),
       });
       if (res.ok) {
@@ -213,7 +224,7 @@ export function useOutreachData(
 
   async function removeContact(id: string) {
     try {
-      await fetch(`${API}/contacts/${id}`, { method: "DELETE" });
+      await fetch(`${API}/contacts/${id}`, { method: "DELETE", headers: authHeaders() });
       setContacts((prev) => prev.filter((c) => c.id !== id));
       showToast("Contact removed", "info");
     } catch {
@@ -227,6 +238,7 @@ export function useOutreachData(
     try {
       const res = await fetch(`${API}/research/${matchId}`, {
         method: "POST",
+        headers: authHeaders(),
       });
       if (res.ok) {
         const data = await res.json();
@@ -246,7 +258,7 @@ export function useOutreachData(
   async function handleRunAutopilot() {
     setAutopilotRunning(true);
     try {
-      const res = await fetch(`${API}/autopilot/run`, { method: "POST" });
+      const res = await fetch(`${API}/autopilot/run`, { method: "POST", headers: authHeaders() });
       if (res.ok) {
         showToast("Autopilot cycle complete", "success");
         loadAutopilotStatus();
@@ -268,7 +280,7 @@ export function useOutreachData(
     try {
       const res = await fetch(`${API}/campaigns`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
           match_id: newCampaignMatch,
           contact_id: newCampaignContact,
@@ -297,6 +309,7 @@ export function useOutreachData(
     try {
       const res = await fetch(`${API}/campaigns/${campaignId}/call-now`, {
         method: "POST",
+        headers: authHeaders(),
       });
       if (res.ok) {
         const updated = await res.json();
@@ -323,6 +336,7 @@ export function useOutreachData(
     try {
       const res = await fetch(`${API}/campaigns/${campaignId}/send-email`, {
         method: "POST",
+        headers: authHeaders(),
       });
       if (res.ok) {
         const updated = await res.json();
@@ -351,7 +365,7 @@ export function useOutreachData(
     try {
       const res = await fetch(
         `${API}/campaigns/${campaignId}/outreach-package`,
-        { method: "POST" },
+        { method: "POST", headers: authHeaders() },
       );
       if (res.ok) {
         const updated = await res.json();

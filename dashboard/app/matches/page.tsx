@@ -2,8 +2,14 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { getToken } from "@/lib/auth";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+function authHeaders(): Record<string, string> {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 function scoreColor(score: number) {
   if (score >= 70) return "bg-emerald-600 text-emerald-100";
@@ -17,7 +23,7 @@ export default function MatchesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API}/matches?limit=50`)
+    fetch(`${API}/matches?limit=50`, { headers: authHeaders() })
       .then((r) => r.json())
       .then((d) => { setMatches(d.items || []); setTotal(d.total || 0); })
       .catch(() => {})

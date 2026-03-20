@@ -1,8 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getToken } from "@/lib/auth";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+function authHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const token = getToken();
+  const headers: Record<string, string> = { ...extra };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
+}
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<any>(null);
@@ -13,7 +21,7 @@ export default function ProfilePage() {
   const [scoutResult, setScoutResult] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${API}/profile`)
+    fetch(`${API}/profile`, { headers: authHeaders() })
       .then((r) => (r.ok ? r.json() : null))
       .then(setProfile)
       .catch(() => {})
@@ -26,7 +34,7 @@ export default function ProfilePage() {
     try {
       const res = await fetch(`${API}/profile/resume`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ resume_text: resume }),
       });
       if (res.ok) {
@@ -43,12 +51,13 @@ export default function ProfilePage() {
     setScouting(true);
     setScoutResult(null);
     try {
-      const res = await fetch(`${API}/ingest/run`, { method: "POST" });
+      const res = await fetch(`${API}/ingest/run`, { method: "POST", headers: authHeaders() });
       const data = await res.json();
-      setScoutResult(`Ingested ${data.opportunities_ingested || 0} new opportunities`);
-      // Auto-score after ingest
-      await fetch(`${API}/matches/score`, { method: "POST" });
-      setScoutResult((prev) => prev + " and scored all matches");
+      setScoutResult(`Ingest ${data.status || "started"}: ${data.detail || ""}`);
+      // Kick off scoring in background too
+      const scoreRes = await fetch(`${API}/matches/score`, { method: "POST", headers: authHeaders() });
+      const scoreData = await scoreRes.json();
+      setScoutResult((prev) => prev + `. Scoring: ${scoreData.status || "started"}`);
     } catch {
       setScoutResult("Scout failed — is the backend running?");
     } finally {
