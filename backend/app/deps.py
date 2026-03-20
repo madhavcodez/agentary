@@ -27,7 +27,7 @@ def get_current_user(
     if not user:
         raise HTTPException(
             status_code=401,
-            detail="User not found",
+            detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )
     return user

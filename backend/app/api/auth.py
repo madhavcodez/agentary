@@ -3,7 +3,11 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
+
+limiter = Limiter(key_func=get_remote_address)
 
 from ..auth import create_access_token, hash_password, verify_password
 from ..deps import get_current_user, get_db
@@ -21,7 +25,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
-def register(body: RegisterRequest, request: Request, db: Session = Depends(get_db)):
+@limiter.limit("5/hour")
+def register(request: Request, body: RegisterRequest, db: Session = Depends(get_db)):
     """Register a new user account.
 
     Validates email uniqueness, hashes password, creates user, and returns a JWT.
@@ -62,7 +67,8 @@ def register(body: RegisterRequest, request: Request, db: Session = Depends(get_
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(body: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
     """Authenticate a user and return a JWT.
 
     Uses generic error messages to avoid leaking whether an email exists.
@@ -72,8 +78,12 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
 
     user = db.query(User).filter(User.email == normalized_email, User.is_active == True).first()
 
-    # Generic error for both "user not found" and "wrong password"
-    if not user or not verify_password(body.password, user.password_hash):
+    # Always run bcrypt to prevent timing-based user enumeration
+    _DUMMY_HASH = "$2b$12$KIXq3oH9Y8eZnmC.qJsMleOlCPWP5P9hBzfFMD8r8Hq3fY9dqMWGu"
+    password_hash = user.password_hash if user else _DUMMY_HASH
+    is_valid = verify_password(body.password, password_hash)
+
+    if not user or not is_valid:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",

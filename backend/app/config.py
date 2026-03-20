@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,16 +24,39 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_client_secret: str = ""
     app_env: str = "dev"
-    secret_key: str = "dev-secret-key-change-in-production"
+    secret_key: str = ""
 
     # JWT / Auth
-    jwt_secret_key: str = ""  # REQUIRED — set via JWT_SECRET_KEY env var
+    jwt_secret_key: str = ""
     jwt_algorithm: str = "HS256"
     jwt_expire_days: int = 7
 
     # Email (Resend)
     resend_api_key: str = ""
     resend_from_email: str = ""
+    resend_webhook_secret: str = ""
+
+    # CORS
+    allowed_origins: str = "http://localhost:3000"
+
+    @field_validator("jwt_secret_key")
+    @classmethod
+    def jwt_secret_must_be_set(cls, v: str) -> str:
+        if not v or len(v) < 32:
+            raise ValueError(
+                "JWT_SECRET_KEY must be set and at least 32 characters. "
+                "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+            )
+        return v
+
+    @field_validator("secret_key")
+    @classmethod
+    def secret_key_must_be_set(cls, v: str) -> str:
+        if not v or v == "dev-secret-key-change-in-production" or len(v) < 32:
+            raise ValueError(
+                "SECRET_KEY must be set and at least 32 characters."
+            )
+        return v
 
 
 settings = Settings()
