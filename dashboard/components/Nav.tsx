@@ -21,7 +21,7 @@ export default function Nav() {
   }
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-gray-900 border-r border-gray-800 flex flex-col z-50">
+    <aside className="fixed left-0 top-0 h-screen w-64 bg-gray-950 border-r border-gray-800 flex flex-col z-50">
       <div className="px-6 py-6 border-b border-gray-800">
         <h1 className="text-xl font-bold tracking-tight">
           <span className="text-indigo-400">Secret</span>

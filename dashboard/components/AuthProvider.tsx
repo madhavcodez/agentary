@@ -12,8 +12,6 @@ import type { ReactNode } from "react";
 import {
   type AuthUser,
   getToken,
-  getUser,
-  isAuthenticated as checkAuth,
   logout as clearAuth,
   setUser as storeUser,
 } from "@/lib/auth";
