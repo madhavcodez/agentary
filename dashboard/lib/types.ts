@@ -1,216 +1,4 @@
-export interface Skill {
-  id: string | null;
-  name: string;
-  category: string | null;
-  years_experience: string | null;
-  proficiency: string | null;
-}
-
-export interface Experience {
-  id: string | null;
-  company: string;
-  title: string;
-  start_date: string | null;
-  end_date: string | null;
-  description: string | null;
-  evidence: string | null;
-}
-
-export interface Preference {
-  id: string | null;
-  key: string;
-  value: string;
-}
-
-export interface Profile {
-  id: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  location: string | null;
-  summary: string | null;
-  skills: Skill[];
-  experiences: Experience[];
-  preferences: Preference[];
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Opportunity {
-  id: string;
-  source: string;
-  source_id: string;
-  company: string;
-  title: string;
-  location: string | null;
-  description: string | null;
-  url: string | null;
-  created_at: string;
-}
-
-export interface OpportunityList {
-  items: Opportunity[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-export interface Match {
-  id: string;
-  opportunity_id: string;
-  profile_id: string;
-  hard_filter_pass: string;
-  semantic_score: number;
-  llm_score: number;
-  composite_score: number;
-  rationale: string | null;
-  status: string;
-  pipeline_stage: string;
-  stage_changed_at: string | null;
-  opportunity: Opportunity | null;
-  created_at: string;
-}
-
-export interface MatchList {
-  items: Match[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-export interface MatchAction {
-  status: string;
-}
-
-export interface PolicyCreate {
-  name: string;
-  rules_json: Record<string, unknown> | unknown[];
-  description: string | null;
-  is_active: boolean;
-}
-
-export interface PolicyUpdate {
-  name?: string | null;
-  rules_json?: Record<string, unknown> | unknown[] | null;
-  description?: string | null;
-  is_active?: boolean | null;
-}
-
-export interface Policy {
-  id: string;
-  name: string;
-  rules_json: Record<string, unknown> | unknown[];
-  is_active: boolean;
-  description: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Dossier {
-  id: string;
-  match_id: string;
-  content_md: string;
-  sections_json: Record<string, unknown> | unknown[] | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface HealthCheck {
-  status: string;
-  checks: Record<string, string>;
-}
-
-export interface ResumeUpload {
-  resume_text: string;
-}
-
-export interface Contact {
-  id: string;
-  company: string;
-  name: string | null;
-  title: string | null;
-  phone: string;
-  email: string | null;
-  source: string;
-  opportunity_id: string | null;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ContactList {
-  items: Contact[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-export interface Campaign {
-  id: string;
-  match_id: string;
-  contact_id: string;
-  status: string;
-  scheduled_at: string | null;
-  priority: number;
-  script_json: Record<string, unknown> | null;
-  max_attempts: number;
-  attempt_count: number;
-  contact: Contact | null;
-  match: MatchWithOpportunity | null;
-  email_draft: string | null;
-  email_subject: string | null;
-  linkedin_msg: string | null;
-  outreach_sequence: Record<string, unknown> | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface MatchWithOpportunity {
-  id: string;
-  composite_score: number;
-  rationale: string | null;
-  status: string;
-  opportunity: Opportunity | null;
-}
-
-export interface CampaignList {
-  items: Campaign[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-export interface CallLog {
-  id: string;
-  campaign_id: string;
-  twilio_call_sid: string | null;
-  started_at: string | null;
-  ended_at: string | null;
-  duration_sec: number | null;
-  outcome: string | null;
-  person_reached: string | null;
-  transcript: string | null;
-  summary: string | null;
-  recording_url: string | null;
-  next_steps: Record<string, unknown> | null;
-  created_at: string;
-}
-
-export interface ResearchResult {
-  id: string;
-  match_id: string;
-  company_intel: Record<string, unknown>;
-  contacts_found: Array<Record<string, unknown>>;
-  sources_used: string[];
-  quality_score: number;
-  researched_at: string;
-}
-
-export interface AutopilotStatus {
-  last_run: string | null;
-  last_result: Record<string, unknown> | null;
-  next_scheduled: string | null;
-}
+// ── Auth ─────────────────────────────────────────────────────────────
 
 export interface AuthUser {
   id: string;
@@ -226,123 +14,101 @@ export interface TokenResponse {
   user: AuthUser;
 }
 
-// ── Analytics ────────────────────────────────────────────────────────
-
-export interface PipelineSummary {
-  lead: number;
-  contacted: number;
-  aware: number;
-  engaged: number;
-  meeting: number;
-  closed_won: number;
-  closed_lost: number;
-  paused: number;
+export interface HealthCheck {
+  status: string;
+  checks: Record<string, string>;
 }
 
-export interface FunnelStage {
-  stage: string;
-  count: number;
-  conversion_rate: number;
-}
+// ── Projects ────────────────────────────────────────────────────────
 
-export interface FunnelData {
-  days: number;
-  total_matches: number;
-  stages: FunnelStage[];
-  closed_lost: number;
-  paused: number;
-}
-
-export interface ChannelPerformance {
-  days: number;
-  email: {
-    sent: number;
-    opened: number;
-    replied: number;
-    open_rate: number;
-    reply_rate: number;
-  };
-  call: {
-    attempted: number;
-    connected: number;
-    rate: number;
-  };
-}
-
-export interface TimelineEntry {
-  date: string;
-  matches_found: number;
-  emails_sent: number;
-  calls_made: number;
-}
-
-export interface ActivityTimeline {
-  days: number;
-  granularity: string;
-  timeline: TimelineEntry[];
-}
-
-export interface ScoreBucket {
-  bucket: string;
-  count: number;
-}
-
-export interface ScoreDistribution {
-  buckets: ScoreBucket[];
-}
-
-// ── Scout ───────────────────────────────────────────────────────────
-
-export type ScoutStatus = "idle" | "running" | "paused" | "complete" | "error" | "cancelled";
-export type ScoutMode = "rank_all" | "strict_filter";
-
-export interface ScoutJob {
+export interface Project {
   id: string;
-  match_id: string;
-  title: string;
-  company: string;
-  location: string;
-  score: number;
-  rationale: string;
-}
-
-export interface ScoutSourceEvent {
-  source: string;
-  status: "fetching" | "done" | "error";
-  jobs_found?: number;
-  error?: string;
-}
-
-export interface ScoutPhaseEvent {
-  phase: string;
-  status: "started" | "done";
-  total_raw?: number;
-  new_jobs?: number;
-  stored?: number;
-  mode?: string;
-  to_score?: number;
-  total?: number;
-  scored?: number;
-}
-
-export interface ScoutFilterEvent {
-  skill: string;
-  matches: number;
-}
-
-export interface ScoutPhaseState {
+  user_id: string;
   name: string;
-  label: string;
-  status: "pending" | "running" | "done" | "error";
-  events: ScoutLogEntry[];
+  description: string | null;
+  status: "active" | "archived" | "completed";
+  project_type: string;
+  domain_context: string | null;
+  total_missions: number;
+  total_findings: number;
+  total_reports_generated: number;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface ScoutLogEntry {
+export interface ProjectList {
+  items: Project[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+// ── Missions ────────────────────────────────────────────────────────
+
+export interface Mission {
   id: string;
-  timestamp: number;
-  type: string;
-  message: string;
-  detail?: string;
+  project_id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  objective: string | null;
+  status: "draft" | "queued" | "running" | "paused" | "completed" | "failed";
+  mission_type: string;
+  instructions: string | null;
+  parameters: Record<string, unknown> | null;
+  findings_count: number;
+  confidence_score: number | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MissionList {
+  items: Mission[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+// ── Expert Agents ───────────────────────────────────────────────────
+
+export interface ExpertAgent {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  specialty: string;
+  icon: string | null;
+  color: string | null;
+  is_system: boolean;
+  is_active: boolean;
+  created_at: string;
+}
+
+// ── Findings ────────────────────────────────────────────────────────
+
+export interface Finding {
+  id: string;
+  mission_id: string;
+  project_id: string | null;
+  expert_agent_id: string | null;
+  finding_type: string;
+  title: string;
+  content: string | null;
+  structured_data: Record<string, unknown> | null;
+  source_url: string | null;
+  source_name: string | null;
+  confidence: number | null;
+  tags: string[];
+  created_at: string;
+}
+
+export interface FindingList {
+  items: Finding[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 // ── Reports ──────────────────────────────────────────────────────────
@@ -613,4 +379,91 @@ export interface WorkflowTemplate {
   install_count: number;
   created_at: string;
   updated_at: string;
+}
+
+// ── Research Engine Types ─────────────────────────────────────────────
+
+export interface MissionFinding {
+  id: string;
+  category: string;
+  title: string;
+  content: string;
+  structured_data: Record<string, unknown> | null;
+  source_type: string | null;
+  source_url: string | null;
+  source_name: string | null;
+  confidence: number;
+  verified: boolean;
+  tags: string[];
+  created_at: string | null;
+}
+
+export interface MissionActivity {
+  id: string;
+  activity_type: string;
+  content: string | null;
+  metadata: Record<string, unknown> | null;
+  confidence: number | null;
+  created_at: string | null;
+}
+
+export interface CrewAgent {
+  agent_id: string;
+  slug: string;
+  name: string;
+  role: string;
+  icon: string | null;
+}
+
+export interface MissionLiveStatus {
+  mission_id: string;
+  status: string;
+  findings_count: number;
+  confidence_score: number | null;
+  crew: { agents: CrewAgent[] } | null;
+  activities: MissionActivity[];
+}
+
+export interface ExpertAgentData {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  specialty: string | null;
+  system_prompt: string | null;
+  tools: string[];
+  model_config: Record<string, unknown>;
+  icon: string | null;
+  color: string | null;
+  is_system: boolean;
+  is_active: boolean;
+  created_at: string | null;
+}
+
+export interface CrewRunData {
+  id: string;
+  status: string;
+  trigger_type: string;
+  iteration: number;
+  started_at: string | null;
+  completed_at: string | null;
+  duration_seconds: number | null;
+  summary: string | null;
+  metrics: Record<string, unknown> | null;
+  created_at: string | null;
+}
+
+export interface CrewTaskLive {
+  task_id: string;
+  expert_name: string;
+  expert_icon: string;
+  status: string;
+  findings_produced: number;
+}
+
+export interface CrewRunLiveData {
+  run_status: string;
+  tasks: CrewTaskLive[];
+  activities: MissionActivity[];
+  has_more: boolean;
 }

@@ -645,11 +645,11 @@ export function fetchWorkflows(params: {
   if (params.status) sp.set("status", params.status);
   if (params.project_id) sp.set("project_id", params.project_id);
   const qs = sp.toString();
-  return request<WorkflowListData>(`/workflows${qs ? `?${qs}` : ""}`);
+  return request<WorkflowListData>(`/api/workflows${qs ? `?${qs}` : ""}`);
 }
 
 export function fetchWorkflow(id: string): Promise<WorkflowData> {
-  return request<WorkflowData>(`/workflows/${id}`);
+  return request<WorkflowData>(`/api/workflows/${id}`);
 }
 
 export function createWorkflow(data: {
@@ -681,26 +681,26 @@ export function updateWorkflow(
     trigger_config?: Record<string, unknown>;
   },
 ): Promise<WorkflowData> {
-  return request<WorkflowData>(`/workflows/${id}`, {
+  return request<WorkflowData>(`/api/workflows/${id}`, {
     method: "PUT",
     body: JSON.stringify(data),
   });
 }
 
 export function deleteWorkflow(id: string): Promise<{ status: string }> {
-  return request<{ status: string }>(`/workflows/${id}`, { method: "DELETE" });
+  return request<{ status: string }>(`/api/workflows/${id}`, { method: "DELETE" });
 }
 
 export function activateWorkflow(id: string): Promise<WorkflowData> {
-  return request<WorkflowData>(`/workflows/${id}/activate`, { method: "POST" });
+  return request<WorkflowData>(`/api/workflows/${id}/activate`, { method: "POST" });
 }
 
 export function pauseWorkflow(id: string): Promise<WorkflowData> {
-  return request<WorkflowData>(`/workflows/${id}/pause`, { method: "POST" });
+  return request<WorkflowData>(`/api/workflows/${id}/pause`, { method: "POST" });
 }
 
 export function triggerWorkflowRun(id: string): Promise<WFRun> {
-  return request<WFRun>(`/workflows/${id}/run`, { method: "POST" });
+  return request<WFRun>(`/api/workflows/${id}/run`, { method: "POST" });
 }
 
 export function fetchWorkflowRuns(
@@ -711,15 +711,15 @@ export function fetchWorkflowRuns(
   if (params?.page) sp.set("page", String(params.page));
   if (params?.limit) sp.set("limit", String(params.limit));
   const qs = sp.toString();
-  return request<WFRunList>(`/workflows/${workflowId}/runs${qs ? `?${qs}` : ""}`);
+  return request<WFRunList>(`/api/workflows/${workflowId}/runs${qs ? `?${qs}` : ""}`);
 }
 
 export function fetchWorkflowRun(workflowId: string, runId: string): Promise<WFRun> {
-  return request<WFRun>(`/workflows/${workflowId}/runs/${runId}`);
+  return request<WFRun>(`/api/workflows/${workflowId}/runs/${runId}`);
 }
 
 export function validateWorkflowApi(id: string): Promise<{ valid: boolean; errors: string[] }> {
-  return request<{ valid: boolean; errors: string[] }>(`/workflows/${id}/validate`, {
+  return request<{ valid: boolean; errors: string[] }>(`/api/workflows/${id}/validate`, {
     method: "POST",
   });
 }
@@ -748,9 +748,85 @@ export function createWorkflowFromDescription(data: {
 
 export function fetchWorkflowTemplates(category?: string): Promise<WFTemplate[]> {
   const qs = category ? `?category=${category}` : "";
-  return request<WFTemplate[]>(`/workflow-templates${qs}`);
+  return request<WFTemplate[]>(`/api/workflow-templates${qs}`);
 }
 
 export function fetchWorkflowTemplate(id: string): Promise<WFTemplate> {
-  return request<WFTemplate>(`/workflow-templates/${id}`);
+  return request<WFTemplate>(`/api/workflow-templates/${id}`);
 }
+
+// ── Research Engine: Missions ─────────────────────────────────────────
+
+export function startMission(missionId: string): Promise<{
+  mission_id: string;
+  crew_id: string;
+  run_id: string;
+  status: string;
+  message: string;
+}> {
+  return request(`/api/missions/${missionId}/start`, { method: "POST" });
+}
+
+export function stopMission(missionId: string): Promise<{ status: string; message: string }> {
+  return request(`/api/missions/${missionId}/stop`, { method: "POST" });
+}
+
+export function fetchMissionFindings(
+  missionId: string,
+  params?: { category?: string; confidence_min?: number; source_type?: string },
+): Promise<{ mission_id: string; total: number; items: MissionFinding[] }> {
+  const sp = new URLSearchParams();
+  if (params?.category) sp.set("category", params.category);
+  if (params?.confidence_min !== undefined) sp.set("confidence_min", String(params.confidence_min));
+  if (params?.source_type) sp.set("source_type", params.source_type);
+  const qs = sp.toString();
+  return request(`/api/missions/${missionId}/findings${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchMissionStatus(missionId: string): Promise<MissionLiveStatus> {
+  return request(`/api/missions/${missionId}/status`);
+}
+
+export function rerunMission(missionId: string): Promise<{
+  mission_id: string;
+  run_id: string;
+  status: string;
+  message: string;
+}> {
+  return request(`/api/missions/${missionId}/rerun`, { method: "POST" });
+}
+
+// ── Research Engine: Experts ──────────────────────────────────────────
+
+export function fetchExperts(): Promise<{ total: number; items: ExpertAgentData[] }> {
+  return request("/api/experts/");
+}
+
+export function seedExperts(): Promise<{ seeded: number; experts: Array<{ slug: string; name: string }> }> {
+  return request("/api/experts/seed", { method: "POST" });
+}
+
+// ── Research Engine: Crews ───────────────────────────────────────────
+
+export function fetchCrewRuns(crewId: string): Promise<{ crew_id: string; runs: CrewRunData[] }> {
+  return request(`/api/crews/${crewId}/runs`);
+}
+
+export function fetchCrewRunLive(
+  crewId: string,
+  runId: string,
+  after?: string,
+): Promise<CrewRunLiveData> {
+  const qs = after ? `?after=${encodeURIComponent(after)}` : "";
+  return request(`/api/crews/${crewId}/runs/${runId}/live${qs}`);
+}
+
+// ── Research Engine Types (inline) ────────────────────────────────────
+
+import type {
+  MissionFinding,
+  MissionLiveStatus,
+  ExpertAgentData,
+  CrewRunData,
+  CrewRunLiveData,
+} from "./types";

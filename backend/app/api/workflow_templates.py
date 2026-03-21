@@ -11,7 +11,7 @@ from ..models.user import User
 from ..models.workflow_template import WorkflowTemplate
 from ..schemas.workflow import WorkflowTemplateCreate, WorkflowTemplateResponse
 
-router = APIRouter(prefix="/workflow-templates", tags=["workflow-templates"])
+router = APIRouter(prefix="/api/workflow-templates", tags=["workflow-templates"])
 
 
 @router.get("", response_model=list[WorkflowTemplateResponse])
