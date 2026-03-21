@@ -4,6 +4,7 @@ from .policy import Policy
 from .project import Project, ProjectStatus, ProjectType
 from .mission import Mission, MissionStatus, MissionType
 from .expert_agent import ExpertAgent, AgentSpecialty
+from .crew_run import CrewRun
 from .agent_crew import AgentCrew, AgentActivity, CoordinationStrategy, ActivityType
 from .mission_run import MissionRun, MissionTask, RunStatus, TriggerType, TaskType, TaskStatus
 from .finding import Finding, FindingType, SourceType
@@ -43,5 +44,6 @@ __all__ = [
     "DataSource", "SourceRequestLog",
     "AlertRecord", "AlertType", "AlertSeverityLevel",
     "WorkflowTemplate",
+    "CrewRun",
     "CrewTask", "CrewTaskStatus",
 ]

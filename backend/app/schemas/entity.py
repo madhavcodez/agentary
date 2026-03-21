@@ -30,6 +30,12 @@ class EntityUpdate(BaseModel):
     is_verified: bool | None = None
 
 
+class EntityMergeRequest(BaseModel):
+    source_entity_id: UUID
+    target_entity_id: UUID
+    strategy: str = "keep_target"  # keep_target, keep_source, merge_all
+
+
 class EntityResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
