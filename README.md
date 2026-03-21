@@ -1,187 +1,236 @@
-# Agentary
+<div align="center">
 
-**Autonomous AI Research & Intelligence Platform**
+# AGENTARY
 
-Deploy expert AI agent crews that research any domain, make voice calls, analyze data, and generate polished reports — automatically.
+### Autonomous AI Research & Intelligence Platform
 
-## What It Does
+[![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org)
+[![Next.js](https://img.shields.io/badge/Next.js-14-000000?style=flat-square&logo=next.js)](https://nextjs.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Gemini](https://img.shields.io/badge/Gemini_2.5-Flash-4285F4?style=flat-square&logo=google&logoColor=white)](https://ai.google.dev)
+[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
-Agentary assembles teams of specialized AI agents to execute research missions. You define what you want to know, and the platform:
+**Deploy expert AI agent crews that research any domain, make voice calls, analyze data, and generate polished reports — automatically.**
 
-1. **Selects experts** — Gemini auto-picks the best agents for your mission (Web Researcher, Market Analyst, Data Analyst, Property Researcher, Local Scout, Voice Caller)
-2. **Plans tasks** — AI generates a research plan with parallel and sequential phases
-3. **Executes research** — Agents run simultaneously, using tools (web search, neural search, web scraping, data analysis, voice calls, chart generation)
-4. **Synthesizes findings** — A Synthesizer agent resolves contradictions, identifies gaps, and ranks insights
-5. **Writes reports** — A Report Writer generates structured documents with charts, citations, and executive summaries
-6. **Delivers results** — Real-time activity feed, exportable findings (CSV/JSON/Excel), and shareable PDF reports
+[Getting Started](#quick-start) | [Architecture](#architecture) | [Agents](#expert-agents) | [Tools](#tools) | [API](#api-endpoints)
+
+---
+
+</div>
+
+## How It Works
+
+You define a research mission. Agentary does the rest:
+
+```
+ You: "Research the AI agents market and competitive landscape"
+                              |
+                              v
+                  +------ AGENTARY ------+
+                  |                      |
+           Gemini selects 5 experts      |
+           Gemini plans 10+ tasks        |
+                  |                      |
+     +------------+------------+         |
+     |            |            |         |
+  Web          Market        Data        |
+  Researcher   Analyst       Analyst     |
+  (3 tasks)    (3 tasks)    (2 tasks)    |
+     |            |            |         |
+     +-----+------+------+----+         |
+           |              |              |
+      Synthesizer    Report Writer       |
+      (1 task)       (1 task)            |
+           |              |              |
+           v              v              |
+     Ranked findings  PDF report         |
+     with confidence  with charts        |
+     scores & sources & citations        |
+                  |                      |
+                  +----------------------+
+                              |
+                              v
+         Real-time activity feed + exportable data
+```
+
+## What You Get
+
+| Feature | Description |
+|---------|-------------|
+| **Live Activity Feed** | Watch agents think, search, scrape, and analyze in real-time |
+| **Structured Findings** | Every fact gets a confidence score, source URL, and category |
+| **Auto-Generated Reports** | Executive summary, sections, charts, citations, methodology |
+| **Multi-Format Export** | CSV, JSON, Excel, PDF, Markdown, shareable link |
+| **Visual Workflows** | Drag-and-drop DAG editor for reusable research pipelines |
+| **Voice Extraction** | Phone-call campaigns to gather data from businesses directly |
+| **Automated Monitors** | Set up watchers that detect changes and send alerts |
+| **10 Data Connectors** | Google Places, Yelp, Crunchbase, Zillow, Exa, web scraping, and more |
+
+---
 
 ## Architecture
 
 ```
-+-----------------------------------------------------------------+
-|                    Next.js Dashboard (Port 3000)                |
-|  Home | Projects | Missions | Workflows | Voice | Reports      |
-+-----------------------------------------------------------------+
-|                   FastAPI Backend (Port 8000)                   |
-|  34 API Routes | JWT Auth | WebSocket Live Feed | CircuitBreak |
-+----------+----------+----------+----------+--------------------+
-| Crew     | Research | Voice    | Workflow | Report             |
-| Runner   | Engine   | Pipeline | Engine   | Generator          |
-+----------+----------+----------+----------+--------------------+
-|              Gemini 2.5 Flash (LLM + Tool Calling)             |
-+----------+----------+----------+----------+--------------------+
-|PostgreSQL|  Redis   |  Qdrant  |  Celery  | APScheduler        |
-| (Data)   | (Cache)  | (Vector) | (Queue)  | (Cron)             |
-+----------+----------+----------+----------+--------------------+
++-------------------------------------------------------------------+
+|                     DASHBOARD (Next.js 14)                        |
+|  21 pages  |  23 components  |  ReactFlow  |  Chart.js  |  WS    |
++-------------------------------------------------------------------+
+                               |
+                          REST + WebSocket
+                               |
++-------------------------------------------------------------------+
+|                      API LAYER (FastAPI)                          |
+|  34 routers  |  JWT auth  |  rate limiting  |  circuit breakers   |
++-----------+----------+-----------+-----------+--------------------+
+|  Crew     | Workflow | Voice     | Report    | Monitor            |
+|  Runner   | Engine   | Pipeline  | Generator | Service            |
++-----------+----------+-----------+-----------+--------------------+
+|                    GEMINI 2.5 FLASH                               |
+|  tool-calling  |  structured output  |  embeddings  |  grounding  |
++-----------+----------+-----------+-----------+--------------------+
+| PostgreSQL| Redis    | Qdrant    | Celery    | APScheduler        |
+| 36 models | pub/sub  | vectors   | workers   | cron jobs          |
++-----------+----------+-----------+-----------+--------------------+
 ```
 
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| **Frontend** | Next.js 14, React 18, TypeScript, Tailwind CSS, ReactFlow |
-| **Backend** | FastAPI, SQLAlchemy, Pydantic, Python 3.13 |
-| **AI/LLM** | Google Gemini 2.5 Flash (tool-calling, structured output, embeddings) |
-| **Voice** | Pipecat + Gemini Live + Twilio (outbound calling) |
-| **Search** | Exa API (neural search), Gemini grounding |
-| **Database** | PostgreSQL 16, Redis 7, Qdrant (vector) |
-| **Task Queue** | Celery + Redis broker (with inline fallback) |
-| **Infrastructure** | Docker Compose (8 services), Nginx reverse proxy |
+---
 
 ## Expert Agents
 
-| Agent | Specialty | Tools |
-|-------|-----------|-------|
-| Web Researcher | Systematic web research with source citation | gemini_search, exa_search, web_scraper |
-| Data Analyst | Statistical analysis and data visualization | python_executor, chart_generator |
-| Market Analyst | Market sizing, competitive analysis, SWOT | gemini_search, exa_search, web_scraper, python_executor |
-| Property Researcher | Real estate data, comps, market trends | gemini_search, exa_search, web_scraper |
-| Local Scout | Local business intelligence, area profiles | gemini_search, exa_search, web_scraper, voice_caller |
-| Voice Caller | Phone-based data extraction | voice_caller |
-| Synthesizer | Cross-reference findings, resolve contradictions | (LLM only) |
-| Report Writer | Generate polished reports with charts | chart_generator |
+Every mission gets a custom crew. Gemini picks the best team for the job.
+
+| | Agent | What It Does | Tools |
+|---|-------|-------------|-------|
+| :mag: | **Web Researcher** | Systematic search with 2+ source corroboration | `gemini_search` `exa_search` `web_scraper` |
+| :bar_chart: | **Data Analyst** | Statistical analysis, trend detection, visualizations | `python_executor` `chart_generator` |
+| :chart_with_upwards_trend: | **Market Analyst** | Market sizing, SWOT, competitive landscape, pricing | `gemini_search` `exa_search` `web_scraper` `python_executor` |
+| :house: | **Property Researcher** | Real estate comps, valuations, neighborhood profiles | `gemini_search` `exa_search` `web_scraper` |
+| :round_pushpin: | **Local Scout** | Local business intel, reviews, area demographics | `gemini_search` `exa_search` `web_scraper` `voice_caller` |
+| :telephone_receiver: | **Voice Caller** | Phone-based data extraction from businesses | `voice_caller` |
+| :brain: | **Synthesizer** | Cross-references findings, resolves contradictions | LLM reasoning only |
+| :memo: | **Report Writer** | Executive summaries, sections, charts, citations | `chart_generator` |
+
+Each agent has a detailed system prompt with methodology, output format, and guardrails. Agents use an **agentic tool-calling loop** — up to 6 iterations of Gemini function-calling per task.
+
+---
 
 ## Tools
 
-- **gemini_search** — Broad web search using Gemini's grounding
-- **exa_search** — Neural/semantic search via Exa API
-- **web_scraper** — Full-page scraping with BeautifulSoup (text, tables, links)
-- **python_executor** — Sandboxed Python execution for data analysis
-- **voice_caller** — Outbound voice calls via Twilio + Pipecat
-- **chart_generator** — Chart.js config generation (line, bar, pie, scatter, radar)
+| Tool | Input | Output | Use Case |
+|------|-------|--------|----------|
+| `gemini_search` | query + focus | search results | Broad web overview |
+| `exa_search` | query + type (neural/keyword) | ranked results with snippets | Deep semantic search |
+| `web_scraper` | URL + extract mode | text, tables, links | Page content extraction |
+| `python_executor` | Python code (sandboxed) | execution output | Data analysis, statistics |
+| `voice_caller` | phone + questions | transcript + extracted data | Direct business outreach |
+| `chart_generator` | chart type + data | Chart.js config | Data visualization |
 
-## Mission Execution Flow
+---
 
-```
-User creates mission
-        |
-        v
-Gemini selects best experts (3-5 agents)
-        |
-        v
-Gemini plans research tasks
-        |
-        +-- PARALLEL PHASE --------------------------------+
-        |   Web Researcher: 2-3 search tasks               |
-        |   Market Analyst: trend + entity tasks            |
-        |   Data Analyst: analysis tasks                    |
-        |   (each agent uses agentic tool-calling           |
-        |    loop: up to 6 iterations with Gemini)          |
-        +--------------------------------------------------+
-        |
-        v  All findings collected
-        |
-        +-- SYNTHESIS PHASE
-        |   Synthesizer: de-duplicate, cross-reference,
-        |   identify gaps, rank insights
-        |
-        +-- REPORT PHASE
-        |   Report Writer: executive summary, sections,
-        |   charts, citations, methodology
-        |
-        v
-Mission complete -- findings + report available
-```
+## Dashboard Pages
 
-## Pages
+| Page | What's There |
+|------|-------------|
+| **Home** `/` | 6 project templates, one-click creation |
+| **Projects** `/projects` | Card grid with type badges, mission/finding counts |
+| **Project Detail** `/projects/[id]` | Missions list, findings preview, inline mission creation |
+| **Mission Live** `/missions/[id]` | Real-time activity feed, findings cards, structured data table |
+| **Command Center** `/dashboard` | Live events, active missions, monitors panel, stats |
+| **Workflow Editor** `/workflows/[id]` | ReactFlow canvas, node palette, properties panel |
+| **Reports** `/reports/[id]` | Full report with TOC, inline charts, PDF download, sharing |
+| **Monitors** `/monitors` | Change detection with cron schedules, alert history |
+| **Voice** `/voice` | Extraction campaigns with progress tracking |
+| **Settings** `/settings` | Infrastructure health, circuit breaker status |
 
-| Route | Purpose |
-|-------|---------|
-| `/` | Project creation wizard with 6 research templates |
-| `/projects` | Project list with type badges and stats |
-| `/projects/[id]` | Project detail: missions, findings, stats |
-| `/missions` | All missions with status filters |
-| `/missions/[id]` | Live mission detail: activity feed, findings, structured data |
-| `/dashboard` | Command center: live events, active missions, monitors |
-| `/workflows` | Visual workflow editor (ReactFlow) |
-| `/workflows/[id]` | Workflow DAG editor with node palette |
-| `/reports` | Report list with PDF export and sharing |
-| `/reports/[id]` | Full report viewer with TOC and charts |
-| `/monitors` | Automated change detection monitors |
-| `/voice` | Voice extraction campaigns |
-| `/analytics` | Platform-wide statistics |
-| `/settings` | Infrastructure health and integration status |
+---
 
-## Data Model
-
-**Core:** Project > Mission > CrewRun > CrewTask > Finding
-
-**36 models** including: User, Project, Mission, AgentCrew, ExpertAgent, CrewTask, Finding, Report, Workflow, WorkflowRun, WorkflowTemplate, Monitor, Alert, VoiceExtraction, CallRecord, Entity, DataSource, KnowledgeBase, and more.
-
-## Setup
+## Quick Start
 
 ### Prerequisites
 - Python 3.13+, Node.js 18+, Docker
 
-### Quick Start
-
 ```bash
-# 1. Clone
-git clone https://github.com/madhavcodez/agentary.git
-cd agentary
+# Clone
+git clone https://github.com/madhavcodez/agentary.git && cd agentary
 
-# 2. Start infrastructure
+# Infrastructure
 docker compose up -d db redis qdrant
 
-# 3. Backend
+# Backend
 cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp ../.env.example .env  # Add your GEMINI_API_KEY
+cp ../.env.example .env   # set GEMINI_API_KEY
 alembic upgrade head
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-# 4. Frontend (new terminal)
-cd dashboard
-npm install
-npm run dev
-
-# 5. Open http://localhost:3000
+# Frontend (new terminal)
+cd dashboard && npm install && npm run dev
 ```
 
-### Environment Variables
+Open **http://localhost:3000** — pick a research type, name your project, create a mission, hit Start.
 
-| Variable | Required | Purpose |
-|----------|----------|---------|
-| `GEMINI_API_KEY` | Yes | Google Gemini API key |
-| `DATABASE_URL` | No | PostgreSQL (default: localhost) |
-| `REDIS_URL` | No | Redis (default: localhost) |
-| `EXA_API_KEY` | No | Exa neural search |
-| `TWILIO_*` | No | Voice calling (SID, token, number) |
-| `RESEND_API_KEY` | No | Email alerts |
+### Environment
 
-## Development
+| Variable | Required | What For |
+|----------|:--------:|----------|
+| `GEMINI_API_KEY` | **Yes** | LLM, tool-calling, embeddings, structured output |
+| `DATABASE_URL` | | PostgreSQL connection (default: localhost) |
+| `REDIS_URL` | | Redis for cache, pub/sub, queues (default: localhost) |
+| `EXA_API_KEY` | | Neural web search via Exa |
+| `TWILIO_ACCOUNT_SID` | | Voice calling |
+| `TWILIO_AUTH_TOKEN` | | Voice calling |
+| `TWILIO_FROM_NUMBER` | | Voice calling |
+| `RESEND_API_KEY` | | Email alerts |
 
-```bash
-# Run backend tests (552 passing)
-cd backend && .venv/bin/python -m pytest tests/ -q
+---
 
-# Build frontend
-cd dashboard && npm run build
+## API Endpoints
 
-# Full Docker deployment
-docker compose up --build
+**34 routers, 100+ endpoints.** Key ones:
+
+| Method | Endpoint | What It Does |
+|--------|----------|-------------|
+| `POST` | `/api/missions` | Create a mission |
+| `POST` | `/api/missions/{id}/start` | Assemble crew + execute |
+| `GET` | `/api/missions/{id}/status` | Live status + activity feed |
+| `GET` | `/api/missions/{id}/findings` | Structured findings with filters |
+| `POST` | `/api/workflows` | Create workflow |
+| `POST` | `/api/workflows/{id}/run` | Trigger workflow execution |
+| `POST` | `/reports/` | Generate report from mission |
+| `GET` | `/reports/{id}/pdf` | Download PDF |
+| `POST` | `/reports/{id}/share` | Create shareable link |
+| `WS` | `/ws/live-feed` | Real-time event stream |
+| `GET` | `/health` | Postgres, Redis, Qdrant, circuit breakers |
+
+---
+
+## Data Model
+
 ```
+Project
+  |-- Mission
+  |     |-- AgentCrew (auto-assembled)
+  |     |     |-- ExpertAgent (Web Researcher, Market Analyst, ...)
+  |     |-- CrewRun
+  |     |     |-- CrewTask (per-expert, per-phase)
+  |     |-- Finding (structured data points with confidence)
+  |     |-- Report (generated document with charts)
+  |
+  |-- Workflow (visual DAG)
+  |     |-- WorkflowRun
+  |
+  |-- Monitor (automated watcher)
+  |     |-- Alert
+  |
+  |-- VoiceExtraction
+        |-- CallRecord
+```
+
+**36 SQLAlchemy models** across missions, agents, findings, reports, workflows, monitors, voice, entities, data sources, and more.
+
+---
 
 ## Project Structure
 
@@ -189,26 +238,46 @@ docker compose up --build
 agentary/
 +-- backend/
 |   +-- app/
-|   |   +-- api/              # 34 FastAPI routers
-|   |   +-- models/           # 36 SQLAlchemy models
+|   |   +-- api/                # 34 FastAPI routers
+|   |   +-- models/             # 36 SQLAlchemy models
 |   |   +-- services/
-|   |   |   +-- crews/        # CrewRunner, tools, events, expert registry
-|   |   |   +-- research/     # Research engine
-|   |   |   +-- reports/      # Report generator, PDF export, charts
-|   |   |   +-- workflow/     # Workflow executor
-|   |   |   +-- voice/        # Voice pipeline (Pipecat + Twilio)
-|   |   |   +-- data_sources/ # 10 data connectors
-|   |   +-- core/             # WebSocket manager, Redis bridge
-|   |   +-- tasks/            # Celery background tasks
-|   +-- tests/                # 556 tests
+|   |   |   +-- crews/          # CrewRunner, tool registry, events, expert registry
+|   |   |   +-- reports/        # Report generator, PDF export, chart engine
+|   |   |   +-- workflow/       # Workflow executor, NL builder
+|   |   |   +-- voice/          # Pipecat + Twilio voice pipeline
+|   |   |   +-- data_sources/   # 10 external connectors
+|   |   +-- core/               # WebSocket manager, Redis pub/sub bridge
+|   |   +-- tasks/              # Celery background tasks
+|   +-- tests/                  # 556 tests
 +-- dashboard/
-|   +-- app/                  # 21 Next.js pages
-|   +-- components/           # 23 React components
-|   +-- lib/                  # API client, types, hooks, auth
-+-- docker-compose.yml        # 8-service orchestration
-+-- nginx.conf                # Reverse proxy routing
+|   +-- app/                    # 21 Next.js pages
+|   +-- components/             # 23 React components
+|   +-- lib/                    # API client, types, hooks, auth
++-- docker-compose.yml          # 8-service orchestration
++-- nginx.conf                  # Reverse proxy
 ```
 
-## License
+---
 
-MIT
+## Dev
+
+```bash
+# Tests (556 passing)
+cd backend && .venv/bin/python -m pytest tests/ -q
+
+# Frontend build
+cd dashboard && npm run build
+
+# Docker (everything)
+docker compose up --build
+```
+
+---
+
+<div align="center">
+
+**MIT License**
+
+Built by [Madhav Chauhan](https://github.com/madhavcodez)
+
+</div>
