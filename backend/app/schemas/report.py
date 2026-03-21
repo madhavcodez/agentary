@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ── Request schemas ──────────────────────────────────────────────────
@@ -27,6 +27,8 @@ class RegenerateSection(BaseModel):
 # ── Response schemas ─────────────────────────────────────────────────
 
 class ReportSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     user_id: str
     project_id: str | None = None
@@ -39,11 +41,10 @@ class ReportSummary(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
-
 
 class ReportFull(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     user_id: str
     project_id: str | None = None
@@ -67,9 +68,6 @@ class ReportFull(BaseModel):
     pdf_url: str | None = None
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class ReportList(BaseModel):

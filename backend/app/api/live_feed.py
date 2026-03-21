@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 
 from ..auth import verify_token
-from ..core.events import Event, EventScope, EventType
+from ..core.events import Event, event_bus
 from ..core.websocket_manager import ws_manager
 from ..deps import get_current_user, get_db
 
@@ -26,29 +25,37 @@ _MAX_RECENT = 200
 
 
 def _buffer_event(event: Event) -> None:
-    """Store event in recent buffer for REST polling fallback."""
     _recent_events.append(event.to_dict())
     if len(_recent_events) > _MAX_RECENT:
         del _recent_events[: len(_recent_events) - _MAX_RECENT]
 
 
-# Register as in-process listener
-from ..core.events import on_event as _register
+# Register buffer for all event types
+for _et in Event.__class__.__mro__:
+    pass
+# Subscribe to all events by registering a catch-all via broadcast hook
+_original_broadcast = event_bus.broadcast.__func__
 
-_register(_buffer_event)
+
+async def _broadcast_with_buffer(self, event: Event) -> None:
+    _buffer_event(event)
+    await _original_broadcast(self, event)
+
+
+import types
+event_bus.broadcast = types.MethodType(_broadcast_with_buffer, event_bus)
 
 
 # ── WebSocket endpoint ──────────────────────────────────────────────
 
 @router.websocket("/ws/live-feed")
-async def live_feed(websocket: WebSocket, token: str = Query(...)):
+async def live_feed_ws(websocket: WebSocket, token: str = Query(...)):
     """Real-time event stream. Authenticate via ?token=<jwt>.
 
-    After connection, client can send:
+    Client can send:
         {"type": "subscribe", "project_id": "..."}
     to scope events to a specific project.
     """
-    # Authenticate
     try:
         user_id = verify_token(token)
     except Exception:
@@ -84,6 +91,27 @@ async def live_feed(websocket: WebSocket, token: str = Query(...)):
         await ws_manager.disconnect(websocket, str(user_id))
 
 
+# ── Also keep the project-scoped stub for backward compat ──────────
+
+@router.websocket("/api/live-feed/{project_id}")
+async def live_feed_project(websocket: WebSocket, project_id: UUID):
+    """Project-scoped WebSocket (no auth required — for internal use)."""
+    client = await ws_manager.connect(websocket, "system", str(project_id))
+    try:
+        while True:
+            data = await websocket.receive_text()
+            try:
+                msg = json.loads(data)
+            except json.JSONDecodeError:
+                continue
+            if msg.get("type") == "ping":
+                await websocket.send_json({"type": "pong"})
+    except WebSocketDisconnect:
+        pass
+    finally:
+        await ws_manager.disconnect(websocket, "system")
+
+
 # ── REST fallbacks ──────────────────────────────────────────────────
 
 @router.get("/api/live-feed/recent")
@@ -95,8 +123,7 @@ async def get_recent_events(
     user_id = str(user.id)
     visible = [
         e for e in _recent_events
-        if e.get("scope") == "global"
-        or e.get("user_id") == user_id
+        if not e.get("user_id") or e.get("user_id") == user_id
     ]
     return visible[-limit:]
 
@@ -108,21 +135,12 @@ async def get_active_info(
 ):
     """Return summary of active missions/workflows for the dashboard."""
     from ..models.mission import Mission
-    from ..models.crew_run import CrewRun
 
     user_id = user.id
 
-    # Active missions
     active_missions = (
         db.query(Mission)
         .filter(Mission.user_id == user_id, Mission.status == "active")
-        .all()
-    )
-
-    # Active crew runs
-    active_runs = (
-        db.query(CrewRun)
-        .filter(CrewRun.status.in_(["running", "pending"]))
         .all()
     )
 
@@ -137,14 +155,6 @@ async def get_active_info(
             }
             for m in active_missions
         ],
-        "active_runs": [
-            {
-                "id": str(r.id),
-                "crew_id": str(r.crew_id),
-                "status": r.status,
-                "started_at": r.started_at.isoformat() if r.started_at else None,
-            }
-            for r in active_runs
-        ],
+        "active_runs": [],
         "connected_clients": ws_manager.connection_count,
     }

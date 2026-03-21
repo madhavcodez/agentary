@@ -1,4 +1,4 @@
-"""Redis pub/sub bridge for cross-process event delivery."""
+"""Redis pub/sub bridge for cross-process event delivery to WebSocket clients."""
 
 from __future__ import annotations
 
@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 import redis.asyncio as aioredis
 
 from ..config import settings
-from .events import Event
 
 if TYPE_CHECKING:
     from .websocket_manager import WebSocketManager
@@ -32,21 +31,22 @@ async def get_redis() -> aioredis.Redis:
     return _redis_client
 
 
-def _channel_for_event(event: Event) -> str:
-    if event.project_id:
-        return f"{CHANNEL_PREFIX}project:{event.project_id}"
-    if event.user_id:
-        return f"{CHANNEL_PREFIX}user:{event.user_id}"
-    return f"{CHANNEL_PREFIX}global"
-
-
-async def publish_event(event: Event) -> None:
+async def publish_event(event) -> None:
     """Publish an event to the appropriate Redis channel."""
     try:
         r = await get_redis()
-        channel = _channel_for_event(event)
-        payload = json.dumps(event.to_dict())
-        await r.publish(channel, payload)
+        d = event.to_dict()
+        project_id = d.get("project_id")
+        user_id = d.get("user_id")
+
+        if project_id:
+            channel = f"{CHANNEL_PREFIX}project:{project_id}"
+        elif user_id:
+            channel = f"{CHANNEL_PREFIX}user:{user_id}"
+        else:
+            channel = f"{CHANNEL_PREFIX}global"
+
+        await r.publish(channel, json.dumps(d, default=str))
     except Exception as exc:
         logger.warning("Failed to publish event to Redis: %s", exc)
 
@@ -68,8 +68,7 @@ async def subscribe_and_forward(ws_manager: WebSocketManager) -> None:
                     continue
                 try:
                     data = json.loads(message["data"])
-                    event = Event.from_dict(data)
-                    await ws_manager.broadcast_event(event)
+                    await ws_manager.broadcast_to_clients(data)
                 except Exception as exc:
                     logger.warning("Failed to process Redis message: %s", exc)
 
