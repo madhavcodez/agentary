@@ -84,6 +84,8 @@ from .voice.outbound.server import router as outbound_router
 from .api.webhooks import router as webhooks_router
 from .api.scout import router as scout_router
 from .api.live_feed import router as live_feed_router
+from .api.monitors import router as monitors_router
+from .api.alerts import router as alerts_router
 
 app.include_router(auth_router)
 app.include_router(health_router)
@@ -102,3 +104,5 @@ app.include_router(outbound_router)
 app.include_router(webhooks_router)
 app.include_router(scout_router)
 app.include_router(live_feed_router)
+app.include_router(monitors_router)
+app.include_router(alerts_router)

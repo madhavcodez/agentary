@@ -194,6 +194,97 @@ def load_all_autopilot_jobs() -> None:
         session.close()
 
 
+# ── Monitor scheduled checks ────────────────────────────────────────
+
+_MONITOR_JOB_PREFIX = "monitor_"
+
+
+def _monitor_job_id(monitor_id: str | UUID) -> str:
+    return f"{_MONITOR_JOB_PREFIX}{monitor_id}"
+
+
+def _run_monitor_check(monitor_id: str):
+    """Execute a scheduled monitor check."""
+    from .monitor_service import execute_check
+
+    try:
+        asyncio.run(execute_check(monitor_id))
+    except Exception as e:
+        logger.error("Scheduled monitor check failed for %s: %s", monitor_id, e)
+
+
+def add_monitor_job(
+    monitor_id: str | UUID, cron_expr: str, timezone_name: str = "UTC"
+) -> None:
+    """Add (or replace) a scheduled monitor check job."""
+    job_id = _monitor_job_id(monitor_id)
+
+    parts = cron_expr.strip().split()
+    if len(parts) != 5:
+        raise ValueError(
+            f"Invalid cron expression '{cron_expr}': expected 5 fields"
+        )
+
+    try:
+        tz = pytz.timezone(timezone_name)
+    except pytz.UnknownTimeZoneError:
+        tz = pytz.timezone("UTC")
+
+    trigger = CronTrigger(
+        minute=parts[0],
+        hour=parts[1],
+        day=parts[2],
+        month=parts[3],
+        day_of_week=parts[4],
+        timezone=tz,
+    )
+
+    scheduler.add_job(
+        _run_monitor_check,
+        trigger,
+        args=[str(monitor_id)],
+        id=job_id,
+        replace_existing=True,
+    )
+    logger.info("Monitor job scheduled: id=%s cron=%s tz=%s", monitor_id, cron_expr, timezone_name)
+
+
+def remove_monitor_job(monitor_id: str | UUID) -> None:
+    """Remove a monitor's scheduled job."""
+    job_id = _monitor_job_id(monitor_id)
+    try:
+        scheduler.remove_job(job_id)
+        logger.info("Monitor job removed: %s", monitor_id)
+    except Exception:
+        pass
+
+
+def load_all_monitor_jobs() -> None:
+    """Load scheduled jobs for all active monitors at startup."""
+    session = SessionLocal()
+    try:
+        from ..models.monitor import Monitor
+
+        monitors = (
+            session.query(Monitor)
+            .filter(
+                Monitor.status == "active",
+                Monitor.schedule_cron.isnot(None),
+            )
+            .all()
+        )
+        for m in monitors:
+            try:
+                add_monitor_job(str(m.id), m.schedule_cron, m.timezone)
+            except Exception as e:
+                logger.error("Failed to load monitor job %s: %s", m.id, e)
+        logger.info("Loaded monitor jobs for %d monitors", len(monitors))
+    except Exception as e:
+        logger.error("Failed to load monitor jobs: %s", e)
+    finally:
+        session.close()
+
+
 def start_scheduler():
     scheduler.add_job(
         _run_ingest, "interval", hours=6, id="ingest_job", replace_existing=True
@@ -206,6 +297,9 @@ def start_scheduler():
 
     # Load per-user autopilot schedules
     load_all_autopilot_jobs()
+
+    # Load monitor schedules
+    load_all_monitor_jobs()
 
 
 def stop_scheduler():

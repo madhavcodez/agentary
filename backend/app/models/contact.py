@@ -18,9 +18,7 @@ class Contact(Base):
     phone = Column(String(50), nullable=False)
     email = Column(String(255), nullable=True)
     source = Column(String(100), default="manual")
-    opportunity_id = Column(
-        UUID(as_uuid=True), ForeignKey("opportunities.id"), nullable=True
-    )
+    opportunity_id = Column(UUID(as_uuid=True), nullable=True)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
