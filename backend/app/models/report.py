@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import uuid
 from datetime import datetime
 
@@ -17,11 +19,7 @@ class Report(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     title = Column(String(500), nullable=False)
     description = Column(Text, nullable=True)
-    report_type = Column(
-        String(50),
-        nullable=False,
-        default="research_report",
-    )
+    report_type = Column(String(50), nullable=False, default="research_report")
     status = Column(String(20), nullable=False, default="generating")
     content_markdown = Column(Text, nullable=True)
     content_html = Column(Text, nullable=True)

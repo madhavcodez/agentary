@@ -1,8 +1,9 @@
-import uuid
-from datetime import datetime
+from __future__ import annotations
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+import uuid
+
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
 from ..database import Base
@@ -24,11 +25,11 @@ class Workflow(Base):
     nodes = Column(JSONB, nullable=False, default=list)
     edges = Column(JSONB, nullable=False, default=list)
     variables = Column(JSONB, nullable=False, default=dict)
-    last_run_at = Column(DateTime, nullable=True)
+    last_run_at = Column(DateTime(timezone=True), nullable=True)
     total_runs = Column(Integer, nullable=False, default=0)
     avg_duration_seconds = Column(Float, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     runs = relationship("WorkflowRun", back_populates="workflow", cascade="all, delete-orphan")
     template = relationship("WorkflowTemplate", foreign_keys=[template_id])

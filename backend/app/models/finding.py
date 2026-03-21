@@ -1,51 +1,66 @@
-import uuid
-from datetime import datetime
+from __future__ import annotations
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
+import enum
+import uuid
+
+from sqlalchemy import Boolean, Column, DateTime, Enum as SAEnum, Float, ForeignKey, String, Text, func
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
 from ..database import Base
+
+
+class FindingType(str, enum.Enum):
+    fact = "fact"
+    data_point = "data_point"
+    insight = "insight"
+    quote = "quote"
+    statistic = "statistic"
+    contact_info = "contact_info"
+    price = "price"
+    availability = "availability"
+    sentiment = "sentiment"
+    trend = "trend"
+    anomaly = "anomaly"
+    opportunity = "opportunity"
+    risk = "risk"
+
+
+class SourceType(str, enum.Enum):
+    web = "web"
+    voice_call = "voice_call"
+    api = "api"
+    public_record = "public_record"
+    user_provided = "user_provided"
+    inferred = "inferred"
 
 
 class Finding(Base):
     __tablename__ = "findings"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    mission_id = Column(
-        UUID(as_uuid=True), ForeignKey("missions.id"), nullable=False, index=True
-    )
-    crew_task_id = Column(
-        UUID(as_uuid=True), ForeignKey("crew_tasks.id"), nullable=True, index=True
-    )
-    expert_agent_id = Column(
-        UUID(as_uuid=True), ForeignKey("expert_agents.id"), nullable=True
-    )
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False, index=True)
+    mission_id = Column(UUID(as_uuid=True), ForeignKey("missions.id"), nullable=True, index=True)
+    expert_agent_id = Column(UUID(as_uuid=True), ForeignKey("expert_agents.id"), nullable=True)
     voice_session_id = Column(
         UUID(as_uuid=True), ForeignKey("voice_sessions.id"), nullable=True, index=True
     )
-    user_id = Column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True
-    )
-    category = Column(
-        String(50), nullable=False, default="data_point"
-    )  # data_point|insight|trend|risk|opportunity|fact|quote|statistic|comparison
+    finding_type = Column(SAEnum(FindingType), nullable=False)
     title = Column(String(500), nullable=False)
-    content = Column(Text, nullable=False)
-    structured_data = Column(JSONB, nullable=True)
-    source_type = Column(
-        String(50), nullable=True
-    )  # web|api|voice_call|calculation|inference
-    source_url = Column(Text, nullable=True)
-    source_name = Column(String(255), nullable=True)
-    source_raw = Column(Text, nullable=True)
-    confidence = Column(Float, nullable=False, default=0.5)
-    verified = Column(Boolean, nullable=False, default=False)
-    verification_sources = Column(JSONB, nullable=True)
-    entity_id = Column(UUID(as_uuid=True), nullable=True)
-    tags = Column(ARRAY(String), default=list)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    content = Column(Text)
+    structured_data = Column(JSONB, default=dict)
+    source_type = Column(SAEnum(SourceType))
+    source_url = Column(String(2048))
+    source_name = Column(String(255))
+    source_metadata = Column(JSONB, default=dict)
+    confidence = Column(Float)
+    verified = Column(Boolean, default=False)
+    verified_by = Column(UUID(as_uuid=True), nullable=True)
+    contradicts = Column(UUID(as_uuid=True), ForeignKey("findings.id"), nullable=True)
+    tags = Column(JSONB, default=list)
+    entity_refs = Column(JSONB, default=list)  # [{type, name, id}]
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
+    # Relationships
+    project = relationship("Project", back_populates="findings")
     mission = relationship("Mission", back_populates="findings")
-    crew_task = relationship("CrewTask", backref="findings")
-    expert_agent = relationship("ExpertAgent", backref="findings")
