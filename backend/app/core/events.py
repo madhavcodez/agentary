@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Callable
 from uuid import UUID
 
@@ -69,7 +69,7 @@ class Event:
         self.project_id = str(project_id) if project_id else None
         self.mission_id = str(mission_id) if mission_id else None
         self.user_id = str(user_id) if user_id else None
-        self.timestamp = datetime.utcnow().isoformat()
+        self.timestamp = datetime.now(timezone.utc).isoformat()
 
     def to_dict(self) -> dict[str, Any]:
         return {
