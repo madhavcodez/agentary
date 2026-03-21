@@ -2,53 +2,51 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { fetchProject, fetchMissions, fetchFindings, fetchReports, createMission } from "@/lib/api";
-import type { Project, Mission, Finding, Report } from "@/lib/types";
+import {
+  fetchProject,
+  fetchMissions,
+  fetchFindings,
+  fetchReports,
+  createMission,
+} from "@/lib/api";
+import type { Project, Mission, Finding } from "@/lib/types";
 
-const STATUS_COLORS: Record<string, string> = {
-  draft: "text-gray-400 bg-gray-400/10 border-gray-400/20",
-  queued: "text-blue-400 bg-blue-400/10 border-blue-400/20",
-  running: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20",
-  paused: "text-amber-400 bg-amber-400/10 border-amber-400/20",
-  completed: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20",
-  failed: "text-red-400 bg-red-400/10 border-red-400/20",
+const TYPE_ICONS: Record<string, string> = {
+  real_estate: "🏠",
+  competitive_intel: "🔍",
+  due_diligence: "📋",
+  data_extraction: "📊",
+  market_research: "📈",
+  local_business: "🏪",
+  custom: "⚙️",
 };
 
-const TYPE_COLORS: Record<string, string> = {
-  real_estate: "text-blue-400 bg-blue-400/10 border-blue-400/20",
-  competitive_intel: "text-purple-400 bg-purple-400/10 border-purple-400/20",
-  due_diligence: "text-amber-400 bg-amber-400/10 border-amber-400/20",
-  data_extraction: "text-cyan-400 bg-cyan-400/10 border-cyan-400/20",
-  market_research: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20",
-  local_business: "text-orange-400 bg-orange-400/10 border-orange-400/20",
-  custom: "text-gray-400 bg-gray-400/10 border-gray-400/20",
-};
-
-const MISSION_TYPES = [
-  { value: "research", label: "Research" },
-  { value: "data_collection", label: "Data Collection" },
-  { value: "competitive_analysis", label: "Competitive Analysis" },
-  { value: "market_survey", label: "Market Survey" },
-  { value: "due_diligence", label: "Due Diligence" },
-  { value: "custom", label: "Custom" },
-];
+function statusDot(status: string): string {
+  switch (status) {
+    case "running":
+      return "bg-emerald-400 animate-pulse";
+    case "completed":
+      return "bg-emerald-400";
+    case "failed":
+      return "bg-red-400";
+    default:
+      return "bg-gray-500";
+  }
+}
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
-    year: "numeric",
   });
 }
 
-function confidenceColor(confidence: number | null): string {
-  if (confidence === null) return "text-gray-500";
+function confidenceBadge(confidence: number | null): string {
+  if (confidence === null) return "text-gray-600";
   if (confidence >= 0.8) return "text-emerald-400";
   if (confidence >= 0.5) return "text-amber-400";
   return "text-red-400";
 }
-
-type Tab = "missions" | "findings" | "reports";
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -58,12 +56,10 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [missions, setMissions] = useState<Mission[]>([]);
   const [findings, setFindings] = useState<Finding[]>([]);
-  const [reports, setReports] = useState<Report[]>([]);
-  const [activeTab, setActiveTab] = useState<Tab>("missions");
+  const [reportsCount, setReportsCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [showMissionForm, setShowMissionForm] = useState(false);
+  const [missionInput, setMissionInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [missionForm, setMissionForm] = useState({ name: "", objective: "", mission_type: "research" });
 
   const loadProject = useCallback(async () => {
     try {
@@ -97,9 +93,9 @@ export default function ProjectDetailPage() {
   const loadReports = useCallback(async () => {
     try {
       const data = await fetchReports({ project_id: id });
-      setReports(data);
+      setReportsCount(data.length);
     } catch {
-      setReports([]);
+      setReportsCount(0);
     }
   }, [id]);
 
@@ -112,21 +108,20 @@ export default function ProjectDetailPage() {
 
   const handleCreateMission = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!missionForm.name.trim()) return;
+    const name = missionInput.trim();
+    if (!name) return;
     setSubmitting(true);
     try {
       await createMission({
         project_id: id,
-        name: missionForm.name.trim(),
-        objective: missionForm.objective.trim() || undefined,
-        mission_type: missionForm.mission_type,
+        name,
+        mission_type: "research",
       });
-      setMissionForm({ name: "", objective: "", mission_type: "research" });
-      setShowMissionForm(false);
+      setMissionInput("");
       await loadMissions();
       await loadProject();
     } catch {
-      // silently handle
+      // error handled silently
     } finally {
       setSubmitting(false);
     }
@@ -147,250 +142,164 @@ export default function ProjectDetailPage() {
       <div className="max-w-6xl mx-auto px-8 py-8">
         <div className="bg-gray-900 border border-gray-800/50 rounded-xl p-12 text-center">
           <p className="text-gray-400">Project not found.</p>
+          <button
+            onClick={() => router.push("/projects")}
+            className="text-emerald-400 hover:text-emerald-300 text-sm mt-3 transition-colors"
+          >
+            Back to Projects
+          </button>
         </div>
       </div>
     );
   }
 
-  const tabs: { key: Tab; label: string }[] = [
-    { key: "missions", label: "Missions" },
-    { key: "findings", label: "Findings" },
-    { key: "reports", label: "Reports" },
-  ];
+  const icon = TYPE_ICONS[project.project_type] ?? TYPE_ICONS.custom;
+  const recentFindings = findings.slice(0, 5);
 
   return (
     <div className="max-w-6xl mx-auto px-8 py-8">
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-2xl font-bold text-gray-100 tracking-tight">{project.name}</h1>
-            <span className={`text-xs px-2 py-0.5 rounded-full border ${STATUS_COLORS[project.status] ?? STATUS_COLORS.draft}`}>
-              {project.status}
-            </span>
-            <span className={`text-xs px-2 py-0.5 rounded-full border ${TYPE_COLORS[project.project_type] ?? TYPE_COLORS.custom}`}>
-              {project.project_type.replace(/_/g, " ")}
-            </span>
-          </div>
-          {project.description && (
-            <p className="text-gray-400 text-sm mt-1">{project.description}</p>
-          )}
-        </div>
+      {/* Back link */}
+      <button
+        onClick={() => router.push("/projects")}
+        className="text-gray-500 hover:text-gray-300 text-sm mb-6 transition-colors flex items-center gap-1.5"
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+        Back to Projects
+      </button>
+
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <span className="text-2xl">{icon}</span>
+        <h1 className="text-2xl font-bold text-gray-100 tracking-tight">
+          {project.name}
+        </h1>
+        <span className="text-xs px-2.5 py-0.5 rounded-full border border-gray-700 text-gray-400 capitalize">
+          {project.project_type.replace(/_/g, " ")}
+        </span>
+        <span className="flex items-center gap-1.5 text-xs text-gray-400">
+          <span className={`w-2 h-2 rounded-full ${statusDot(project.status)}`} />
+          {project.status}
+        </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      {project.description && (
+        <p className="text-gray-500 text-sm mb-6 -mt-2">{project.description}</p>
+      )}
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-3 gap-4 mb-10">
         <div className="bg-gray-900 border border-gray-800/50 rounded-xl p-5">
-          <p className="text-sm text-gray-500 mb-1">Total Missions</p>
+          <p className="text-xs text-gray-500 mb-1 uppercase tracking-wider">Missions</p>
           <p className="text-2xl font-bold text-gray-100">{project.total_missions}</p>
         </div>
         <div className="bg-gray-900 border border-gray-800/50 rounded-xl p-5">
-          <p className="text-sm text-gray-500 mb-1">Total Findings</p>
+          <p className="text-xs text-gray-500 mb-1 uppercase tracking-wider">Findings</p>
           <p className="text-2xl font-bold text-gray-100">{project.total_findings}</p>
         </div>
         <div className="bg-gray-900 border border-gray-800/50 rounded-xl p-5">
-          <p className="text-sm text-gray-500 mb-1">Reports Generated</p>
-          <p className="text-2xl font-bold text-gray-100">{project.total_reports_generated}</p>
+          <p className="text-xs text-gray-500 mb-1 uppercase tracking-wider">Reports</p>
+          <p className="text-2xl font-bold text-gray-100">{reportsCount}</p>
         </div>
       </div>
 
-      <div className="flex items-center gap-1 border-b border-gray-800/50 mb-6">
-        {tabs.map((tab) => (
+      {/* New Mission */}
+      <div className="mb-10">
+        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">
+          New Mission
+        </h2>
+        <form onSubmit={handleCreateMission} className="flex gap-3">
+          <input
+            type="text"
+            value={missionInput}
+            onChange={(e) => setMissionInput(e.target.value)}
+            placeholder="Describe what you want to research..."
+            className="flex-1 bg-gray-900 border border-gray-800/50 rounded-xl px-4 py-3 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-emerald-400/50 transition-colors"
+          />
           <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
-              activeTab === tab.key
-                ? "text-emerald-400 border-emerald-400"
-                : "text-gray-500 border-transparent hover:text-gray-300"
-            }`}
+            type="submit"
+            disabled={submitting || !missionInput.trim()}
+            className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl text-sm font-medium transition-colors whitespace-nowrap"
           >
-            {tab.label}
+            {submitting ? "Starting..." : "Start Research"}
           </button>
-        ))}
+        </form>
       </div>
 
-      {activeTab === "missions" && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-gray-100 font-semibold text-sm">Missions</h3>
-            <button
-              onClick={() => setShowMissionForm(!showMissionForm)}
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium transition-colors"
-            >
-              New Mission
-            </button>
+      {/* Missions list */}
+      <div className="mb-10">
+        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">
+          Missions
+        </h2>
+        {missions.length === 0 ? (
+          <div className="bg-gray-900 border border-gray-800/50 rounded-xl p-8 text-center">
+            <p className="text-gray-500 text-sm">No missions yet. Create one above to get started.</p>
           </div>
+        ) : (
+          <div className="space-y-1.5">
+            {missions.map((mission) => (
+              <button
+                key={mission.id}
+                onClick={() => router.push(`/missions/${mission.id}`)}
+                className="w-full text-left bg-gray-900 border border-gray-800/50 rounded-xl px-4 py-3 hover:border-gray-700/50 transition-colors flex items-center justify-between group"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusDot(mission.status)}`} />
+                  <p className="text-gray-100 text-sm font-medium truncate group-hover:text-white transition-colors">
+                    {mission.name}
+                  </p>
+                </div>
+                <div className="flex items-center gap-4 text-xs text-gray-600 flex-shrink-0 ml-4">
+                  <span>{mission.findings_count} findings</span>
+                  <span className="w-16 text-right">{formatDate(mission.created_at)}</span>
+                  <svg className="w-4 h-4 text-gray-700 group-hover:text-gray-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
-          {showMissionForm && (
-            <div className="bg-gray-900 border border-gray-800/50 rounded-xl p-5 mb-4">
-              <form onSubmit={handleCreateMission} className="space-y-4">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1.5">Mission Name</label>
-                  <input
-                    type="text"
-                    value={missionForm.name}
-                    onChange={(e) => setMissionForm({ ...missionForm, name: e.target.value })}
-                    placeholder="e.g. Competitor Pricing Analysis"
-                    className="w-full bg-gray-950 border border-gray-800 rounded-lg px-4 py-2.5 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-emerald-400/50 transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1.5">Objective</label>
-                  <textarea
-                    value={missionForm.objective}
-                    onChange={(e) => setMissionForm({ ...missionForm, objective: e.target.value })}
-                    placeholder="What should this mission accomplish?"
-                    rows={2}
-                    className="w-full bg-gray-950 border border-gray-800 rounded-lg px-4 py-2.5 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-emerald-400/50 transition-colors resize-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1.5">Mission Type</label>
-                  <select
-                    value={missionForm.mission_type}
-                    onChange={(e) => setMissionForm({ ...missionForm, mission_type: e.target.value })}
-                    className="w-full bg-gray-950 border border-gray-800 rounded-lg px-4 py-2.5 text-sm text-gray-100 focus:outline-none focus:border-emerald-400/50 transition-colors"
-                  >
-                    {MISSION_TYPES.map((t) => (
-                      <option key={t.value} value={t.value}>{t.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex gap-3 pt-1">
-                  <button
-                    type="submit"
-                    disabled={submitting || !missionForm.name.trim()}
-                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
-                  >
-                    {submitting ? "Creating..." : "Create Mission"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowMissionForm(false)}
-                    className="px-5 py-2 text-gray-400 hover:text-gray-300 text-sm font-medium transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {missions.length === 0 ? (
-            <div className="bg-gray-900 border border-gray-800/50 rounded-xl p-10 text-center">
-              <p className="text-gray-400 text-sm">No missions yet.</p>
-              <p className="text-gray-600 text-xs mt-1">Create a mission to start gathering intelligence.</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {missions.map((mission) => (
-                <button
-                  key={mission.id}
-                  onClick={() => router.push(`/missions/${mission.id}`)}
-                  className="w-full text-left bg-gray-900 border border-gray-800/50 rounded-xl p-4 hover:border-gray-700/50 transition-colors flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div>
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <p className="text-gray-100 text-sm font-medium truncate">{mission.name}</p>
-                        <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${STATUS_COLORS[mission.status] ?? STATUS_COLORS.draft} ${mission.status === "running" ? "animate-pulse" : ""}`}>
-                          {mission.status}
-                        </span>
-                      </div>
-                      {mission.objective && (
-                        <p className="text-gray-500 text-xs truncate max-w-md">{mission.objective}</p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-5 text-xs text-gray-600 flex-shrink-0 ml-4">
-                    <span>{mission.findings_count} findings</span>
-                    <span className={confidenceColor(mission.confidence_score)}>
-                      {mission.confidence_score !== null ? `${Math.round(mission.confidence_score * 100)}%` : "--"}
-                    </span>
-                    <span>{formatDate(mission.created_at)}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === "findings" && (
-        <div>
-          {findings.length === 0 ? (
-            <div className="bg-gray-900 border border-gray-800/50 rounded-xl p-10 text-center">
-              <p className="text-gray-400 text-sm">No findings yet.</p>
-              <p className="text-gray-600 text-xs mt-1">Run missions to discover findings.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {findings.map((finding) => (
-                <div
-                  key={finding.id}
-                  className="bg-gray-900 border border-gray-800/50 rounded-xl p-5"
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <h4 className="text-gray-100 text-sm font-medium truncate pr-2">{finding.title}</h4>
-                    {finding.confidence !== null && (
-                      <span className={`text-xs font-medium whitespace-nowrap ${confidenceColor(finding.confidence)}`}>
-                        {Math.round(finding.confidence * 100)}%
-                      </span>
-                    )}
-                  </div>
+      {/* Recent Findings */}
+      <div>
+        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">
+          Recent Findings
+        </h2>
+        {recentFindings.length === 0 ? (
+          <div className="bg-gray-900 border border-gray-800/50 rounded-xl p-8 text-center">
+            <p className="text-gray-500 text-sm">No findings yet. Run a mission to discover findings.</p>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {recentFindings.map((finding) => (
+              <div
+                key={finding.id}
+                className="bg-gray-900 border border-gray-800/50 rounded-xl px-4 py-3 flex items-center justify-between"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-gray-100 text-sm font-medium truncate">{finding.title}</p>
                   {finding.content && (
-                    <p className="text-gray-500 text-xs line-clamp-3 mb-3">{finding.content}</p>
+                    <p className="text-gray-600 text-xs truncate mt-0.5 max-w-xl">{finding.content}</p>
                   )}
-                  <div className="flex items-center gap-3 text-xs text-gray-600">
-                    {finding.source_type && <span>{finding.source_type}</span>}
-                    {finding.source_url && (
-                      <a
-                        href={finding.source_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-emerald-400/70 hover:text-emerald-400 truncate max-w-[200px]"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {finding.source_url}
-                      </a>
-                    )}
-                  </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === "reports" && (
-        <div>
-          {reports.length === 0 ? (
-            <div className="bg-gray-900 border border-gray-800/50 rounded-xl p-10 text-center">
-              <p className="text-gray-400 text-sm">No reports yet.</p>
-              <p className="text-gray-600 text-xs mt-1">Generate reports from your mission findings.</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {reports.map((report) => (
-                <div
-                  key={report.id}
-                  className="bg-gray-900 border border-gray-800/50 rounded-xl p-4 flex items-center justify-between"
-                >
-                  <div>
-                    <p className="text-gray-100 text-sm font-medium">{report.title}</p>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-600">
-                      <span>{report.report_type.replace(/_/g, " ")}</span>
-                      <span className={`px-1.5 py-0.5 rounded border ${STATUS_COLORS[report.status] ?? STATUS_COLORS.draft}`}>
-                        {report.status}
-                      </span>
-                    </div>
-                  </div>
-                  <span className="text-xs text-gray-600">{formatDate(report.created_at)}</span>
+                <div className="flex items-center gap-4 text-xs flex-shrink-0 ml-4">
+                  {finding.confidence !== null && (
+                    <span className={`font-medium ${confidenceBadge(finding.confidence)}`}>
+                      {Math.round(finding.confidence * 100)}%
+                    </span>
+                  )}
+                  {finding.source_type && (
+                    <span className="text-gray-600">{finding.source_type}</span>
+                  )}
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

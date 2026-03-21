@@ -255,22 +255,27 @@ export default function ReportsPage() {
               />
             </label>
 
-            <label className="block mb-6">
-              <span className="text-sm text-gray-400 mb-1 block">
+            <div className="mb-6">
+              <span className="text-sm text-gray-400 mb-2 block">
                 Report Type
               </span>
-              <select
-                value={formReportType}
-                onChange={(e) => setFormReportType(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-100 text-sm focus:outline-none focus:border-emerald-500/50"
-              >
+              <div className="grid grid-cols-2 gap-2">
                 {REPORT_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => setFormReportType(t.value)}
+                    className={`text-left px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                      formReportType === t.value
+                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                        : "bg-gray-800 text-gray-400 border border-gray-700 hover:border-gray-600"
+                    }`}
+                  >
                     {t.label}
-                  </option>
+                  </button>
                 ))}
-              </select>
-            </label>
+              </div>
+            </div>
 
             <div className="flex items-center justify-end gap-3">
               <button

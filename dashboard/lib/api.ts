@@ -239,7 +239,7 @@ export function fetchFindings(params?: {
 
 // ── Reports ─────────────────────────────────────────────────────────
 
-export function fetchReports(params?: {
+export async function fetchReports(params?: {
   project_id?: string;
   report_type?: string;
   page?: number;
@@ -251,7 +251,8 @@ export function fetchReports(params?: {
   if (params?.page) sp.set("page", String(params.page));
   if (params?.limit) sp.set("limit", String(params.limit));
   const qs = sp.toString();
-  return request<Report[]>(`/api/reports${qs ? `?${qs}` : ""}`);
+  const res = await request<Report[] | { items: Report[] }>(`/reports/${qs ? `?${qs}` : ""}`);
+  return Array.isArray(res) ? res : res.items;
 }
 
 // ── Voice Extractions ───────────────────────────────────────────────
@@ -273,7 +274,7 @@ export function fetchVoiceExtractions(params?: {
 
 // ── Workflows ───────────────────────────────────────────────────────
 
-export function fetchWorkflows(params?: {
+export async function fetchWorkflows(params?: {
   category?: string;
   page?: number;
   limit?: number;
@@ -283,7 +284,8 @@ export function fetchWorkflows(params?: {
   if (params?.page) sp.set("page", String(params.page));
   if (params?.limit) sp.set("limit", String(params.limit));
   const qs = sp.toString();
-  return request<Workflow[]>(`/api/workflows${qs ? `?${qs}` : ""}`);
+  const res = await request<Workflow[] | { items: Workflow[] }>(`/api/workflows${qs ? `?${qs}` : ""}`);
+  return Array.isArray(res) ? res : res.items;
 }
 
 export function createWorkflow(data: {
