@@ -6,8 +6,8 @@ export interface AuthUser {
   created_at: string;
 }
 
-const TOKEN_KEY = "secretairy_token";
-const USER_KEY = "secretairy_user";
+const TOKEN_KEY = "agentary_token";
+const USER_KEY = "agentary_user";
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;

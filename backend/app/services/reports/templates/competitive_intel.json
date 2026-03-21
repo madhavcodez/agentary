@@ -1,0 +1,71 @@
+{
+  "type": "competitive_intel",
+  "name": "Competitive Intelligence",
+  "description": "Competitive intelligence report analyzing competitor profiles, feature comparisons, pricing, and strategic positioning",
+  "sections": [
+    {
+      "title": "Executive Summary",
+      "purpose": "High-level overview of the competitive landscape, key takeaways about competitor positioning, and the most critical strategic implications for decision-makers.",
+      "order": 0,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": []
+    },
+    {
+      "title": "Company Profiles",
+      "purpose": "Detailed profiles of each competitor including company size, founding date, funding/revenue, target market, product offerings, recent news, and strategic direction.",
+      "order": 1,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": []
+    },
+    {
+      "title": "Feature Comparison",
+      "purpose": "Side-by-side comparison of features and capabilities across all competitors in a matrix format. Highlight differentiators, feature gaps, and areas of parity.",
+      "order": 2,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": ["table"]
+    },
+    {
+      "title": "Pricing Comparison",
+      "purpose": "Compare pricing models, tiers, and price points across competitors. Analyze value-for-money positioning and identify pricing strategies (freemium, enterprise, usage-based, etc.).",
+      "order": 3,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": ["bar", "table"]
+    },
+    {
+      "title": "Market Positioning",
+      "purpose": "Analyze how each competitor positions themselves in the market. Map positioning along key dimensions such as price vs. features, enterprise vs. SMB, or breadth vs. depth.",
+      "order": 4,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": ["scatter", "quadrant"]
+    },
+    {
+      "title": "Strengths & Weaknesses",
+      "purpose": "For each competitor, provide a structured analysis of their key strengths and weaknesses. Include evidence and data points supporting each assessment.",
+      "order": 5,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": []
+    },
+    {
+      "title": "Strategic Recommendations",
+      "purpose": "Based on the competitive analysis, provide actionable strategic recommendations for differentiation, positioning, pricing, feature prioritization, and go-to-market approaches.",
+      "order": 6,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": []
+    },
+    {
+      "title": "Sources",
+      "purpose": "List all sources of competitive intelligence including company websites, press releases, review sites, analyst reports, job postings, patent filings, and any other data sources with dates accessed.",
+      "order": 7,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": []
+    }
+  ]
+}

@@ -10,7 +10,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    database_url: str = "postgresql://soundscore:soundscore@localhost:5432/secretairy"
+    database_url: str = "postgresql://agentary:agentary@localhost:5432/agentary"
     redis_url: str = "redis://localhost:6379/0"
     qdrant_url: str = "http://localhost:6333"
     gemini_api_key: str = ""

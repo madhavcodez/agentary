@@ -1,0 +1,71 @@
+{
+  "type": "property_report",
+  "name": "Property Report",
+  "description": "Real estate property analysis covering market context, comparables, pricing, neighborhood data, and investment potential",
+  "sections": [
+    {
+      "title": "Property Overview",
+      "purpose": "Provide a comprehensive summary of the subject property including address, property type, lot size, square footage, bedrooms/bathrooms, year built, condition, and notable features.",
+      "order": 0,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": []
+    },
+    {
+      "title": "Market Context",
+      "purpose": "Describe the local real estate market conditions including median home prices, inventory levels, days on market, and year-over-year trends for the area. Include relevant area statistics.",
+      "order": 1,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": ["bar", "line"]
+    },
+    {
+      "title": "Comparable Sales Analysis",
+      "purpose": "Present recently sold comparable properties with details on sale price, size, condition, and proximity. Analyze adjustments for differences and derive a value range for the subject property.",
+      "order": 2,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": ["table", "bar"]
+    },
+    {
+      "title": "Price Analysis",
+      "purpose": "Analyze price per square foot trends in the area, historical price appreciation, and current listing vs. sale price ratios. Compare the subject property's pricing to local benchmarks.",
+      "order": 3,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": ["line", "bar"]
+    },
+    {
+      "title": "Neighborhood Profile",
+      "purpose": "Profile the surrounding neighborhood including school ratings and proximity, crime statistics, walkability scores, public transit access, nearby amenities (shopping, dining, parks), and demographic data.",
+      "order": 4,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": ["bar", "table"]
+    },
+    {
+      "title": "Permit & Construction Activity",
+      "purpose": "Summarize recent building permits, planned developments, and construction activity in the area. Highlight any projects that may positively or negatively impact property values.",
+      "order": 5,
+      "required": false,
+      "auto_generate": true,
+      "chart_suggestions": ["bar"]
+    },
+    {
+      "title": "Investment Analysis",
+      "purpose": "Evaluate the property as an investment including estimated rental income, cap rate, cash-on-cash return, ROI projections, and break-even analysis. Consider both short-term and long-term scenarios.",
+      "order": 6,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": ["line", "bar"]
+    },
+    {
+      "title": "Sources",
+      "purpose": "List all data sources used in the report including MLS data, public records, census data, school rating providers, crime databases, and any other references with access dates.",
+      "order": 7,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": []
+    }
+  ]
+}

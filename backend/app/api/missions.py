@@ -93,3 +93,217 @@ def list_mission_runs(
     user: User = Depends(get_current_user),
 ):
     return db.query(MissionRun).filter(MissionRun.mission_id == mission_id).order_by(MissionRun.created_at.desc()).all()
+
+
+# ── Research Engine Endpoints ─────────────────────────────────────────
+
+from ..models.agent_crew import AgentCrew, AgentActivity
+from ..models.crew_run import CrewRun
+from ..models.finding import Finding
+
+
+@router.post("/{mission_id}/start")
+async def start_mission(
+    mission_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Assemble expert crew and start research execution."""
+    from ..services.crews.crew_service import assemble_crew, start_crew_run
+
+    mission = db.query(Mission).filter(Mission.id == mission_id, Mission.user_id == user.id).first()
+    if not mission:
+        raise HTTPException(status_code=404, detail="Mission not found")
+
+    if mission.status.value not in ("draft", "failed"):
+        raise HTTPException(status_code=400, detail=f"Cannot start mission in {mission.status.value} status")
+
+    # Assemble crew
+    crew_config = mission.crew_config or {}
+    expert_slugs = crew_config.get("required_experts")
+    crew = await assemble_crew(mission, db, expert_slugs=expert_slugs)
+
+    # Start run
+    run = await start_crew_run(crew, mission, db)
+
+    # Enqueue Celery task
+    from ..tasks.crew_tasks import execute_crew_run
+    execute_crew_run.delay(str(run.id))
+
+    return {
+        "mission_id": str(mission.id),
+        "crew_id": str(crew.id),
+        "run_id": str(run.id),
+        "status": "queued",
+        "message": "Mission started — crew assembled and execution queued",
+    }
+
+
+@router.post("/{mission_id}/stop")
+def stop_mission(
+    mission_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Cancel a running mission."""
+    from ..models.mission import MissionStatus
+
+    mission = db.query(Mission).filter(Mission.id == mission_id, Mission.user_id == user.id).first()
+    if not mission:
+        raise HTTPException(status_code=404, detail="Mission not found")
+
+    mission.status = MissionStatus.paused
+    runs = db.query(CrewRun).filter_by(mission_id=mission.id, status="running").all()
+    for run in runs:
+        run.status = "cancelled"
+    db.commit()
+    return {"status": "cancelled", "message": "Mission stopped"}
+
+
+@router.get("/{mission_id}/findings")
+def get_mission_findings(
+    mission_id: UUID,
+    category: str | None = None,
+    confidence_min: float | None = None,
+    source_type: str | None = None,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Get findings for a mission with optional filters."""
+    mission = db.query(Mission).filter(Mission.id == mission_id, Mission.user_id == user.id).first()
+    if not mission:
+        raise HTTPException(status_code=404, detail="Mission not found")
+
+    query = db.query(Finding).filter(Finding.mission_id == mission.id)
+    if category:
+        query = query.filter(Finding.category == category)
+    if confidence_min is not None:
+        query = query.filter(Finding.confidence >= confidence_min)
+    if source_type:
+        query = query.filter(Finding.source_type == source_type)
+
+    findings = query.order_by(Finding.confidence.desc()).all()
+
+    return {
+        "mission_id": str(mission.id),
+        "total": len(findings),
+        "items": [
+            {
+                "id": str(f.id),
+                "category": f.category,
+                "title": f.title,
+                "content": f.content,
+                "structured_data": f.structured_data,
+                "source_type": f.source_type,
+                "source_url": f.source_url,
+                "source_name": f.source_name,
+                "confidence": f.confidence,
+                "verified": f.verified,
+                "tags": f.tags or [],
+                "created_at": f.created_at.isoformat() if f.created_at else None,
+            }
+            for f in findings
+        ],
+    }
+
+
+@router.get("/{mission_id}/findings/structured")
+def get_structured_findings(
+    mission_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Get findings in a structured table format."""
+    mission = db.query(Mission).filter(Mission.id == mission_id, Mission.user_id == user.id).first()
+    if not mission:
+        raise HTTPException(status_code=404, detail="Mission not found")
+
+    findings = db.query(Finding).filter(Finding.mission_id == mission.id).all()
+
+    return {
+        "mission_id": str(mission.id),
+        "columns": ["title", "category", "confidence", "source", "content"],
+        "rows": [
+            {
+                "id": str(f.id),
+                "title": f.title,
+                "category": f.category,
+                "confidence": f.confidence,
+                "source": f.source_name or f.source_url or "N/A",
+                "content": f.content[:200] if f.content else "",
+                "structured_data": f.structured_data,
+            }
+            for f in findings
+        ],
+    }
+
+
+@router.get("/{mission_id}/status")
+def get_mission_status(
+    mission_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Get real-time mission status with activity feed."""
+    mission = db.query(Mission).filter(Mission.id == mission_id, Mission.user_id == user.id).first()
+    if not mission:
+        raise HTTPException(status_code=404, detail="Mission not found")
+
+    activities = (
+        db.query(AgentActivity)
+        .filter(AgentActivity.mission_id == mission.id)
+        .order_by(AgentActivity.created_at.desc())
+        .limit(50)
+        .all()
+    )
+
+    crew = db.query(AgentCrew).filter_by(mission_id=mission.id).first()
+
+    return {
+        "mission_id": str(mission.id),
+        "status": mission.status.value if hasattr(mission.status, "value") else str(mission.status),
+        "findings_count": mission.findings_count or 0,
+        "confidence_score": mission.confidence_score,
+        "crew": {"agents": crew.agents or []} if crew else None,
+        "activities": [
+            {
+                "id": str(a.id),
+                "activity_type": a.activity_type.value if hasattr(a.activity_type, "value") else str(a.activity_type),
+                "content": a.content,
+                "metadata": a.metadata_json,
+                "confidence": a.confidence,
+                "created_at": a.created_at.isoformat() if a.created_at else None,
+            }
+            for a in activities
+        ],
+    }
+
+
+@router.post("/{mission_id}/rerun")
+async def rerun_mission(
+    mission_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Re-run a completed or failed mission."""
+    from ..services.crews.crew_service import assemble_crew, start_crew_run
+
+    mission = db.query(Mission).filter(Mission.id == mission_id, Mission.user_id == user.id).first()
+    if not mission:
+        raise HTTPException(status_code=404, detail="Mission not found")
+
+    crew = db.query(AgentCrew).filter_by(mission_id=mission.id).first()
+    if not crew:
+        crew = await assemble_crew(mission, db)
+
+    run = await start_crew_run(crew, mission, db)
+
+    from ..tasks.crew_tasks import execute_crew_run
+    execute_crew_run.delay(str(run.id))
+
+    return {
+        "mission_id": str(mission.id),
+        "run_id": str(run.id),
+        "status": "queued",
+        "message": "Mission re-run queued",
+    }

@@ -13,3 +13,7 @@ from .monitor import MonitorCreate, MonitorUpdate, MonitorResponse, AlertRespons
 from .knowledge_base import KnowledgeBaseCreate, KnowledgeBaseUpdate, KnowledgeBaseResponse
 from .source import SourceCreate, SourceResponse
 from .audit_log import AuditLogResponse
+from .alert import AlertCreate, AlertUpdate, AlertRecordResponse
+from .entity import EntityCreate, EntityUpdate, EntityResponse
+from .workflow_template import WorkflowTemplateCreate, WorkflowTemplateUpdate, WorkflowTemplateResponse
+from .crew_task import CrewTaskCreate, CrewTaskUpdate, CrewTaskResponse

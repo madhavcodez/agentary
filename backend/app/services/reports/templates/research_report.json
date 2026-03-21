@@ -1,0 +1,72 @@
+{
+  "type": "research_report",
+  "name": "Research Report",
+  "description": "General research report with findings and analysis",
+  "sections": [
+    {
+      "title": "Executive Summary",
+      "purpose": "Concise overview of key findings and conclusions. Summarize the most important discoveries, their implications, and recommended next steps in a brief, scannable format.",
+      "order": 0,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": []
+    },
+    {
+      "title": "Background & Context",
+      "purpose": "Provide the context and background information necessary to understand the research. Include the research question, motivation, and any relevant historical or situational context.",
+      "order": 1,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": []
+    },
+    {
+      "title": "Methodology",
+      "purpose": "Describe the research approach, data sources consulted, search strategies used, and any criteria applied for evaluating and filtering information.",
+      "order": 2,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": []
+    },
+    {
+      "title": "Key Findings",
+      "purpose": "Present the most important findings from the research. Only include findings with a confidence score of 0.7 or higher. Each finding should be clearly stated with supporting evidence.",
+      "order": 3,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": [],
+      "confidence_filter": 0.7
+    },
+    {
+      "title": "Detailed Analysis",
+      "purpose": "Provide in-depth analysis of the findings, exploring relationships between data points, identifying patterns, and drawing evidence-based conclusions. Include visual representations where data supports charting.",
+      "order": 4,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": ["bar", "line", "pie"]
+    },
+    {
+      "title": "Supporting Data",
+      "purpose": "Present raw data, statistics, tables, and supplementary evidence that backs up the key findings and detailed analysis sections.",
+      "order": 5,
+      "required": false,
+      "auto_generate": true,
+      "chart_suggestions": ["table", "bar"]
+    },
+    {
+      "title": "Limitations & Caveats",
+      "purpose": "Acknowledge any limitations of the research, gaps in data, potential biases, and caveats that the reader should be aware of when interpreting the findings.",
+      "order": 6,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": []
+    },
+    {
+      "title": "Sources & References",
+      "purpose": "List all sources consulted during the research, including URLs, publication dates, author information, and credibility assessments where available.",
+      "order": 7,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": []
+    }
+  ]
+}

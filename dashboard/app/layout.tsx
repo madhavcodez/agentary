@@ -8,8 +8,8 @@ import { ToastProvider } from "@/components/ui/Toast";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "SecretAIRY Dashboard",
-  description: "AI-powered job matching and career intelligence dashboard",
+  title: "Agentary Dashboard",
+  description: "Autonomous research & intelligence platform",
 };
 
 export default function RootLayout({

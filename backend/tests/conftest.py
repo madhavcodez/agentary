@@ -1,14 +1,8 @@
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
-from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
-from app.database import Base
-from app.deps import get_db
-from app.main import app
-
 
 # Use the real secretairy DB for integration tests
 TEST_DB_URL = "postgresql://soundscore:soundscore@localhost:5432/secretairy"
@@ -26,8 +20,12 @@ def db():
         session.close()
 
 
+# Lazy app/client fixtures — only loaded when explicitly requested
 @pytest.fixture
 def client(db):
+    from app.deps import get_db
+    from app.main import app
+
     def override_get_db():
         try:
             yield db
@@ -35,6 +33,7 @@ def client(db):
             pass
 
     app.dependency_overrides[get_db] = override_get_db
+    from fastapi.testclient import TestClient
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()

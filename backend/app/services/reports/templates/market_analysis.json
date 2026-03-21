@@ -1,0 +1,71 @@
+{
+  "type": "market_analysis",
+  "name": "Market Analysis",
+  "description": "Comprehensive market analysis covering size, competition, trends, and strategic recommendations",
+  "sections": [
+    {
+      "title": "Executive Summary",
+      "purpose": "Concise overview of the market analysis including key market metrics, competitive dynamics, and strategic recommendations for decision-makers.",
+      "order": 0,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": []
+    },
+    {
+      "title": "Market Overview",
+      "purpose": "Describe the total addressable market, current market size, historical growth rates, and projected growth. Include segmentation by geography, customer type, or product category as relevant.",
+      "order": 1,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": ["bar", "line", "pie"]
+    },
+    {
+      "title": "Competitive Landscape",
+      "purpose": "Map out the competitive environment including major players, market share distribution, recent entrants, and competitive dynamics. Identify the key differentiators among competitors.",
+      "order": 2,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": ["bar", "pie"]
+    },
+    {
+      "title": "Pricing Analysis",
+      "purpose": "Analyze pricing models, price points, and pricing strategies across competitors and market segments. Highlight pricing trends and value positioning.",
+      "order": 3,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": ["bar", "table"]
+    },
+    {
+      "title": "Trends & Projections",
+      "purpose": "Identify key market trends, emerging technologies, regulatory changes, and consumer behavior shifts. Provide forward-looking projections with supporting data and assumptions.",
+      "order": 4,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": ["line", "area"]
+    },
+    {
+      "title": "Opportunities & Risks",
+      "purpose": "Evaluate market opportunities for entry or expansion and identify potential risks including regulatory, competitive, and macroeconomic threats. Assess likelihood and potential impact.",
+      "order": 5,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": []
+    },
+    {
+      "title": "Recommendations",
+      "purpose": "Provide actionable strategic recommendations based on the analysis. Prioritize by impact and feasibility, and include suggested timelines or phasing where appropriate.",
+      "order": 6,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": []
+    },
+    {
+      "title": "Methodology & Sources",
+      "purpose": "Document the research methodology, data sources, date ranges covered, and any assumptions or limitations in the analysis. List all referenced sources with links and credibility notes.",
+      "order": 7,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": []
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+{
+  "type": "due_diligence",
+  "name": "Due Diligence",
+  "description": "Comprehensive due diligence report for evaluating a company across financial, legal, operational, and strategic dimensions",
+  "sections": [
+    {
+      "title": "Executive Summary",
+      "purpose": "High-level summary of the due diligence findings including overall assessment, key risks identified, notable strengths, and a clear recommendation with supporting rationale.",
+      "order": 0,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": []
+    },
+    {
+      "title": "Company Overview",
+      "purpose": "Provide a comprehensive overview of the target company including history, mission, business model, products/services, organizational structure, key locations, and employee count.",
+      "order": 1,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": []
+    },
+    {
+      "title": "Financial Health",
+      "purpose": "Analyze the company's financial position including revenue trends, profitability, cash flow, burn rate, debt obligations, and key financial ratios. Identify any financial red flags.",
+      "order": 2,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": ["line", "bar"]
+    },
+    {
+      "title": "Leadership & Team",
+      "purpose": "Profile the leadership team and key personnel including backgrounds, track records, tenure, and any concerns. Assess organizational depth, culture signals, and employee retention data.",
+      "order": 3,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": []
+    },
+    {
+      "title": "Legal & Compliance",
+      "purpose": "Review legal standing including corporate structure, pending or past litigation, regulatory compliance status, licenses and permits, and any known legal risks or liabilities.",
+      "order": 4,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": []
+    },
+    {
+      "title": "Market Position",
+      "purpose": "Assess the company's position within its market including market share, competitive advantages, customer base, brand perception, and growth trajectory relative to the market.",
+      "order": 5,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": ["bar", "pie"]
+    },
+    {
+      "title": "Technology & IP",
+      "purpose": "Evaluate the company's technology stack, intellectual property portfolio (patents, trademarks, trade secrets), technical debt, scalability of systems, and any proprietary technology advantages.",
+      "order": 6,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": []
+    },
+    {
+      "title": "Risks & Red Flags",
+      "purpose": "Consolidate all identified risks and red flags across financial, legal, operational, and strategic dimensions. Categorize by severity (critical, high, medium, low) and likelihood of impact.",
+      "order": 7,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": ["bar"]
+    },
+    {
+      "title": "Recommendation",
+      "purpose": "Provide a clear, evidence-based recommendation (proceed, proceed with conditions, or do not proceed) with a summary of the key factors driving the decision and suggested next steps.",
+      "order": 8,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": []
+    },
+    {
+      "title": "Sources",
+      "purpose": "List all sources consulted during due diligence including public filings, databases, news articles, interviews conducted, and third-party reports with dates and credibility assessments.",
+      "order": 9,
+      "required": true,
+      "auto_generate": true,
+      "chart_suggestions": []
+    }
+  ]
+}

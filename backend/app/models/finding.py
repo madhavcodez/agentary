@@ -42,8 +42,8 @@ class Finding(Base):
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False, index=True)
     mission_id = Column(UUID(as_uuid=True), ForeignKey("missions.id"), nullable=True, index=True)
     expert_agent_id = Column(UUID(as_uuid=True), ForeignKey("expert_agents.id"), nullable=True)
-    voice_session_id = Column(
-        UUID(as_uuid=True), ForeignKey("voice_sessions.id"), nullable=True, index=True
+    call_record_id = Column(
+        UUID(as_uuid=True), ForeignKey("call_records.id"), nullable=True, index=True
     )
     finding_type = Column(SAEnum(FindingType), nullable=False)
     title = Column(String(500), nullable=False)
