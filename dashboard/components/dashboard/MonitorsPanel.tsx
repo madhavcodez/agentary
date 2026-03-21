@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import type { MonitorSummary } from "@/lib/types";
 
 interface MonitorsPanelProps {

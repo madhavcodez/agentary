@@ -72,17 +72,6 @@ const CALL_STATUS_STYLES: Record<string, string> = {
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 function formatDuration(seconds: number | null): string {
   if (seconds === null || seconds === 0) return "--";
   const mins = Math.floor(seconds / 60);

@@ -89,6 +89,37 @@ export interface Report {
   updated_at: string;
 }
 
+export type ReportType =
+  | "research_report"
+  | "market_analysis"
+  | "property_report"
+  | "competitive_intel"
+  | "due_diligence"
+  | "custom";
+
+export type ReportStatus = "generating" | "ready" | "failed";
+
+export interface ReportSummary {
+  id: string;
+  user_id: string;
+  project_id: string | null;
+  mission_id: string | null;
+  title: string;
+  description: string | null;
+  report_type: ReportType;
+  status: ReportStatus;
+  share_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReportList {
+  items: ReportSummary[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
 export interface ChartConfig {
   id: string;
   type: string;
@@ -145,13 +176,6 @@ export interface ReportFull {
   pdf_url: string | null;
   created_at: string;
   updated_at: string;
-}
-
-export interface ReportList {
-  items: Report[];
-  total: number;
-  page: number;
-  limit: number;
 }
 
 export interface ShareResponse {
@@ -318,4 +342,111 @@ export interface Alert {
 export interface HealthCheck {
   status: string;
   checks: Record<string, string>;
+}
+
+// ── Dashboard / Live Feed ──────────────────────────────────────────
+
+export interface MonitorSummary {
+  id: string;
+  user_id: string;
+  project_id: string | null;
+  name: string;
+  description: string | null;
+  monitor_type: string;
+  status: "active" | "paused" | "archived";
+  check_config: Record<string, unknown>;
+  alert_config: Record<string, unknown>;
+  schedule_cron: string | null;
+  timezone: string;
+  last_check_at: string | null;
+  last_change_at: string | null;
+  total_checks: number;
+  total_alerts: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AlertItem {
+  id: string;
+  monitor_id: string;
+  project_id: string | null;
+  alert_type: string;
+  title: string;
+  message: string | null;
+  severity: "info" | "warning" | "critical";
+  data: Record<string, unknown> | null;
+  acknowledged: boolean;
+  acknowledged_at: string | null;
+  delivered_channels: string[] | null;
+  created_at: string;
+}
+
+export interface ActiveInfo {
+  active_missions: Array<{
+    id: string;
+    title: string;
+    status: string;
+    project_id: string | null;
+    created_at: string | null;
+  }>;
+  active_runs: Array<{
+    id: string;
+    crew_id: string;
+    status: string;
+    started_at: string | null;
+  }>;
+  connected_clients: number;
+}
+
+export interface LiveEvent {
+  event_id: string;
+  event_type: string;
+  scope: "global" | "user" | "project";
+  user_id: string | null;
+  project_id: string | null;
+  data: Record<string, unknown>;
+  timestamp: number;
+}
+
+// ── Mission Live Data ────────────────────────────────────────────────
+
+export interface MissionFinding {
+  id: string;
+  category: string;
+  title: string;
+  content: string;
+  structured_data: Record<string, unknown> | null;
+  source_type: string | null;
+  source_url: string | null;
+  source_name: string | null;
+  confidence: number;
+  verified: boolean;
+  tags: string[];
+  created_at: string | null;
+}
+
+export interface MissionActivity {
+  id: string;
+  activity_type: string;
+  content: string | null;
+  metadata: Record<string, unknown> | null;
+  confidence: number | null;
+  created_at: string | null;
+}
+
+export interface CrewAgent {
+  agent_id: string;
+  slug: string;
+  name: string;
+  role: string;
+  icon: string | null;
+}
+
+export interface MissionLiveStatus {
+  mission_id: string;
+  status: string;
+  findings_count: number;
+  confidence_score: number | null;
+  crew: { agents: CrewAgent[] } | null;
+  activities: MissionActivity[];
 }

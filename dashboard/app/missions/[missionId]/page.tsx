@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import {
   fetchMissionStatus,
   fetchMissionFindings,
@@ -25,13 +25,6 @@ const STATUS_COLORS: Record<string, string> = {
   paused: "bg-orange-500",
   completed: "bg-green-500",
   failed: "bg-red-500",
-};
-
-const EXPERT_STATUS: Record<string, string> = {
-  completed: "\u2705",
-  running: "\u23f3",
-  pending: "\u2b1c",
-  failed: "\u274c",
 };
 
 // ── Activity type icons ─────────────────────────────────────────────
@@ -69,7 +62,6 @@ function ConfidenceBadge({ value }: { value: number }) {
 
 export default function MissionDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const missionId = params.missionId as string;
 
   const [status, setStatus] = useState<MissionLiveStatus | null>(null);
@@ -106,6 +98,7 @@ export default function MissionDetailPage() {
     if (!status || !["running", "queued"].includes(status.status)) return;
     const interval = setInterval(loadData, 2000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- status?.status is the correct narrow dependency
   }, [status?.status, loadData]);
 
   // Auto-scroll activity feed

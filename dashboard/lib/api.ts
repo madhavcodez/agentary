@@ -3,8 +3,13 @@ import type {
   Finding,
   HealthCheck,
   Mission,
-  Monitor,
+  MissionLiveStatus,
+  MissionFinding,
+  AlertItem,
+  MonitorSummary,
   Project,
+  WorkflowData,
+  WorkflowTemplate,
   Report,
   ReportFull,
   ShareResponse,
@@ -186,6 +191,35 @@ export function triggerMissionRun(missionId: string): Promise<Mission> {
   });
 }
 
+export function startMission(id: string): Promise<Mission> {
+  return request<Mission>(`/api/missions/${id}/start`, { method: "POST" });
+}
+
+export function stopMission(id: string): Promise<Mission> {
+  return request<Mission>(`/api/missions/${id}/stop`, { method: "POST" });
+}
+
+export function rerunMission(id: string): Promise<Mission> {
+  return request<Mission>(`/api/missions/${id}/rerun`, { method: "POST" });
+}
+
+export function fetchMissionStatus(id: string): Promise<MissionLiveStatus> {
+  return request<MissionLiveStatus>(`/api/missions/${id}/status`);
+}
+
+export function fetchMissionFindings(
+  id: string,
+  params?: { page?: number; limit?: number },
+): Promise<{ items: MissionFinding[]; total: number }> {
+  const sp = new URLSearchParams();
+  if (params?.page) sp.set("page", String(params.page));
+  if (params?.limit) sp.set("limit", String(params.limit));
+  const qs = sp.toString();
+  return request<{ items: MissionFinding[]; total: number }>(
+    `/api/missions/${id}/findings${qs ? `?${qs}` : ""}`,
+  );
+}
+
 // ── Expert Agents ───────────────────────────────────────────────────
 
 export function fetchExpertAgents(): Promise<ExpertAgent[]> {
@@ -264,53 +298,99 @@ export function createWorkflow(data: {
   name: string;
   description?: string;
   category?: string;
-}): Promise<Workflow> {
-  return request<Workflow>("/api/workflows", {
+  nodes?: unknown[];
+  edges?: unknown[];
+  variables?: Record<string, unknown>;
+  trigger_type?: string;
+  trigger_config?: Record<string, unknown>;
+  created_from?: string;
+  project_id?: string;
+}): Promise<WorkflowData> {
+  return request<WorkflowData>("/api/workflows", {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
-// ── Monitors ────────────────────────────────────────────────────────
+export function fetchWorkflow(id: string): Promise<WorkflowData> {
+  return request<WorkflowData>(`/api/workflows/${id}`);
+}
 
-export function fetchMonitors(params?: {
-  project_id?: string;
-  status?: string;
-  page?: number;
-  limit?: number;
-}): Promise<Monitor[]> {
+export function updateWorkflow(
+  id: string,
+  data: Record<string, unknown>,
+): Promise<WorkflowData> {
+  return request<WorkflowData>(`/api/workflows/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteWorkflow(id: string): Promise<{ status: string }> {
+  return request<{ status: string }>(`/api/workflows/${id}`, { method: "DELETE" });
+}
+
+export function activateWorkflow(id: string): Promise<WorkflowData> {
+  return request<WorkflowData>(`/api/workflows/${id}/activate`, { method: "POST" });
+}
+
+export function pauseWorkflow(id: string): Promise<WorkflowData> {
+  return request<WorkflowData>(`/api/workflows/${id}/pause`, { method: "POST" });
+}
+
+export function triggerWorkflowRun(id: string): Promise<Record<string, unknown>> {
+  return request<Record<string, unknown>>(`/api/workflows/${id}/run`, { method: "POST" });
+}
+
+export function fetchWorkflowRuns(
+  workflowId: string,
+  params?: { page?: number; limit?: number },
+): Promise<Record<string, unknown>[]> {
   const sp = new URLSearchParams();
-  if (params?.project_id) sp.set("project_id", params.project_id);
-  if (params?.status) sp.set("status", params.status);
   if (params?.page) sp.set("page", String(params.page));
   if (params?.limit) sp.set("limit", String(params.limit));
   const qs = sp.toString();
-  return request<Monitor[]>(`/api/monitors${qs ? `?${qs}` : ""}`);
+  return request<Record<string, unknown>[]>(`/api/workflows/${workflowId}/runs${qs ? `?${qs}` : ""}`);
 }
 
-export function createMonitor(data: {
-  project_id: string;
-  name: string;
-  monitor_type: string;
-}): Promise<Monitor> {
-  return request<Monitor>("/api/monitors", {
+export function validateWorkflowApi(id: string): Promise<{ valid: boolean; errors: string[] }> {
+  return request<{ valid: boolean; errors: string[] }>(`/api/workflows/${id}/validate`, { method: "POST" });
+}
+
+export function createWorkflowFromTemplate(data: {
+  template_id: string;
+  variables: Record<string, unknown>;
+  project_id?: string;
+  name?: string;
+}): Promise<WorkflowData> {
+  return request<WorkflowData>("/api/workflows/from-template", {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
-// ── Report Generation & Export ──────────────────────────────────────
-
-export function createReport(data: {
-  mission_id: string;
-  report_type: string;
-  config?: Record<string, unknown>;
-}): Promise<ReportFull> {
-  return request<ReportFull>("/reports/", {
+export function createWorkflowFromDescription(data: {
+  description: string;
+  project_id?: string;
+}): Promise<WorkflowData> {
+  return request<WorkflowData>("/api/workflows/from-description", {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
+
+export function fetchWorkflowTemplates(category?: string): Promise<WorkflowTemplate[]> {
+  const qs = category ? `?category=${category}` : "";
+  return request<WorkflowTemplate[]>(`/api/workflow-templates${qs}`);
+}
+
+import type { WorkflowRun } from "./types";
+
+export function fetchWorkflowRun(workflowId: string, runId: string): Promise<WorkflowRun> {
+  return request<WorkflowRun>(`/api/workflows/${workflowId}/runs/${runId}`);
+}
+
+// ── Reports extended ──────────────────────────────────────────────────
 
 export function fetchReport(id: string): Promise<ReportFull> {
   return request<ReportFull>(`/reports/${id}`);
@@ -327,15 +407,11 @@ export function updateReport(
 }
 
 export function deleteReport(id: string): Promise<{ status: string }> {
-  return request<{ status: string }>(`/reports/${id}`, {
-    method: "DELETE",
-  });
+  return request<{ status: string }>(`/reports/${id}`, { method: "DELETE" });
 }
 
 export function regenerateReport(id: string): Promise<ReportFull> {
-  return request<ReportFull>(`/reports/${id}/regenerate`, {
-    method: "POST",
-  });
+  return request<ReportFull>(`/reports/${id}/regenerate`, { method: "POST" });
 }
 
 export function regenerateSection(
@@ -350,19 +426,16 @@ export function regenerateSection(
 }
 
 export function downloadReportPdf(id: string): string {
-  return `${BASE_URL}/reports/${id}/pdf`;
+  const token = getToken();
+  return `${BASE_URL}/reports/${id}/pdf${token ? `?token=${token}` : ""}`;
 }
 
 export function createShareLink(reportId: string): Promise<ShareResponse> {
-  return request<ShareResponse>(`/reports/${reportId}/share`, {
-    method: "POST",
-  });
+  return request<ShareResponse>(`/reports/${reportId}/share`, { method: "POST" });
 }
 
 export function revokeShareLink(reportId: string): Promise<{ status: string }> {
-  return request<{ status: string }>(`/reports/${reportId}/share`, {
-    method: "DELETE",
-  });
+  return request<{ status: string }>(`/reports/${reportId}/share`, { method: "DELETE" });
 }
 
 export function fetchSharedReport(token: string): Promise<ReportFull> {
@@ -372,3 +445,108 @@ export function fetchSharedReport(token: string): Promise<ReportFull> {
     return res.json() as Promise<ReportFull>;
   });
 }
+
+export function exportFindingsCsvUrl(missionId: string): string {
+  return `${BASE_URL}/export/missions/${missionId}/findings/csv`;
+}
+
+export function exportFindingsExcelUrl(missionId: string): string {
+  return `${BASE_URL}/export/missions/${missionId}/findings/excel`;
+}
+
+export function exportFindingsJsonUrl(missionId: string): string {
+  return `${BASE_URL}/export/missions/${missionId}/findings/json`;
+}
+
+// ── Monitors ────────────────────────────────────────────────────────
+
+export function fetchMonitors(params?: {
+  project_id?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+}): Promise<MonitorSummary[]> {
+  const sp = new URLSearchParams();
+  if (params?.project_id) sp.set("project_id", params.project_id);
+  if (params?.status) sp.set("status", params.status);
+  if (params?.page) sp.set("page", String(params.page));
+  if (params?.limit) sp.set("limit", String(params.limit));
+  const qs = sp.toString();
+  return request<MonitorSummary[]>(`/api/monitors${qs ? `?${qs}` : ""}`);
+}
+
+export function createMonitor(data: {
+  project_id?: string;
+  name: string;
+  monitor_type: string;
+  check_config?: Record<string, unknown>;
+  alert_config?: Record<string, unknown>;
+  schedule_cron?: string;
+  timezone?: string;
+  description?: string;
+}): Promise<MonitorSummary> {
+  return request<MonitorSummary>("/api/monitors", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteMonitor(id: string): Promise<{ status: string }> {
+  return request<{ status: string }>(`/api/monitors/${id}`, { method: "DELETE" });
+}
+
+export function pauseMonitor(id: string): Promise<MonitorSummary> {
+  return request<MonitorSummary>(`/api/monitors/${id}/pause`, { method: "POST" });
+}
+
+export function resumeMonitor(id: string): Promise<MonitorSummary> {
+  return request<MonitorSummary>(`/api/monitors/${id}/resume`, { method: "POST" });
+}
+
+export function triggerMonitorCheck(id: string): Promise<Record<string, unknown>> {
+  return request<Record<string, unknown>>(`/api/monitors/${id}/check`, { method: "POST" });
+}
+
+// ── Alerts ────────────────────────────────────────────────────────
+
+export function fetchAlerts(params?: {
+  severity?: string;
+  acknowledged?: boolean;
+  limit?: number;
+}): Promise<AlertItem[]> {
+  const sp = new URLSearchParams();
+  if (params?.severity) sp.set("severity", params.severity);
+  if (params?.acknowledged !== undefined) sp.set("acknowledged", String(params.acknowledged));
+  if (params?.limit) sp.set("limit", String(params.limit));
+  const qs = sp.toString();
+  return request<AlertItem[]>(`/api/alerts${qs ? `?${qs}` : ""}`);
+}
+
+export function acknowledgeAlert(id: string): Promise<AlertItem> {
+  return request<AlertItem>(`/api/alerts/${id}/acknowledge`, { method: "PUT" });
+}
+
+export function fetchUnreadAlertCount(): Promise<{ unread: number }> {
+  return request<{ unread: number }>("/api/alerts/unread");
+}
+
+// ── Live Feed ─────────────────────────────────────────────────────
+
+export function fetchRecentEvents(limit: number = 50): Promise<Record<string, unknown>[]> {
+  return request<Record<string, unknown>[]>(`/api/live-feed/recent?limit=${limit}`);
+}
+
+// ── Report Generation & Export ──────────────────────────────────────
+
+export function createReport(data: {
+  mission_id: string;
+  report_type: string;
+  config?: Record<string, unknown>;
+}): Promise<ReportFull> {
+  return request<ReportFull>("/reports/", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// (Report CRUD, share, and export functions defined above)

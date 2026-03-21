@@ -29,7 +29,6 @@ import type {
   ReportSection,
   ChartConfig,
   ReportSource,
-  ReportType,
 } from "@/lib/types";
 
 ChartJS.register(
@@ -48,7 +47,7 @@ ChartJS.register(
 // Constants
 // ---------------------------------------------------------------------------
 
-const TYPE_LABELS: Record<ReportType, string> = {
+const TYPE_LABELS: Record<string, string> = {
   research_report: "Research",
   market_analysis: "Market Analysis",
   property_report: "Property",
@@ -58,41 +57,6 @@ const TYPE_LABELS: Record<ReportType, string> = {
 };
 
 const POLL_INTERVAL_MS = 3000;
-
-// ---------------------------------------------------------------------------
-// Reusable: ConfidenceBadge
-// ---------------------------------------------------------------------------
-
-interface ConfidenceBadgeProps {
-  score: number;
-  className?: string;
-}
-
-function ConfidenceBadge({ score, className = "" }: ConfidenceBadgeProps) {
-  let color: string;
-  let label: string;
-
-  if (score > 0.8) {
-    color = "bg-emerald-400";
-    label = "High";
-  } else if (score >= 0.5) {
-    color = "bg-amber-400";
-    label = "Medium";
-  } else {
-    color = "bg-red-400";
-    label = "Low";
-  }
-
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 text-xs text-gray-400 ${className}`}
-      title={`Confidence: ${(score * 100).toFixed(0)}%`}
-    >
-      <span className={`w-2 h-2 rounded-full ${color}`} />
-      {label} ({(score * 100).toFixed(0)}%)
-    </span>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Reusable: ChartRenderer
