@@ -391,7 +391,7 @@ async def _send_alert_email(alert: Alert, monitor: Monitor) -> None:
             json={
                 "from": settings.resend_from_email,
                 "to": recipients,
-                "subject": f"[SecretAIRY Alert] {alert.title}",
+                "subject": f"[Agentary Alert] {alert.title}",
                 "html": (
                     f"<h2>{alert.title}</h2>"
                     f"<p><strong>Monitor:</strong> {monitor.name}</p>"

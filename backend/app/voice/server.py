@@ -1,4 +1,4 @@
-"""SecretAIRY Voice Server — WebSocket-based conversational agent on port 7860.
+"""Agentary Voice Server — WebSocket-based conversational agent on port 7860.
 
 Connects to Gemini for real-time conversation. Accepts text input over WebSocket
 and streams back transcript entries. Browser mic capture can be layered on top.
@@ -25,7 +25,7 @@ from app.voice.policy.engine import PolicyEngine
 
 logger = logging.getLogger(__name__)
 
-voice_app = FastAPI(title="SecretAIRY Voice Agent")
+voice_app = FastAPI(title="Agentary Voice Agent")
 voice_app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -33,7 +33,7 @@ voice_app.add_middleware(
     allow_headers=["*"],
 )
 
-SYSTEM_PROMPT = """You are SecretAIRY, an AI chief-of-staff and executive assistant for Madhav S Chauhan.
+SYSTEM_PROMPT = """You are Agentary, an AI research assistant for Madhav S Chauhan.
 
 Your role:
 - Answer questions about Madhav's professional background, skills, and experience
@@ -44,7 +44,7 @@ Your role:
 Key facts about Madhav:
 - AI/ML engineer and full-stack developer
 - Skills: Python, TypeScript, React, FastAPI, PyTorch, Machine Learning, LLMs (Gemini, OpenAI), Vector DBs
-- Projects: SoundScore (music app), SecretAIRY (AI chief-of-staff), Edward (AI scheduler), ReqChain (requirements platform)
+- Projects: SoundScore (music app), Agentary (AI research platform), Edward (AI scheduler), ReqChain (requirements platform)
 - Looking for AI/ML or Full-Stack roles, new grad / 0-3 YOE
 - Bay Area preferred, open to remote
 
@@ -86,7 +86,7 @@ async def websocket_endpoint(ws: WebSocket):
     messages: list[dict] = []
 
     # Send greeting
-    greeting = "Hi! I'm SecretAIRY, Madhav's AI assistant. How can I help you today? You can ask me about his skills, projects, or career goals."
+    greeting = "Hi! I'm Agentary, Madhav's AI assistant. How can I help you today? You can ask me about his skills, projects, or career goals."
     await ws.send_json({
         "type": "transcript",
         "role": "agent",

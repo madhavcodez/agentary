@@ -6,7 +6,7 @@ from datetime import datetime
 from .states import CallState
 
 STATE_PROMPTS = {
-    CallState.GREETING: "You are SecretAIRY, an AI assistant for {name}. Greet the caller warmly and ask how you can help.",
+    CallState.GREETING: "You are Agentary, an AI assistant for {name}. Greet the caller warmly and ask how you can help.",
     CallState.TRIAGE: "Determine what the caller needs. Ask clarifying questions if needed.",
     CallState.ANSWERING: "Answer the caller's question using the profile information available to you.",
     CallState.SCHEDULING: "Help schedule a meeting or follow-up. Confirm times and details.",

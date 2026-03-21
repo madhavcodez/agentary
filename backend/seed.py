@@ -29,7 +29,7 @@ Tools: Docker, PostgreSQL, Redis, Git, GitHub Actions
 EXPERIENCE
 Personal Projects (2024-2026)
 - SoundScore: Cross-platform music logging app (iOS + Android) with SwiftUI and Kotlin
-- SecretAIRY: AI chief-of-staff system with job matching, dossier generation, and voice
+- Agentary: AI research platform with job matching, dossier generation, and voice
 - Edward: AI scheduling assistant with Google Calendar integration and voice (Pipecat)
 - ReqChain: Multi-project AI requirements platform with FastAPI and Next.js
 

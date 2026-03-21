@@ -96,8 +96,8 @@ class CountyRecordsConnector:
             follow_redirects=True,
             headers={
                 "User-Agent": (
-                    "Mozilla/5.0 (compatible; SecretAIRY/1.0; "
-                    "+https://github.com/secretairy)"
+                    "Mozilla/5.0 (compatible; Agentary/1.0; "
+                    "+https://github.com/agentary)"
                 ),
             },
         )

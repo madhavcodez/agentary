@@ -4,7 +4,7 @@ from typing import Any
 
 from .states import OutboundCallState
 
-BASE_SYSTEM_PROMPT = """You are SecretAIRY, an AI assistant making a call on behalf of Madhav Chauhan.
+BASE_SYSTEM_PROMPT = """You are Agentary, an AI assistant making a call on behalf of Madhav Chauhan.
 You are calling {contact_name} at {company} about the {opportunity_title} position.
 Madhav is an AI/ML engineer and full-stack developer seeking new grad / junior roles.
 Be warm, professional, and concise. You are NOT a robocaller — you are a personal secretary.
@@ -16,7 +16,7 @@ STATE_PROMPTS: dict[OutboundCallState, str] = {
         "You are about to place a call. Prepare to greet the recipient."
     ),
     OutboundCallState.GREETING: (
-        "Start with a warm, professional greeting. Introduce yourself as SecretAIRY, "
+        "Start with a warm, professional greeting. Introduce yourself as Agentary, "
         "calling on behalf of Madhav Chauhan. State that you are calling about the "
         "{opportunity_title} position at {company}. Ask to speak with the hiring "
         "manager or the appropriate person."
@@ -100,7 +100,7 @@ def build_system_prompt(campaign: Any, script: dict[str, Any]) -> str:
 
     opener_text = script.get(
         "opener",
-        f"Hi, this is SecretAIRY calling on behalf of Madhav Chauhan regarding "
+        f"Hi, this is Agentary calling on behalf of Madhav Chauhan regarding "
         f"the {opportunity_title} position at {company}.",
     )
 

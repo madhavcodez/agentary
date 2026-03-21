@@ -6,7 +6,7 @@ from fastapi import FastAPI
 
 logger = logging.getLogger(__name__)
 
-voice_app = FastAPI(title="SecretAIRY Voice")
+voice_app = FastAPI(title="Agentary Voice")
 
 
 @voice_app.get("/health")

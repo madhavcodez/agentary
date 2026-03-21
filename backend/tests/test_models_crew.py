@@ -11,7 +11,7 @@ from app.models.agent_crew import AgentCrew, CoordinationStrategy, AgentActivity
 from app.models.crew_run import CrewRun
 from app.models.crew_task import CrewTask
 from app.models.finding import Finding
-from app.models.mission_research_result import MissionResearchResult
+from app.models.report import Report
 
 
 class TestProjectModel:
@@ -116,7 +116,7 @@ class TestCrewTaskModel:
     def test_create_task(self):
         task = CrewTask(
             id=uuid.uuid4(),
-            run_id=uuid.uuid4(),
+            mission_run_id=uuid.uuid4(),
             expert_agent_id=uuid.uuid4(),
             task_type="web_search",
             description="Search for Austin housing data",
@@ -138,7 +138,7 @@ class TestCrewTaskModel:
         }
         task = CrewTask(
             id=uuid.uuid4(),
-            run_id=uuid.uuid4(),
+            mission_run_id=uuid.uuid4(),
             expert_agent_id=uuid.uuid4(),
             task_type="web_search",
             description="test",
@@ -168,25 +168,25 @@ class TestFindingModel:
         assert "real_estate" in finding.tags
 
 
-class TestMissionResearchResultModel:
-    def test_create_result(self):
-        result = MissionResearchResult(
+class TestReportModel:
+    def test_create_report(self):
+        result = Report(
             id=uuid.uuid4(),
             mission_id=uuid.uuid4(),
+            user_id=uuid.uuid4(),
             title="Austin 78704 Housing Market Report",
-            summary="Comprehensive analysis of the housing market...",
+            report_type="research_report",
+            status="generating",
+            executive_summary="Comprehensive analysis of the housing market...",
             sections=[
                 {"title": "Executive Summary", "content": "...", "finding_ids": []},
                 {"title": "Price Trends", "content": "...", "chart_configs": []},
             ],
-            sources_used=12,
-            findings_count=24,
-            confidence=0.78,
             methodology="Multi-expert parallel research with web, data, and synthesis phases",
         )
         assert result.title == "Austin 78704 Housing Market Report"
         assert len(result.sections) == 2
-        assert result.confidence == 0.78
+        assert result.report_type == "research_report"
 
 
 class TestAgentActivityModel:

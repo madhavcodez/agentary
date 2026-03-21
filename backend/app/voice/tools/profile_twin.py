@@ -6,7 +6,7 @@ PROFILE_DATA = {
     "skills": ["Python", "TypeScript", "React", "FastAPI", "Machine Learning", "LLMs"],
     "experience": [
         "Built SoundScore, a cross-platform music logging app",
-        "Created SecretAIRY, an AI chief-of-staff system",
+        "Created Agentary, an AI research platform",
         "Experience with Gemini, OpenAI, and vector databases",
     ],
     "preferences": {

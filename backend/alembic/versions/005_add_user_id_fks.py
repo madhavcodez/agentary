@@ -42,7 +42,7 @@ def upgrade() -> None:
             "ON CONFLICT (id) DO NOTHING"
         ).bindparams(
             id=DEFAULT_USER_UUID,
-            email="migration-default@secretairy.internal",
+            email="migration-default@agentary.internal",
             pw="!MIGRATION_PLACEHOLDER_NOT_A_REAL_HASH!",
             name="Migration Default",
         )

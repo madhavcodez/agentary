@@ -1,4 +1,4 @@
-"""Comprehensive tests for the SecretAIRY data source connector system.
+"""Comprehensive tests for the Agentary data source connector system.
 
 Covers: SourceResult, SourceConnector protocol, SourceRegistry,
 all 10 connectors' get_tool_definition(), PythonExecutorConnector,

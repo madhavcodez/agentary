@@ -34,7 +34,7 @@ async def execute(url: str, extract: str = "text", **kwargs: Any) -> dict[str, A
         async with httpx.AsyncClient(
             timeout=20,
             follow_redirects=True,
-            headers={"User-Agent": "Mozilla/5.0 (compatible; SecretAIRY/1.0)"},
+            headers={"User-Agent": "Mozilla/5.0 (compatible; Agentary/1.0)"},
         ) as client:
             response = await client.get(url)
             response.raise_for_status()
