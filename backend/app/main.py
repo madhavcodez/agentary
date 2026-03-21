@@ -24,6 +24,13 @@ async def lifespan(app: FastAPI):
 
     redis_task = asyncio.create_task(subscribe_and_forward(ws_manager))
 
+    # Initialize SourceRegistry and cache
+    from .services.data_sources.source_registry import create_source_registry
+    from .services.data_sources.cache import source_cache
+
+    app.state.source_registry = create_source_registry(settings)
+    await source_cache.connect()
+
     yield
 
     redis_task.cancel()
@@ -91,6 +98,9 @@ from .api.export import router as export_router
 from .api.shared import router as shared_router
 from .api.workflows import router as workflows_router
 from .api.workflow_templates import router as workflow_templates_router
+from .api.data_sources import router as data_sources_router
+from .api.entities import router as entities_router
+from .api.entity_collections import router as entity_collections_router
 
 app.include_router(auth_router)
 app.include_router(health_router)
@@ -116,3 +126,6 @@ app.include_router(export_router)
 app.include_router(shared_router)
 app.include_router(workflows_router)
 app.include_router(workflow_templates_router)
+app.include_router(data_sources_router)
+app.include_router(entities_router)
+app.include_router(entity_collections_router)

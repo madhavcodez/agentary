@@ -15,6 +15,10 @@ from .monitor import Monitor, Alert, MonitorStatus, MonitorType, AlertSeverity
 from .knowledge_base import KnowledgeBase, KBDomain
 from .source import Source, SourceKind
 from .audit_log import AuditLog, AuditAction
+from .data_source import DataSource
+from .source_request_log import SourceRequestLog
+from .entity import Entity
+from .entity_collection import EntityCollection
 
 __all__ = [
     "User", "Contact", "Policy",
@@ -32,4 +36,5 @@ __all__ = [
     "KnowledgeBase", "KBDomain",
     "Source", "SourceKind",
     "AuditLog", "AuditAction",
+    "DataSource", "SourceRequestLog", "Entity", "EntityCollection",
 ]

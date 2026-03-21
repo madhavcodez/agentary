@@ -47,11 +47,37 @@ twilio_breaker = pybreaker.CircuitBreaker(
 qdrant_breaker = pybreaker.CircuitBreaker(
     fail_max=5, reset_timeout=30, name="qdrant", listeners=[_listener],
 )
+google_places_breaker = pybreaker.CircuitBreaker(
+    fail_max=3, reset_timeout=120, name="google_places", listeners=[_listener],
+)
+yelp_breaker = pybreaker.CircuitBreaker(
+    fail_max=3, reset_timeout=120, name="yelp", listeners=[_listener],
+)
+crunchbase_breaker = pybreaker.CircuitBreaker(
+    fail_max=3, reset_timeout=120, name="crunchbase", listeners=[_listener],
+)
+zillow_breaker = pybreaker.CircuitBreaker(
+    fail_max=3, reset_timeout=120, name="zillow", listeners=[_listener],
+)
+web_scraper_breaker = pybreaker.CircuitBreaker(
+    fail_max=5, reset_timeout=60, name="web_scraper", listeners=[_listener],
+)
 
 
 def get_breaker_status() -> dict:
     """Return current state of all circuit breakers for health checks."""
-    breakers = [gemini_breaker, exa_breaker, resend_breaker, twilio_breaker, qdrant_breaker]
+    breakers = [
+        gemini_breaker,
+        exa_breaker,
+        resend_breaker,
+        twilio_breaker,
+        qdrant_breaker,
+        google_places_breaker,
+        yelp_breaker,
+        crunchbase_breaker,
+        zillow_breaker,
+        web_scraper_breaker,
+    ]
     return {
         b.name: {
             "state": b.current_state,
