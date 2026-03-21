@@ -41,6 +41,7 @@ def execute_crew_run(self, run_id: str) -> dict:
             "duration_seconds": run.duration_seconds,
         }
     except Exception as exc:
+        db.rollback()
         if self.request.retries < self.max_retries:
             raise self.retry(exc=exc, countdown=30)
         raise
@@ -78,6 +79,7 @@ def plan_and_start_mission(mission_id: str) -> dict:
             "findings_count": completed_run.metrics.get("findings_count", 0) if completed_run.metrics else 0,
         }
     except Exception:
+        db.rollback()
         # Mark mission as failed
         mission = db.query(Mission).filter_by(id=uuid.UUID(mission_id)).first()
         if mission:

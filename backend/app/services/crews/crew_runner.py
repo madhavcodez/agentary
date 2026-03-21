@@ -16,7 +16,6 @@ from ...models.crew_task import CrewTask
 from ...models.expert_agent import ExpertAgent
 from ...models.finding import Finding
 from ...models.mission import Mission, MissionStatus
-from ...models.mission_research_result import MissionResearchResult
 from ..gemini import generate_text, get_client
 from .events import (
     emit_crew_run_completed,
@@ -50,8 +49,8 @@ class CrewRunner:
         if not run:
             raise ValueError(f"CrewRun {run_id} not found")
 
-        crew = self.db.query(AgentCrew).filter_by(id=run.crew_id).first()
         mission = self.db.query(Mission).filter_by(id=run.mission_id).first()
+        crew = self.db.query(AgentCrew).filter_by(mission_id=run.mission_id).first()
 
         if not crew or not mission:
             run.status = "failed"
@@ -107,6 +106,8 @@ class CrewRunner:
                     ],
                     return_exceptions=True,
                 )
+                failed_count = 0
+                failed_errors: list[str] = []
                 for result in results:
                     if isinstance(result, tuple):
                         findings, tokens, cost = result
@@ -114,12 +115,20 @@ class CrewRunner:
                         total_tokens += tokens
                         total_cost += cost
                     elif isinstance(result, Exception):
+                        failed_count += 1
+                        failed_errors.append(str(result))
                         await emit_expert_thinking(
                             self.db, mission.id, run.id, crew.id,
                             None, "System", "\u26a0\ufe0f",
                             f"Research task failed: {result}", "error",
                         )
                         self.db.commit()
+
+                # If ALL research tasks failed, abort the run
+                if research_tasks and failed_count == len(research_tasks):
+                    raise RuntimeError(
+                        f"All {failed_count} research tasks failed: {'; '.join(failed_errors[:3])}"
+                    )
 
             # ── SYNTHESIS PHASE ──────────────────────────────────────
             for task in synthesis_tasks:
@@ -169,21 +178,7 @@ class CrewRunner:
                     total_tokens += tokens
                     total_cost += cost
 
-                    # Create MissionResearchResult from report output
-                    if task.output_data:
-                        research_result = MissionResearchResult(
-                            id=uuid.uuid4(),
-                            mission_id=mission.id,
-                            crew_run_id=run.id,
-                            title=task.output_data.get("title", f"Report: {mission.name}"),
-                            summary=task.output_data.get("summary", ""),
-                            sections=task.output_data.get("sections", []),
-                            methodology=task.output_data.get("methodology", ""),
-                            sources_used=task.output_data.get("sources_used", len(all_findings)),
-                            findings_count=len(all_findings),
-                            confidence=task.output_data.get("confidence", 0.5),
-                        )
-                        self.db.add(research_result)
+                    # Store report data in task output for later report generation
 
             # ── FINALIZE ─────────────────────────────────────────────
             elapsed = time.time() - start_time
@@ -273,7 +268,7 @@ class CrewRunner:
             tool_declarations = tool_registry.get_gemini_tool_declarations(expert_tools)
 
             # ── AGENTIC TOOL-CALLING LOOP ────────────────────────────
-            max_iterations = 10
+            max_iterations = 6
             done = False
             iteration = 0
 
@@ -286,6 +281,7 @@ class CrewRunner:
                 config_kwargs: dict[str, Any] = {
                     "system_instruction": system_prompt,
                     "temperature": temperature,
+                    "http_options": {"timeout": 120_000},
                 }
 
                 tools_param = None
@@ -385,16 +381,32 @@ class CrewRunner:
                     # Parse findings from response
                     parsed = self._parse_findings(response_text, expert, task, mission)
                     for f_data in parsed:
+                        # Map category string to FindingType enum
+                        raw_type = f_data.get("category", f_data.get("finding_type", "data_point"))
+                        try:
+                            from ...models.finding import FindingType
+                            finding_type = FindingType(raw_type)
+                        except ValueError:
+                            finding_type = FindingType.data_point
+
+                        # Map source_type string to SourceType enum
+                        raw_source = f_data.get("source_type", "web")
+                        try:
+                            from ...models.finding import SourceType
+                            source_type = SourceType(raw_source)
+                        except ValueError:
+                            source_type = SourceType.web
+
                         finding = Finding(
                             id=uuid.uuid4(),
+                            project_id=mission.project_id,
                             mission_id=mission.id,
-                            crew_task_id=task.id,
                             expert_agent_id=expert.id,
-                            category=f_data.get("category", "data_point"),
-                            title=f_data.get("title", "Untitled finding"),
+                            finding_type=finding_type,
+                            title=f_data.get("title", "Untitled finding")[:500],
                             content=f_data.get("content", ""),
                             structured_data=f_data.get("structured_data"),
-                            source_type=f_data.get("source_type", "web"),
+                            source_type=source_type,
                             source_url=f_data.get("source_url"),
                             source_name=f_data.get("source_name"),
                             confidence=float(f_data.get("confidence", 0.5)),
@@ -420,12 +432,11 @@ class CrewRunner:
 
             # Finalize task
             elapsed = time.time() - start_time
+            cost = total_tokens * 0.000001  # Rough estimate
             task.status = "completed"
             task.completed_at = datetime.now(timezone.utc)
             task.duration_seconds = elapsed
-            task.findings_produced = len(findings)
-            task.tokens_used = total_tokens
-            task.cost_usd = total_tokens * 0.000001  # Rough estimate
+            task.findings_count = len(findings)
             self.db.commit()
 
             await emit_task_completed(
@@ -434,7 +445,7 @@ class CrewRunner:
             )
             self.db.commit()
 
-            return findings, total_tokens, task.cost_usd
+            return findings, total_tokens, cost
 
         except Exception as e:
             task.status = "failed"

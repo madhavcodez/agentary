@@ -23,7 +23,9 @@ export default function NewWorkflowPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetchWorkflowTemplates().then(setTemplates).catch(console.error);
+    fetchWorkflowTemplates()
+      .then(setTemplates)
+      .catch(() => setError("Failed to load templates"));
   }, []);
 
   async function handleTemplateCreate() {
@@ -38,7 +40,7 @@ export default function NewWorkflowPage() {
       });
       router.push(`/workflows/${wf.id}`);
     } catch (e) {
-      setError(String(e));
+      setError(e instanceof Error ? e.message : "Failed to create workflow");
     } finally {
       setLoading(false);
     }
@@ -52,7 +54,7 @@ export default function NewWorkflowPage() {
       const wf = await createWorkflowFromDescription({ description: nlDescription });
       router.push(`/workflows/${wf.id}`);
     } catch (e) {
-      setError(String(e));
+      setError(e instanceof Error ? e.message : "Failed to generate workflow");
     } finally {
       setLoading(false);
     }
@@ -71,7 +73,7 @@ export default function NewWorkflowPage() {
       });
       router.push(`/workflows/${wf.id}`);
     } catch (e) {
-      setError(String(e));
+      setError(e instanceof Error ? e.message : "Failed to create workflow");
     } finally {
       setLoading(false);
     }

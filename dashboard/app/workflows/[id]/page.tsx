@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/Toast";
 import ReactFlow, {
   addEdge,
   applyEdgeChanges,
@@ -75,6 +76,7 @@ function rfEdgesToWF(edges: Edge[]): WorkflowEdge[] {
 export default function WorkflowEditorPage() {
   const params = useParams();
   const router = useRouter();
+  const { toast } = useToast();
   const workflowId = params.id as string;
 
   const [workflow, setWorkflow] = useState<WorkflowData | null>(null);
@@ -95,7 +97,7 @@ export default function WorkflowEditorPage() {
         setEdges(wfEdgesToRF(wf.edges));
       })
       .catch((err) => {
-        console.error(err);
+        toast(err instanceof Error ? err.message : "Failed to load workflow", "error");
         router.push("/workflows");
       });
   }, [workflowId, router]);
@@ -181,17 +183,23 @@ export default function WorkflowEditorPage() {
       });
       setWorkflow(updated);
       setDirty(false);
+      toast("Workflow saved", "success");
     } catch (e) {
-      console.error(e);
+      toast(e instanceof Error ? e.message : "Failed to save workflow", "error");
     } finally {
       setSaving(false);
     }
   }
 
   async function handleValidate() {
-    const result = await validateWorkflowApi(workflowId);
-    setValidationErrors(result.errors);
-    return result.valid;
+    try {
+      const result = await validateWorkflowApi(workflowId);
+      setValidationErrors(result.errors);
+      return result.valid;
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Validation failed", "error");
+      return false;
+    }
   }
 
   async function handleRun() {
@@ -200,7 +208,7 @@ export default function WorkflowEditorPage() {
       const run = await triggerWorkflowRun(workflowId);
       router.push(`/workflows/${workflowId}/runs/${run.id}`);
     } catch (e) {
-      console.error(e);
+      toast(e instanceof Error ? e.message : "Failed to run workflow", "error");
     }
   }
 
@@ -210,12 +218,14 @@ export default function WorkflowEditorPage() {
       if (workflow.status === "active") {
         const updated = await pauseWorkflow(workflowId);
         setWorkflow(updated);
+        toast("Workflow paused", "success");
       } else {
         const updated = await activateWorkflow(workflowId);
         setWorkflow(updated);
+        toast("Workflow activated", "success");
       }
     } catch (e) {
-      console.error(e);
+      toast(e instanceof Error ? e.message : "Failed to update workflow", "error");
     }
   }
 

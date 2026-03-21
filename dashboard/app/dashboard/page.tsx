@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   fetchRecentEvents,
   fetchMonitors,
@@ -8,6 +8,7 @@ import {
   fetchFindings,
   fetchUnreadAlertCount,
 } from "@/lib/api";
+import { useToast } from "@/components/ui/Toast";
 import type { MonitorSummary, LiveEvent } from "@/lib/types";
 import StatsBar from "@/components/dashboard/StatsBar";
 import ActiveMissions from "@/components/dashboard/ActiveMissions";
@@ -28,6 +29,8 @@ export default function DashboardPage() {
     connectedClients: 0,
   });
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+  const hasShownError = useRef(false);
 
   const loadData = useCallback(async () => {
     const results = await Promise.allSettled([
@@ -76,6 +79,12 @@ export default function DashboardPage() {
       unread = (results[4].value as { unread: number }).unread;
     }
 
+    const failedCount = results.filter((r) => r.status === "rejected").length;
+    if (failedCount > 0 && !hasShownError.current) {
+      toast("Some dashboard data failed to load", "error");
+      hasShownError.current = true;
+    }
+
     setStatsData({
       activeMissions: missionList.length,
       totalFindings: findingsCount,
@@ -85,11 +94,13 @@ export default function DashboardPage() {
     });
 
     setLoading(false);
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 30000);
+    const interval = setInterval(() => {
+      if (!document.hidden) loadData();
+    }, 30000);
     return () => clearInterval(interval);
   }, [loadData]);
 

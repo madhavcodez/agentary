@@ -9,6 +9,7 @@ import {
   fetchReports,
   createMission,
 } from "@/lib/api";
+import { useToast } from "@/components/ui/Toast";
 import type { Project, Mission, Finding } from "@/lib/types";
 
 const TYPE_ICONS: Record<string, string> = {
@@ -51,6 +52,7 @@ function confidenceBadge(confidence: number | null): string {
 export default function ProjectDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { toast } = useToast();
   const id = params.id as string;
 
   const [project, setProject] = useState<Project | null>(null);
@@ -67,10 +69,11 @@ export default function ProjectDetailPage() {
       setProject(data);
     } catch {
       setProject(null);
+      toast("Failed to load project", "error");
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, toast]);
 
   const loadMissions = useCallback(async () => {
     try {
@@ -78,8 +81,9 @@ export default function ProjectDetailPage() {
       setMissions(data);
     } catch {
       setMissions([]);
+      toast("Failed to load missions", "error");
     }
-  }, [id]);
+  }, [id, toast]);
 
   const loadFindings = useCallback(async () => {
     try {
@@ -120,8 +124,8 @@ export default function ProjectDetailPage() {
       setMissionInput("");
       await loadMissions();
       await loadProject();
-    } catch {
-      // error handled silently
+    } catch (e: unknown) {
+      toast(e instanceof Error ? e.message : "Failed to create mission", "error");
     } finally {
       setSubmitting(false);
     }

@@ -25,8 +25,11 @@ def health(db: Session = Depends(get_db)) -> dict:
         import redis
         from ..config import settings
         r = redis.from_url(settings.redis_url)
-        r.ping()
-        checks["redis"] = "ok"
+        try:
+            r.ping()
+            checks["redis"] = "ok"
+        finally:
+            r.close()
     except Exception as e:
         checks["redis"] = f"error: {e}"
 
@@ -35,8 +38,11 @@ def health(db: Session = Depends(get_db)) -> dict:
         from qdrant_client import QdrantClient
         from ..config import settings
         client = QdrantClient(url=settings.qdrant_url, timeout=5, check_compatibility=False)
-        client.get_collections()
-        checks["qdrant"] = "ok"
+        try:
+            client.get_collections()
+            checks["qdrant"] = "ok"
+        finally:
+            client.close()
     except Exception as e:
         checks["qdrant"] = f"error: {e}"
 

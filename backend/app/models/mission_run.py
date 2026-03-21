@@ -60,7 +60,7 @@ class MissionRun(Base):
 
     # Relationships
     mission = relationship("Mission", back_populates="runs")
-    tasks = relationship("MissionTask", back_populates="run", lazy="dynamic")
+    tasks = relationship("CrewTask", foreign_keys="CrewTask.mission_run_id", lazy="select")
 
 
 class MissionTask(Base):
@@ -81,4 +81,4 @@ class MissionTask(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
-    run = relationship("MissionRun", back_populates="tasks")
+    run = relationship("MissionRun")

@@ -70,6 +70,7 @@ export default function MissionDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"activity" | "findings" | "structured">("activity");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [actionLoading, setActionLoading] = useState(false);
   const feedRef = useRef<HTMLDivElement>(null);
 
   // Load mission status and findings
@@ -93,10 +94,12 @@ export default function MissionDetailPage() {
     loadData();
   }, [loadData]);
 
-  // Poll when mission is running
+  // Poll when mission is running (5s interval, skip if tab hidden)
   useEffect(() => {
     if (!status || !["running", "queued"].includes(status.status)) return;
-    const interval = setInterval(loadData, 2000);
+    const interval = setInterval(() => {
+      if (!document.hidden) loadData();
+    }, 5000);
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- status?.status is the correct narrow dependency
   }, [status?.status, loadData]);
@@ -110,29 +113,38 @@ export default function MissionDetailPage() {
 
   // Action handlers
   const handleStart = async () => {
+    setActionLoading(true);
     try {
       await startMission(missionId);
       loadData();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to start");
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const handleStop = async () => {
+    setActionLoading(true);
     try {
       await stopMission(missionId);
       loadData();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to stop");
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const handleRerun = async () => {
+    setActionLoading(true);
     try {
       await rerunMission(missionId);
       loadData();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to rerun");
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -191,25 +203,28 @@ export default function MissionDetailPage() {
           {isDraft && (
             <button
               onClick={handleStart}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+              disabled={actionLoading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
             >
-              Start Research
+              {actionLoading ? "Starting..." : "Start Research"}
             </button>
           )}
           {isRunning && (
             <button
               onClick={handleStop}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
+              disabled={actionLoading}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 text-sm font-medium"
             >
-              Stop
+              {actionLoading ? "Stopping..." : "Stop"}
             </button>
           )}
           {isDone && (
             <button
               onClick={handleRerun}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+              disabled={actionLoading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
             >
-              Re-run
+              {actionLoading ? "Starting..." : "Re-run"}
             </button>
           )}
         </div>

@@ -109,6 +109,7 @@ async def start_mission(
     user: User = Depends(get_current_user),
 ):
     """Assemble expert crew and start research execution."""
+    from ..models.mission import MissionStatus
     from ..services.crews.crew_service import assemble_crew, start_crew_run
 
     mission = db.query(Mission).filter(Mission.id == mission_id, Mission.user_id == user.id).first()
@@ -118,17 +119,41 @@ async def start_mission(
     if mission.status.value not in ("draft", "failed"):
         raise HTTPException(status_code=400, detail=f"Cannot start mission in {mission.status.value} status")
 
-    # Assemble crew
-    crew_config = mission.crew_config or {}
-    expert_slugs = crew_config.get("required_experts")
-    crew = await assemble_crew(mission, db, expert_slugs=expert_slugs)
+    try:
+        # Assemble crew
+        crew_config = mission.crew_config or {}
+        expert_slugs = crew_config.get("required_experts")
+        crew = await assemble_crew(mission, db, expert_slugs=expert_slugs)
 
-    # Start run
-    run = await start_crew_run(crew, mission, db)
+        # Start run
+        run = await start_crew_run(crew, mission, db)
 
-    # Enqueue Celery task
-    from ..tasks.crew_tasks import execute_crew_run
-    execute_crew_run.delay(str(run.id))
+        # Enqueue Celery task (with fallback to inline execution)
+        try:
+            from ..tasks.crew_tasks import execute_crew_run
+            execute_crew_run.delay(str(run.id))
+        except Exception:
+            # Celery not available — run inline in background
+            import asyncio
+            from ..services.crews.crew_runner import CrewRunner
+
+            async def _run_inline():
+                from ..database import SessionLocal
+                inline_db = SessionLocal()
+                try:
+                    runner = CrewRunner(inline_db)
+                    await runner.execute_run(run.id)
+                except Exception:
+                    pass
+                finally:
+                    inline_db.close()
+
+            asyncio.ensure_future(_run_inline())
+    except Exception as e:
+        db.rollback()
+        mission.status = MissionStatus.failed
+        db.commit()
+        raise HTTPException(status_code=500, detail=f"Failed to start mission: {e}")
 
     return {
         "mission_id": str(mission.id),
@@ -286,20 +311,44 @@ async def rerun_mission(
     user: User = Depends(get_current_user),
 ):
     """Re-run a completed or failed mission."""
+    from ..models.mission import MissionStatus
     from ..services.crews.crew_service import assemble_crew, start_crew_run
 
     mission = db.query(Mission).filter(Mission.id == mission_id, Mission.user_id == user.id).first()
     if not mission:
         raise HTTPException(status_code=404, detail="Mission not found")
 
-    crew = db.query(AgentCrew).filter_by(mission_id=mission.id).first()
-    if not crew:
-        crew = await assemble_crew(mission, db)
+    try:
+        crew = db.query(AgentCrew).filter_by(mission_id=mission.id).first()
+        if not crew:
+            crew = await assemble_crew(mission, db)
 
-    run = await start_crew_run(crew, mission, db)
+        run = await start_crew_run(crew, mission, db)
 
-    from ..tasks.crew_tasks import execute_crew_run
-    execute_crew_run.delay(str(run.id))
+        try:
+            from ..tasks.crew_tasks import execute_crew_run
+            execute_crew_run.delay(str(run.id))
+        except Exception:
+            import asyncio
+            from ..services.crews.crew_runner import CrewRunner
+
+            async def _run_inline():
+                from ..database import SessionLocal
+                inline_db = SessionLocal()
+                try:
+                    runner = CrewRunner(inline_db)
+                    await runner.execute_run(run.id)
+                except Exception:
+                    pass
+                finally:
+                    inline_db.close()
+
+            asyncio.ensure_future(_run_inline())
+    except Exception as e:
+        db.rollback()
+        mission.status = MissionStatus.failed
+        db.commit()
+        raise HTTPException(status_code=500, detail=f"Failed to rerun mission: {e}")
 
     return {
         "mission_id": str(mission.id),

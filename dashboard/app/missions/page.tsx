@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { fetchMissions, fetchProjects } from "@/lib/api";
+import { useToast } from "@/components/ui/Toast";
 import type { Mission, Project } from "@/lib/types";
 
 const STATUS_FILTERS = ["all", "draft", "running", "completed", "failed"] as const;
@@ -30,6 +31,7 @@ function formatDate(dateStr: string): string {
 
 export default function MissionsPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [missions, setMissions] = useState<Mission[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,10 +51,11 @@ export default function MissionsPage() {
       setMissions(data);
     } catch {
       setMissions([]);
+      toast("Failed to load missions", "error");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   const loadProjects = useCallback(async () => {
     try {

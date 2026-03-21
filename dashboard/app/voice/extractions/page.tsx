@@ -68,8 +68,9 @@ export default function VoiceExtractionsPage() {
     setLoading(true);
     setError(null);
     try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:8000/voice/sessions", {
+      const res = await fetch(`${baseUrl}/voice/sessions`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {

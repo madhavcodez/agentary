@@ -30,26 +30,34 @@ export default function WorkflowRunPage() {
   const nodeTypes: NodeTypes = useMemo(() => ({ runStatus: RunStatusNode }), []);
 
   useEffect(() => {
-    fetchWorkflow(workflowId).then(setWorkflow).catch(console.error);
+    fetchWorkflow(workflowId).then(setWorkflow).catch(() => {});
   }, [workflowId]);
 
   useEffect(() => {
     let active = true;
-    async function poll() {
+
+    // Initial fetch
+    fetchWorkflowRun(workflowId, runId)
+      .then((r) => { if (active) setRun(r); })
+      .catch(() => { if (active) router.push(`/workflows/${workflowId}`); });
+
+    // Poll only while running, with setInterval + cleanup
+    const interval = setInterval(async () => {
+      if (!active || document.hidden) return;
       try {
         const r = await fetchWorkflowRun(workflowId, runId);
         if (active) {
           setRun(r);
-          if (r.status === "queued" || r.status === "running") {
-            setTimeout(poll, 2000);
+          if (r.status !== "queued" && r.status !== "running") {
+            clearInterval(interval);
           }
         }
       } catch {
-        if (active) router.push(`/workflows/${workflowId}`);
+        // ignore poll errors
       }
-    }
-    poll();
-    return () => { active = false; };
+    }, 5000);
+
+    return () => { active = false; clearInterval(interval); };
   }, [workflowId, runId, router]);
 
   if (!workflow || !run) {

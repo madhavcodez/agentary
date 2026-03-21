@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { fetchProjects } from "@/lib/api";
+import { useToast } from "@/components/ui/Toast";
 import type { Project } from "@/lib/types";
 
 const TYPE_ICONS: Record<string, string> = {
@@ -35,6 +36,7 @@ function formatDate(dateStr: string): string {
 
 export default function ProjectsPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -44,10 +46,11 @@ export default function ProjectsPage() {
       setProjects(data);
     } catch {
       setProjects([]);
+      toast("Failed to load projects", "error");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     loadProjects();

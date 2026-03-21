@@ -8,6 +8,7 @@ import {
   resumeMonitor,
   deleteMonitor,
 } from "@/lib/api";
+import { useToast } from "@/components/ui/Toast";
 import type { MonitorSummary } from "@/lib/types";
 import MonitorCreateWizard from "@/components/dashboard/MonitorCreateWizard";
 
@@ -28,6 +29,7 @@ function formatDate(iso: string | null): string {
 }
 
 export default function MonitorsPage() {
+  const { toast } = useToast();
   const [monitors, setMonitors] = useState<MonitorSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [showWizard, setShowWizard] = useState(false);
@@ -39,10 +41,11 @@ export default function MonitorsPage() {
       setMonitors(data);
     } catch {
       setMonitors([]);
+      toast("Failed to load monitors", "error");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     load();
@@ -52,8 +55,9 @@ export default function MonitorsPage() {
     setActionLoading(id);
     try {
       await triggerMonitorCheck(id);
+      toast("Monitor check triggered", "success");
     } catch {
-      // silently fail
+      toast("Failed to run monitor check", "error");
     } finally {
       setActionLoading(null);
       load();
@@ -65,11 +69,13 @@ export default function MonitorsPage() {
     try {
       if (monitor.status === "active") {
         await pauseMonitor(monitor.id);
+        toast("Monitor paused", "success");
       } else {
         await resumeMonitor(monitor.id);
+        toast("Monitor resumed", "success");
       }
     } catch {
-      // silently fail
+      toast("Failed to update monitor", "error");
     } finally {
       setActionLoading(null);
       load();
@@ -81,8 +87,9 @@ export default function MonitorsPage() {
     setActionLoading(id);
     try {
       await deleteMonitor(id);
+      toast("Monitor deleted", "success");
     } catch {
-      // silently fail
+      toast("Failed to delete monitor", "error");
     } finally {
       setActionLoading(null);
       load();

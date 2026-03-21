@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Nav from "@/components/Nav";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { ToastProvider } from "@/components/ui/Toast";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -22,7 +23,9 @@ export default function RootLayout({
         <ToastProvider>
           <div className="flex min-h-screen bg-gray-950">
             <Nav />
-            <main className="flex-1 ml-64">{children}</main>
+            <main className="flex-1 ml-64">
+              <ErrorBoundary>{children}</ErrorBoundary>
+            </main>
           </div>
         </ToastProvider>
       </body>

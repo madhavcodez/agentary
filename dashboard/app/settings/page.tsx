@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { fetchHealth } from "@/lib/api";
 
 const INTEGRATIONS = [
   { key: "gemini", name: "Gemini", desc: "LLM & search" },
@@ -32,9 +33,8 @@ export default function SettingsPage() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("http://localhost:8000/health");
-      const data = await res.json();
-      setHealth(data);
+      const data = await fetchHealth();
+      setHealth(data as HealthData);
       setError(false);
     } catch {
       setError(true);

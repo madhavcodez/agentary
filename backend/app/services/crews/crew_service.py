@@ -90,11 +90,9 @@ async def start_crew_run(
     # Create the run
     run = CrewRun(
         id=uuid.uuid4(),
-        crew_id=crew.id,
         mission_id=mission.id,
         status="queued",
         trigger_type=trigger_type,
-        iteration=1,
         metrics={},
     )
     db.add(run)
@@ -108,7 +106,7 @@ async def start_crew_run(
 
         crew_task = CrewTask(
             id=uuid.uuid4(),
-            run_id=run.id,
+            mission_run_id=run.id,
             expert_agent_id=expert.id,
             task_type=task_data["task_type"],
             description=task_data["description"],
