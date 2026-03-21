@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "@/components/AuthProvider";
+import { loginApi, registerApi } from "@/lib/api";
 
 type Mode = "login" | "register";
 
 export default function LoginPage() {
-  const { login, register } = useAuth();
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,9 +40,9 @@ export default function LoginPage() {
 
     try {
       if (mode === "login") {
-        await login(email, password);
+        await loginApi(email, password);
       } else {
-        await register(email, password, name.trim());
+        await registerApi(email, password, name.trim());
       }
       window.location.href = "/";
     } catch (err) {
@@ -54,31 +53,25 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-950 px-4">
+    <div className="min-h-screen flex items-center justify-center px-4 -ml-64">
       <div className="w-full max-w-md">
-        {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold tracking-tight">
-            <span className="text-indigo-400">Secret</span>
-            <span className="text-gray-100">AIRY</span>
+            <span className="text-emerald-400">Agent</span>
+            <span className="text-gray-100">ary</span>
           </h1>
-          <p className="text-sm text-gray-500 mt-2">AI Chief of Staff</p>
+          <p className="text-sm text-gray-500 mt-2">Research & Intelligence Platform</p>
         </div>
 
-        {/* Card */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-8">
+        <div className="bg-gray-900 border border-gray-800/50 rounded-xl p-8">
           <h2 className="text-xl font-semibold text-gray-100 mb-6">
             {mode === "login" ? "Sign In" : "Create Account"}
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Name field (register only) */}
             {mode === "register" && (
               <div>
-                <label
-                  htmlFor="name"
-                  className="block text-sm font-medium text-gray-400 mb-1.5"
-                >
+                <label htmlFor="name" className="block text-sm font-medium text-gray-400 mb-1.5">
                   Full Name
                 </label>
                 <input
@@ -89,17 +82,13 @@ export default function LoginPage() {
                   placeholder="Jane Smith"
                   maxLength={100}
                   autoComplete="name"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-gray-100 placeholder-gray-500 focus:border-indigo-500 focus:outline-none transition-colors"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-gray-100 placeholder-gray-500 focus:border-emerald-500 focus:outline-none transition-colors"
                 />
               </div>
             )}
 
-            {/* Email */}
             <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-400 mb-1.5"
-              >
+              <label htmlFor="email" className="block text-sm font-medium text-gray-400 mb-1.5">
                 Email
               </label>
               <input
@@ -109,16 +98,12 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 autoComplete="email"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-gray-100 placeholder-gray-500 focus:border-indigo-500 focus:outline-none transition-colors"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-gray-100 placeholder-gray-500 focus:border-emerald-500 focus:outline-none transition-colors"
               />
             </div>
 
-            {/* Password */}
             <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-400 mb-1.5"
-              >
+              <label htmlFor="password" className="block text-sm font-medium text-gray-400 mb-1.5">
                 Password
               </label>
               <input
@@ -126,50 +111,37 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={
-                  mode === "register" ? "Min 8 characters" : "Enter your password"
-                }
+                placeholder={mode === "register" ? "Min 8 characters" : "Enter your password"}
                 maxLength={128}
-                autoComplete={
-                  mode === "register" ? "new-password" : "current-password"
-                }
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-gray-100 placeholder-gray-500 focus:border-indigo-500 focus:outline-none transition-colors"
+                autoComplete={mode === "register" ? "new-password" : "current-password"}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-gray-100 placeholder-gray-500 focus:border-emerald-500 focus:outline-none transition-colors"
               />
             </div>
 
-            {/* Error */}
             {error && (
               <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2.5">
                 <p className="text-sm text-red-400">{error}</p>
               </div>
             )}
 
-            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 disabled:text-gray-500 text-white text-sm font-medium rounded-lg transition-colors"
+              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:text-gray-500 text-white text-sm font-medium rounded-lg transition-colors"
             >
               {loading
-                ? mode === "login"
-                  ? "Signing in..."
-                  : "Creating account..."
-                : mode === "login"
-                  ? "Sign In"
-                  : "Create Account"}
+                ? mode === "login" ? "Signing in..." : "Creating account..."
+                : mode === "login" ? "Sign In" : "Create Account"}
             </button>
           </form>
 
-          {/* Toggle mode */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-500">
-              {mode === "login"
-                ? "Don't have an account?"
-                : "Already have an account?"}{" "}
+              {mode === "login" ? "Don't have an account?" : "Already have an account?"}{" "}
               <button
                 type="button"
                 onClick={toggleMode}
-                className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+                className="text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
               >
                 {mode === "login" ? "Create one" : "Sign in"}
               </button>

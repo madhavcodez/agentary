@@ -109,6 +109,18 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
+
+@app.get("/")
+def root():
+    return {
+        "name": "Agentary",
+        "description": "Autonomous research & intelligence platform",
+        "version": "0.2.0",
+        "docs": "/docs",
+        "health": "/health",
+    }
+
+
 # ── Agentary routes ──────────────────────────────────────────────────
 from .api.auth import router as auth_router
 from .api.health import router as health_router

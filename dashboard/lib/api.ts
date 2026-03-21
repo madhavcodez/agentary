@@ -16,7 +16,7 @@ import type {
   VoiceExtraction,
   Workflow,
 } from "./types";
-import { type AuthUser, getToken, logout, setToken, setUser } from "./auth";
+import { type AuthUser, getToken, setToken, setUser } from "./auth";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -39,14 +39,6 @@ async function request<T>(
     headers,
     cache: "no-store",
   });
-
-  if (res.status === 401) {
-    logout();
-    if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
-      window.location.href = "/login";
-    }
-    throw new Error("Session expired");
-  }
 
   if (!res.ok) {
     const body = await res.text().catch(() => "Unknown error");
