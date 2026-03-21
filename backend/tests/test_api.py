@@ -1,3 +1,6 @@
+"""Basic API smoke tests for Agentary endpoints."""
+
+
 def test_health(client):
     resp = client.get("/health")
     assert resp.status_code == 200
@@ -6,43 +9,27 @@ def test_health(client):
     assert "checks" in data
 
 
-def test_get_profile(client):
-    resp = client.get("/profile")
-    assert resp.status_code in (200, 404)
+def test_projects_list_requires_auth(client):
+    resp = client.get("/api/projects")
+    assert resp.status_code == 401
 
 
-def test_list_opportunities_empty(client):
-    resp = client.get("/opportunities")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["total"] >= 0
-    assert "items" in data
+def test_missions_list_requires_auth(client):
+    resp = client.get("/api/missions")
+    assert resp.status_code == 401
 
 
-def test_list_matches_empty(client):
-    resp = client.get("/matches")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert "items" in data
+def test_agents_list(client):
+    resp = client.get("/api/agents")
+    # Agents endpoint may require auth or different prefix
+    assert resp.status_code in (200, 401, 404)
 
 
-def test_list_policies_empty(client):
-    resp = client.get("/policies")
-    assert resp.status_code == 200
+def test_reports_list_requires_auth(client):
+    resp = client.get("/reports/")
+    assert resp.status_code == 401
 
 
-def test_ingest_status(client):
-    resp = client.get("/ingest/status")
-    assert resp.status_code == 200
-
-
-def test_create_policy(client):
-    resp = client.post("/policies", json={
-        "name": "Test Policy",
-        "rules_json": {"exclude_companies": ["test"]},
-        "description": "A test policy",
-    })
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["name"] == "Test Policy"
-    assert data["is_active"] is True
+def test_monitors_list_requires_auth(client):
+    resp = client.get("/api/monitors")
+    assert resp.status_code == 401

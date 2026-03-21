@@ -50,7 +50,7 @@ class AgentActivity(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     mission_id = Column(UUID(as_uuid=True), ForeignKey("missions.id"), nullable=False, index=True)
-    run_id = Column(UUID(as_uuid=True), ForeignKey("crew_runs.id"), nullable=True, index=True)
+    run_id = Column(UUID(as_uuid=True), ForeignKey("mission_runs.id"), nullable=True, index=True)
     crew_id = Column(UUID(as_uuid=True), ForeignKey("agent_crews.id"), nullable=True, index=True)
     expert_agent_id = Column(UUID(as_uuid=True), ForeignKey("expert_agents.id"), nullable=True)
     activity_type = Column(SAEnum(ActivityType), nullable=False)

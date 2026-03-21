@@ -59,7 +59,8 @@ class TestInitiateCall:
             assert data["From"] == "+15551234567"
             assert "twiml" in data["Url"]
             assert "campaign-uuid-123" in data["Url"]
-            assert data["MachineDetection"] == "DetectMessageEnd"
+            # MachineDetection disabled for trial accounts
+            assert "MachineDetection" not in data
 
     @pytest.mark.asyncio
     async def test_initiate_call_http_error(self, mock_settings):

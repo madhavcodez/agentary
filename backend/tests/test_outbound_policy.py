@@ -51,14 +51,14 @@ class TestRetryLogic:
         """After a no-answer with backoff elapsed, should retry."""
         from app.services.campaign_orchestrator import _should_retry
         from unittest.mock import MagicMock
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
         campaign = MagicMock()
         campaign.attempt_count = 1
 
         last_log = MagicMock()
         last_log.outcome = "no_answer"
-        last_log.created_at = datetime.utcnow() - timedelta(hours=3)
+        last_log.created_at = datetime.now(timezone.utc) - timedelta(hours=3)
 
         assert _should_retry(campaign, last_log) is True
 
@@ -66,14 +66,14 @@ class TestRetryLogic:
         """Within the backoff window, should not retry."""
         from app.services.campaign_orchestrator import _should_retry
         from unittest.mock import MagicMock
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
         campaign = MagicMock()
         campaign.attempt_count = 2  # 2nd attempt => backoff = 2h
 
         last_log = MagicMock()
         last_log.outcome = "no_answer"
-        last_log.created_at = datetime.utcnow() - timedelta(minutes=30)
+        last_log.created_at = datetime.now(timezone.utc) - timedelta(minutes=30)
 
         assert _should_retry(campaign, last_log) is False
 

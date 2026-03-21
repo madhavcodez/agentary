@@ -81,7 +81,7 @@ class ReportGenerator:
         for idx, f in enumerate(findings, start=1):
             lines = [
                 f"### Finding {idx}: {f.title}",
-                f"Category: {f.category}",
+                f"Category: {getattr(f, 'category', None) or getattr(f, 'finding_type', 'unknown')}",
                 f"Confidence: {f.confidence:.0%}",
                 f"Verified: {'Yes' if f.verified else 'No'}",
             ]
