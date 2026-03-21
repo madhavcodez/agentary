@@ -89,6 +89,76 @@ export interface Report {
   updated_at: string;
 }
 
+export interface ChartConfig {
+  id: string;
+  type: string;
+  title: string;
+  data: {
+    labels: string[];
+    datasets: Array<{
+      label: string;
+      data: number[];
+      backgroundColor?: string | string[];
+      borderColor?: string | string[];
+      borderWidth?: number;
+    }>;
+  };
+  options?: Record<string, unknown>;
+}
+
+export interface ReportSection {
+  title: string;
+  content_md: string;
+  finding_ids?: string[];
+  chart_configs?: ChartConfig[];
+  order: number;
+}
+
+export interface ReportSource {
+  name: string;
+  url?: string;
+  type?: string;
+  access_date?: string;
+}
+
+export interface ReportFull {
+  id: string;
+  user_id: string;
+  project_id: string | null;
+  mission_id: string | null;
+  title: string;
+  description: string | null;
+  report_type: string;
+  status: string;
+  content_markdown: string | null;
+  content_html: string | null;
+  sections: ReportSection[] | null;
+  executive_summary: string | null;
+  methodology: string | null;
+  sources: ReportSource[] | null;
+  charts: ChartConfig[] | null;
+  structured_data: Record<string, unknown> | null;
+  metadata: Record<string, unknown> | null;
+  format_config: Record<string, unknown> | null;
+  share_token: string | null;
+  share_enabled: boolean;
+  pdf_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReportList {
+  items: Report[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface ShareResponse {
+  url: string;
+  token: string;
+}
+
 // ── Voice Extractions ────────────────────────────────────────────
 export interface VoiceExtraction {
   id: string;

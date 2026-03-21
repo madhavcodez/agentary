@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, patch
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-# Use the real secretairy DB for integration tests
-TEST_DB_URL = "postgresql://soundscore:soundscore@localhost:5432/secretairy"
+# Use the real agentary DB for integration tests
+TEST_DB_URL = "postgresql://soundscore:soundscore@localhost:5432/agentary"
 engine = create_engine(TEST_DB_URL, future=True)
 TestSession = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 

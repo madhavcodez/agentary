@@ -321,7 +321,7 @@ class PDFExporter:
 
         # Header
         parts.append('<header class="header">')
-        parts.append('<div class="brand">SecretAIRY</div>')
+        parts.append('<div class="brand">Agentary</div>')
         parts.append(f'<h1>{_esc(report.title)}</h1>')
         if report.description:
             parts.append(f'<p class="subtitle">{_esc(report.description)}</p>')
@@ -649,7 +649,7 @@ class PDFExporter:
 
         # ── Cover page ──────────────────────────────────────────────── #
         parts.append('<div class="cover-page">')
-        parts.append('<div class="brand">SecretAIRY</div>')
+        parts.append('<div class="brand">Agentary</div>')
         parts.append(f'<div class="title">{_esc(report.title)}</div>')
         if report.description:
             parts.append(f'<div class="subtitle">{_esc(report.description)}</div>')

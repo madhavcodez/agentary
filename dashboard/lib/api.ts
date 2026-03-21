@@ -6,6 +6,8 @@ import type {
   Monitor,
   Project,
   Report,
+  ReportFull,
+  ShareResponse,
   VoiceExtraction,
   Workflow,
 } from "./types";
