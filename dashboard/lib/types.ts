@@ -1,5 +1,4 @@
-// ── Auth ─────────────────────────────────────────────────────────────
-
+// ── Auth ──────────────────────────────────────────────────────────
 export interface AuthUser {
   id: string;
   email: string;
@@ -14,37 +13,24 @@ export interface TokenResponse {
   user: AuthUser;
 }
 
-export interface HealthCheck {
-  status: string;
-  checks: Record<string, string>;
-}
-
-// ── Projects ────────────────────────────────────────────────────────
-
+// ── Projects ─────────────────────────────────────────────────────
 export interface Project {
   id: string;
   user_id: string;
   name: string;
   description: string | null;
-  status: "active" | "archived" | "completed";
+  status: string;
   project_type: string;
   domain_context: string | null;
   total_missions: number;
   total_findings: number;
+  total_calls_made: number;
   total_reports_generated: number;
   created_at: string;
   updated_at: string;
 }
 
-export interface ProjectList {
-  items: Project[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-// ── Missions ────────────────────────────────────────────────────────
-
+// ── Missions ─────────────────────────────────────────────────────
 export interface Mission {
   id: string;
   project_id: string;
@@ -52,10 +38,8 @@ export interface Mission {
   name: string;
   description: string | null;
   objective: string | null;
-  status: "draft" | "queued" | "running" | "paused" | "completed" | "failed";
+  status: string;
   mission_type: string;
-  instructions: string | null;
-  parameters: Record<string, unknown> | null;
   findings_count: number;
   confidence_score: number | null;
   started_at: string | null;
@@ -64,15 +48,7 @@ export interface Mission {
   updated_at: string;
 }
 
-export interface MissionList {
-  items: Mission[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-// ── Expert Agents ───────────────────────────────────────────────────
-
+// ── Expert Agents ────────────────────────────────────────────────
 export interface ExpertAgent {
   id: string;
   slug: string;
@@ -83,184 +59,50 @@ export interface ExpertAgent {
   color: string | null;
   is_system: boolean;
   is_active: boolean;
-  created_at: string;
 }
 
-// ── Findings ────────────────────────────────────────────────────────
-
+// ── Findings ─────────────────────────────────────────────────────
 export interface Finding {
   id: string;
-  mission_id: string;
-  project_id: string | null;
-  expert_agent_id: string | null;
+  project_id: string;
+  mission_id: string | null;
   finding_type: string;
   title: string;
   content: string | null;
-  structured_data: Record<string, unknown> | null;
+  source_type: string | null;
   source_url: string | null;
-  source_name: string | null;
   confidence: number | null;
+  verified: boolean;
   tags: string[];
   created_at: string;
 }
 
-export interface FindingList {
-  items: Finding[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-// ── Reports ──────────────────────────────────────────────────────────
-
-export type ReportType =
-  | "research_report"
-  | "market_analysis"
-  | "property_report"
-  | "competitive_intel"
-  | "due_diligence"
-  | "custom";
-
-export type ReportStatus = "generating" | "ready" | "failed";
-
-export interface ChartConfig {
+// ── Reports ──────────────────────────────────────────────────────
+export interface Report {
   id: string;
-  type: string;
+  project_id: string;
   title: string;
-  data: {
-    labels: string[];
-    datasets: Array<{
-      label: string;
-      data: number[];
-      backgroundColor?: string | string[];
-      borderColor?: string | string[];
-      borderWidth?: number;
-    }>;
-  };
-  options?: Record<string, unknown>;
-}
-
-export interface ReportSection {
-  title: string;
-  content_md: string;
-  finding_ids?: string[];
-  chart_configs?: ChartConfig[];
-  order: number;
-}
-
-export interface ReportSource {
-  name: string;
-  url?: string;
-  type?: string;
-  access_date?: string;
-}
-
-export interface ReportSummary {
-  id: string;
-  user_id: string;
-  project_id: string | null;
-  mission_id: string | null;
-  title: string;
-  description: string | null;
-  report_type: ReportType;
-  status: ReportStatus;
-  share_enabled: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ReportFull extends ReportSummary {
-  content_markdown: string | null;
-  content_html: string | null;
-  sections: ReportSection[] | null;
+  report_type: string;
+  status: string;
   executive_summary: string | null;
-  methodology: string | null;
-  sources: ReportSource[] | null;
-  charts: ChartConfig[] | null;
-  structured_data: Record<string, unknown> | null;
-  metadata: Record<string, unknown> | null;
-  format_config: Record<string, unknown> | null;
-  share_token: string | null;
-  pdf_url: string | null;
-}
-
-export interface ReportList {
-  items: ReportSummary[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-export interface ShareResponse {
-  url: string;
-  token: string;
-}
-
-// ── Dashboard / Live Feed ──────────────────────────────────────────
-
-export interface LiveEvent {
-  event_id: string;
-  event_type: string;
-  scope: "global" | "user" | "project";
-  user_id: string | null;
-  project_id: string | null;
-  data: Record<string, unknown>;
-  timestamp: number;
-}
-
-export interface MonitorSummary {
-  id: string;
-  user_id: string;
-  project_id: string | null;
-  name: string;
-  description: string | null;
-  monitor_type: string;
-  status: "active" | "paused" | "archived";
-  check_config: Record<string, unknown>;
-  alert_config: Record<string, unknown>;
-  schedule_cron: string | null;
-  timezone: string;
-  last_check_at: string | null;
-  last_change_at: string | null;
-  total_checks: number;
-  total_alerts: number;
   created_at: string;
   updated_at: string;
 }
 
-export interface AlertItem {
+// ── Voice Extractions ────────────────────────────────────────────
+export interface VoiceExtraction {
   id: string;
-  monitor_id: string;
-  project_id: string | null;
-  alert_type: string;
-  title: string;
-  message: string | null;
-  severity: "info" | "warning" | "critical";
-  data: Record<string, unknown> | null;
-  acknowledged: boolean;
-  acknowledged_at: string | null;
-  delivered_channels: string[] | null;
+  project_id: string;
+  name: string;
+  status: string;
+  total_targets: number;
+  calls_completed: number;
+  calls_successful: number;
+  data_points_extracted: number;
   created_at: string;
 }
 
-export interface ActiveInfo {
-  active_missions: Array<{
-    id: string;
-    title: string;
-    status: string;
-    project_id: string | null;
-    created_at: string | null;
-  }>;
-  active_runs: Array<{
-    id: string;
-    crew_id: string;
-    status: string;
-    started_at: string | null;
-  }>;
-  connected_clients: number;
-}
-
-// ── Workflows ────────────────────────────────────────────────────────
+// ── Workflows ────────────────────────────────────────────────────
 
 export type WorkflowStatus = "draft" | "active" | "paused" | "archived";
 export type WorkflowTriggerType = "manual" | "scheduled" | "event";
@@ -268,10 +110,7 @@ export type WorkflowCreatedFrom = "template" | "natural_language" | "visual_edit
 export type WorkflowNodeStatus = "pending" | "running" | "completed" | "failed";
 export type WorkflowRunStatus = "queued" | "running" | "completed" | "failed" | "cancelled";
 
-export interface WorkflowNodePosition {
-  x: number;
-  y: number;
-}
+export interface WorkflowNodePosition { x: number; y: number; }
 
 export interface WorkflowNode {
   id: string;
@@ -288,11 +127,14 @@ export interface WorkflowEdge {
   target_port?: string;
 }
 
-export interface WorkflowTriggerConfig {
-  cron?: string;
-  timezone?: string;
-  event_type?: string;
-  conditions?: Record<string, unknown>;
+export interface Workflow {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string;
+  is_template: boolean;
+  version: number;
+  created_at: string;
 }
 
 export interface WorkflowData {
@@ -303,7 +145,7 @@ export interface WorkflowData {
   description: string | null;
   status: WorkflowStatus;
   trigger_type: WorkflowTriggerType;
-  trigger_config: WorkflowTriggerConfig | null;
+  trigger_config: Record<string, unknown> | null;
   created_from: WorkflowCreatedFrom;
   template_id: string | null;
   nodes: WorkflowNode[];
@@ -381,89 +223,29 @@ export interface WorkflowTemplate {
   updated_at: string;
 }
 
-// ── Research Engine Types ─────────────────────────────────────────────
-
-export interface MissionFinding {
+// ── Monitors ─────────────────────────────────────────────────────
+export interface Monitor {
   id: string;
-  category: string;
+  project_id: string;
+  name: string;
+  status: string;
+  monitor_type: string;
+  last_checked_at: string | null;
+  created_at: string;
+}
+
+export interface Alert {
+  id: string;
+  monitor_id: string;
+  severity: string;
   title: string;
-  content: string;
-  structured_data: Record<string, unknown> | null;
-  source_type: string | null;
-  source_url: string | null;
-  source_name: string | null;
-  confidence: number;
-  verified: boolean;
-  tags: string[];
-  created_at: string | null;
-}
-
-export interface MissionActivity {
-  id: string;
-  activity_type: string;
   content: string | null;
-  metadata: Record<string, unknown> | null;
-  confidence: number | null;
-  created_at: string | null;
+  acknowledged: boolean;
+  created_at: string;
 }
 
-export interface CrewAgent {
-  agent_id: string;
-  slug: string;
-  name: string;
-  role: string;
-  icon: string | null;
-}
-
-export interface MissionLiveStatus {
-  mission_id: string;
+// ── Health ────────────────────────────────────────────────────────
+export interface HealthCheck {
   status: string;
-  findings_count: number;
-  confidence_score: number | null;
-  crew: { agents: CrewAgent[] } | null;
-  activities: MissionActivity[];
-}
-
-export interface ExpertAgentData {
-  id: string;
-  slug: string;
-  name: string;
-  description: string | null;
-  specialty: string | null;
-  system_prompt: string | null;
-  tools: string[];
-  model_config: Record<string, unknown>;
-  icon: string | null;
-  color: string | null;
-  is_system: boolean;
-  is_active: boolean;
-  created_at: string | null;
-}
-
-export interface CrewRunData {
-  id: string;
-  status: string;
-  trigger_type: string;
-  iteration: number;
-  started_at: string | null;
-  completed_at: string | null;
-  duration_seconds: number | null;
-  summary: string | null;
-  metrics: Record<string, unknown> | null;
-  created_at: string | null;
-}
-
-export interface CrewTaskLive {
-  task_id: string;
-  expert_name: string;
-  expert_icon: string;
-  status: string;
-  findings_produced: number;
-}
-
-export interface CrewRunLiveData {
-  run_status: string;
-  tasks: CrewTaskLive[];
-  activities: MissionActivity[];
-  has_more: boolean;
+  checks: Record<string, string>;
 }
