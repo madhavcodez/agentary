@@ -11,7 +11,7 @@ from uuid import UUID
 import httpx
 from sqlalchemy.orm import Session
 
-from ..core.events import Event, EventScope, EventType, emit_event
+from ..core.events import Event, EventType, event_bus
 from ..models.monitor import Alert, Monitor
 from .change_detector import (
     ChangeResult,
@@ -118,12 +118,11 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
             return {"skipped": "not_active"}
 
         # Emit check start event
-        await emit_event(Event(
-            event_type=EventType.MONITOR_CHECK_START,
-            scope=EventScope.USER,
+        await event_bus.broadcast(Event(
+            event_type=EventType.monitor_triggered,
+            data={"monitor_id": str(monitor.id), "monitor_name": monitor.name, "action": "check_start"},
             user_id=str(monitor.user_id),
             project_id=str(monitor.project_id) if monitor.project_id else None,
-            data={"monitor_id": str(monitor.id), "monitor_name": monitor.name},
         ))
 
         # Fetch new data based on monitor type
@@ -148,32 +147,31 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
         db.refresh(monitor)
 
         # Emit check done event
-        await emit_event(Event(
-            event_type=EventType.MONITOR_CHECK_DONE,
-            scope=EventScope.USER,
-            user_id=str(monitor.user_id),
-            project_id=str(monitor.project_id) if monitor.project_id else None,
+        await event_bus.broadcast(Event(
+            event_type=EventType.monitor_triggered,
             data={
                 "monitor_id": str(monitor.id),
                 "monitor_name": monitor.name,
+                "action": "check_done",
                 "changed": changes.changed,
                 "summary": changes.summary,
             },
+            user_id=str(monitor.user_id),
+            project_id=str(monitor.project_id) if monitor.project_id else None,
         ))
 
         # If alert was created, emit alert event and send notifications
         if alert:
-            await emit_event(Event(
-                event_type=EventType.ALERT_CREATED,
-                scope=EventScope.USER,
-                user_id=str(monitor.user_id),
-                project_id=str(monitor.project_id) if monitor.project_id else None,
+            await event_bus.broadcast(Event(
+                event_type=EventType.monitor_alert,
                 data={
                     "alert_id": str(alert.id),
                     "monitor_name": monitor.name,
                     "title": alert.title,
-                    "severity": alert.severity,
+                    "severity": str(alert.severity.value) if hasattr(alert.severity, 'value') else str(alert.severity),
                 },
+                user_id=str(monitor.user_id),
+                project_id=str(monitor.project_id) if monitor.project_id else None,
             ))
             await _send_alert_notifications(alert, monitor)
 
