@@ -17,6 +17,8 @@
 
 ---
 
+<img src="docs/screenshots/home.png" alt="Agentary Dashboard" width="100%" />
+
 </div>
 
 ## How It Works
