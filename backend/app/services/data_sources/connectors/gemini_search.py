@@ -26,8 +26,8 @@ def _get_client() -> genai.Client:
 class GeminiSearchConnector:
     """Data source connector for Google Search via Gemini AI."""
 
-    name: str = "gemini_search"
-    provider: str = "google"
+    name: str = "Gemini Search"
+    provider: str = "gemini_search"
     description: str = (
         "Search the web using Google Search via Gemini AI. "
         "Returns real-time web results with snippets."

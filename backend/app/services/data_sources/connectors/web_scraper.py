@@ -199,8 +199,8 @@ async def _ai_extract(
 class WebScraperConnector:
     """Data source connector for general web scraping and extraction."""
 
-    name: str = "web_scraper"
-    provider: str = "web"
+    name: str = "Web Scraper"
+    provider: str = "web_scraper"
     description: str = (
         "Fetch and extract structured data from any web page. "
         "Supports text, table, CSS selector, and AI-powered extraction."

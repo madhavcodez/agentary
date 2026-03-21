@@ -8,17 +8,20 @@ from .agent_crew import AgentCrew, AgentActivity, CoordinationStrategy, Activity
 from .mission_run import MissionRun, MissionTask, RunStatus, TriggerType, TaskType, TaskStatus
 from .finding import Finding, FindingType, SourceType
 from .dataset import DataSet, DataRow
-from .report import Report, ReportType, ReportStatus
+from .report import Report
 from .voice_extraction import VoiceExtraction, CallRecord, VoiceExtractionStatus, CallDirection, CallStatus
-from .workflow import Workflow, WorkflowCategory
+from .workflow import Workflow
 from .monitor import Monitor, Alert, MonitorStatus, MonitorType, AlertSeverity
 from .knowledge_base import KnowledgeBase, KBDomain
 from .source import Source, SourceKind
 from .audit_log import AuditLog, AuditAction
+from .entity import Entity, EntityType
+from .entity_collection import EntityCollection
 from .data_source import DataSource
 from .source_request_log import SourceRequestLog
-from .entity import Entity
-from .entity_collection import EntityCollection
+from .alert import AlertRecord, AlertType, AlertSeverityLevel
+from .workflow_template import WorkflowTemplate
+from .crew_task import CrewTask, CrewTaskStatus
 
 __all__ = [
     "User", "Contact", "Policy",
@@ -29,12 +32,16 @@ __all__ = [
     "MissionRun", "MissionTask", "RunStatus", "TriggerType", "TaskType", "TaskStatus",
     "Finding", "FindingType", "SourceType",
     "DataSet", "DataRow",
-    "Report", "ReportType", "ReportStatus",
+    "Report",
     "VoiceExtraction", "CallRecord", "VoiceExtractionStatus", "CallDirection", "CallStatus",
-    "Workflow", "WorkflowCategory",
+    "Workflow",
     "Monitor", "Alert", "MonitorStatus", "MonitorType", "AlertSeverity",
     "KnowledgeBase", "KBDomain",
     "Source", "SourceKind",
     "AuditLog", "AuditAction",
-    "DataSource", "SourceRequestLog", "Entity", "EntityCollection",
+    "Entity", "EntityType", "EntityCollection",
+    "DataSource", "SourceRequestLog",
+    "AlertRecord", "AlertType", "AlertSeverityLevel",
+    "WorkflowTemplate",
+    "CrewTask", "CrewTaskStatus",
 ]

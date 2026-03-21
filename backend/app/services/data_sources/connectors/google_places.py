@@ -43,7 +43,7 @@ class GooglePlacesConnector:
     """Data source connector for Google Places API (New)."""
 
     name: str = "google_places"
-    provider: str = "google"
+    provider: str = "google_places"
     description: str = (
         "Search for local businesses and places. Returns names, addresses, "
         "phone numbers, hours, ratings, reviews."

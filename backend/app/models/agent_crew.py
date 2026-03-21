@@ -42,7 +42,7 @@ class AgentCrew(Base):
     # Relationships
     mission = relationship("Mission", back_populates="crew")
     activities = relationship("AgentActivity", back_populates="crew", lazy="dynamic")
-    runs = relationship("CrewRun", back_populates="crew", cascade="all, delete-orphan")
+    runs = relationship("MissionRun", back_populates="crew", cascade="all, delete-orphan")
 
 
 class AgentActivity(Base):

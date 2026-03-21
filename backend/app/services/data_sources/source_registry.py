@@ -70,7 +70,7 @@ def create_source_registry(settings) -> SourceRegistry:
     """Factory function called on app startup. Import connectors lazily."""
     from .connectors.county_records import CountyRecordsConnector
     from .connectors.crunchbase import CrunchbaseConnector
-    from .connectors.custom_api import CustomAPIConnector
+    from .connectors.custom_api import CustomApiConnector
     from .connectors.exa import ExaConnector
     from .connectors.gemini_search import GeminiSearchConnector
     from .connectors.google_places import GooglePlacesConnector
@@ -82,26 +82,22 @@ def create_source_registry(settings) -> SourceRegistry:
     registry = SourceRegistry()
 
     # Always available (no API key needed)
-    registry.register(
-        WebScraperConnector(
-            gemini_api_key=getattr(settings, "gemini_api_key", ""),
-        ),
-    )
+    registry.register(WebScraperConnector())
     registry.register(PythonExecutorConnector())
 
     # Require API keys -- skip with warning if missing
     if getattr(settings, "gemini_api_key", None):
-        registry.register(GeminiSearchConnector(settings.gemini_api_key))
+        registry.register(GeminiSearchConnector())
     else:
         logger.warning("GEMINI_API_KEY not set -- GeminiSearchConnector disabled")
 
     if getattr(settings, "exa_api_key", None):
-        registry.register(ExaConnector(settings.exa_api_key))
+        registry.register(ExaConnector())
     else:
         logger.warning("EXA_API_KEY not set -- ExaConnector disabled")
 
     if getattr(settings, "google_places_api_key", None):
-        registry.register(GooglePlacesConnector(settings.google_places_api_key))
+        registry.register(GooglePlacesConnector())
     else:
         logger.warning(
             "GOOGLE_PLACES_API_KEY not set -- GooglePlacesConnector disabled",
