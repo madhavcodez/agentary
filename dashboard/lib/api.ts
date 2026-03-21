@@ -296,3 +296,77 @@ export function createMonitor(data: {
     body: JSON.stringify(data),
   });
 }
+
+// ── Report Generation & Export ──────────────────────────────────────
+
+export function createReport(data: {
+  mission_id: string;
+  report_type: string;
+  config?: Record<string, unknown>;
+}): Promise<ReportFull> {
+  return request<ReportFull>("/reports/", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function fetchReport(id: string): Promise<ReportFull> {
+  return request<ReportFull>(`/reports/${id}`);
+}
+
+export function updateReport(
+  id: string,
+  data: { title?: string; description?: string },
+): Promise<ReportFull> {
+  return request<ReportFull>(`/reports/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteReport(id: string): Promise<{ status: string }> {
+  return request<{ status: string }>(`/reports/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export function regenerateReport(id: string): Promise<ReportFull> {
+  return request<ReportFull>(`/reports/${id}/regenerate`, {
+    method: "POST",
+  });
+}
+
+export function regenerateSection(
+  reportId: string,
+  sectionIndex: number,
+  instructions?: string,
+): Promise<ReportFull> {
+  return request<ReportFull>(`/reports/${reportId}/regenerate-section`, {
+    method: "POST",
+    body: JSON.stringify({ section_index: sectionIndex, instructions }),
+  });
+}
+
+export function downloadReportPdf(id: string): string {
+  return `${BASE_URL}/reports/${id}/pdf`;
+}
+
+export function createShareLink(reportId: string): Promise<ShareResponse> {
+  return request<ShareResponse>(`/reports/${reportId}/share`, {
+    method: "POST",
+  });
+}
+
+export function revokeShareLink(reportId: string): Promise<{ status: string }> {
+  return request<{ status: string }>(`/reports/${reportId}/share`, {
+    method: "DELETE",
+  });
+}
+
+export function fetchSharedReport(token: string): Promise<ReportFull> {
+  const url = `${BASE_URL}/shared/reports/${token}`;
+  return fetch(url, { cache: "no-store" }).then((res) => {
+    if (!res.ok) throw new Error("Report not found");
+    return res.json() as Promise<ReportFull>;
+  });
+}

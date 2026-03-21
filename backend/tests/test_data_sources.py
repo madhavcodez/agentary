@@ -829,7 +829,7 @@ class TestWebScraperConnector:
     def test_attributes(self):
         connector = WebScraperConnector()
         assert connector.name == "Web Scraper"
-        assert connector.provider == "web"
+        assert connector.provider == "web_scraper"
 
 
 class TestWebScraperHelpers:
