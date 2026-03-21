@@ -86,6 +86,11 @@ from .api.scout import router as scout_router
 from .api.live_feed import router as live_feed_router
 from .api.monitors import router as monitors_router
 from .api.alerts import router as alerts_router
+from .api.reports import router as reports_router
+from .api.export import router as export_router
+from .api.shared import router as shared_router
+from .api.workflows import router as workflows_router
+from .api.workflow_templates import router as workflow_templates_router
 
 app.include_router(auth_router)
 app.include_router(health_router)
@@ -106,3 +111,8 @@ app.include_router(scout_router)
 app.include_router(live_feed_router)
 app.include_router(monitors_router)
 app.include_router(alerts_router)
+app.include_router(reports_router)
+app.include_router(export_router)
+app.include_router(shared_router)
+app.include_router(workflows_router)
+app.include_router(workflow_templates_router)

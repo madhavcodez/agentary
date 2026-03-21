@@ -9,8 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..deps import get_current_user, get_db
-from ..models.alert import Alert
-from ..models.monitor import Monitor
+from ..models.monitor import Alert, Monitor
 from ..services.monitor_service import (
     create_monitor,
     execute_check,

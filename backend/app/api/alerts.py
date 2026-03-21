@@ -9,8 +9,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..deps import get_current_user, get_db
-from ..models.alert import Alert
-from ..models.monitor import Monitor
+from ..models.monitor import Alert, Monitor
 
 router = APIRouter(prefix="/api/alerts", tags=["alerts"])
 

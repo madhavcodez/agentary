@@ -12,8 +12,7 @@ import httpx
 from sqlalchemy.orm import Session
 
 from ..core.events import Event, EventScope, EventType, emit_event
-from ..models.alert import Alert
-from ..models.monitor import Monitor
+from ..models.monitor import Alert, Monitor
 from .change_detector import (
     ChangeResult,
     detect_new_items,
