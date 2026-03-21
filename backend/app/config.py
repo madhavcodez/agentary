@@ -21,6 +21,12 @@ class Settings(BaseSettings):
     twilio_webhook_base_url: str = ""
     exa_api_key: str = ""
     openclaw_url: str = "http://localhost:3000"
+
+    # Data Source API Keys (optional — connectors skip if missing)
+    google_places_api_key: str = ""
+    zillow_api_key: str = ""
+    yelp_api_key: str = ""
+    crunchbase_api_key: str = ""
     google_client_id: str = ""
     google_client_secret: str = ""
     app_env: str = "dev"
@@ -35,6 +41,9 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     resend_from_email: str = ""
     resend_webhook_secret: str = ""
+
+    # App base URL (for shareable links)
+    base_url: str = "http://localhost:3000"
 
     # CORS
     allowed_origins: str = "http://localhost:3000"

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -16,7 +17,17 @@ from .services.scheduler import start_scheduler, stop_scheduler
 async def lifespan(app: FastAPI):
     init_db()
     start_scheduler()
+
+    # Start Redis → WebSocket bridge
+    from .core.redis_bridge import subscribe_and_forward, close_redis
+    from .core.websocket_manager import ws_manager
+
+    redis_task = asyncio.create_task(subscribe_and_forward(ws_manager))
+
     yield
+
+    redis_task.cancel()
+    await close_redis()
     stop_scheduler()
 
 
@@ -72,6 +83,7 @@ from .api.analytics import router as analytics_router
 from .voice.outbound.server import router as outbound_router
 from .api.webhooks import router as webhooks_router
 from .api.scout import router as scout_router
+from .api.live_feed import router as live_feed_router
 
 app.include_router(auth_router)
 app.include_router(health_router)
@@ -89,3 +101,4 @@ app.include_router(analytics_router)
 app.include_router(outbound_router)
 app.include_router(webhooks_router)
 app.include_router(scout_router)
+app.include_router(live_feed_router)
