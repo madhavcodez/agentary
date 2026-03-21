@@ -285,6 +285,105 @@ def load_all_monitor_jobs() -> None:
         session.close()
 
 
+## ── Workflow scheduled runs ─────────────────────────────────────────
+
+_WORKFLOW_JOB_PREFIX = "workflow_"
+
+
+def _workflow_job_id(workflow_id: str | UUID) -> str:
+    return f"{_WORKFLOW_JOB_PREFIX}{workflow_id}"
+
+
+def _run_scheduled_workflow(workflow_id: str):
+    """Execute a scheduled workflow run."""
+    from .workflow.service import trigger_run as wf_trigger_run
+    from ..models.workflow import Workflow
+
+    session = SessionLocal()
+    try:
+        workflow = session.query(Workflow).filter(Workflow.id == workflow_id).first()
+        if not workflow:
+            logger.warning("Scheduled workflow %s not found — removing job", workflow_id)
+            remove_workflow_schedule(workflow_id)
+            return
+        if workflow.status != "active":
+            logger.info("Workflow %s not active — skipping scheduled run", workflow_id)
+            return
+        asyncio.run(wf_trigger_run(session, workflow, trigger="scheduled"))
+        logger.info("Scheduled workflow run completed for %s", workflow_id)
+    except Exception as e:
+        logger.error("Scheduled workflow run failed for %s: %s", workflow_id, e)
+    finally:
+        session.close()
+
+
+def add_workflow_schedule(
+    workflow_id: str | UUID, cron_expr: str, timezone_name: str = "America/Los_Angeles"
+) -> None:
+    """Add (or replace) a scheduled workflow run job."""
+    job_id = _workflow_job_id(workflow_id)
+    parts = cron_expr.strip().split()
+    if len(parts) != 5:
+        raise ValueError(f"Invalid cron expression '{cron_expr}': expected 5 fields")
+
+    try:
+        tz = pytz.timezone(timezone_name)
+    except pytz.UnknownTimeZoneError:
+        tz = pytz.timezone("America/Los_Angeles")
+
+    trigger = CronTrigger(
+        minute=parts[0], hour=parts[1], day=parts[2],
+        month=parts[3], day_of_week=parts[4], timezone=tz,
+    )
+    scheduler.add_job(
+        _run_scheduled_workflow, trigger,
+        args=[str(workflow_id)], id=job_id, replace_existing=True,
+    )
+    logger.info("Workflow job scheduled: id=%s cron=%s tz=%s", workflow_id, cron_expr, timezone_name)
+
+
+def remove_workflow_schedule(workflow_id: str | UUID) -> None:
+    """Remove a workflow's scheduled job."""
+    job_id = _workflow_job_id(workflow_id)
+    try:
+        scheduler.remove_job(job_id)
+        logger.info("Workflow job removed: %s", workflow_id)
+    except Exception:
+        pass
+
+
+def load_all_workflow_schedules() -> None:
+    """Load scheduled jobs for all active scheduled workflows at startup."""
+    session = SessionLocal()
+    try:
+        from ..models.workflow import Workflow
+
+        workflows = (
+            session.query(Workflow)
+            .filter(
+                Workflow.status == "active",
+                Workflow.trigger_type == "scheduled",
+                Workflow.trigger_config.isnot(None),
+            )
+            .all()
+        )
+        for wf in workflows:
+            try:
+                config = wf.trigger_config or {}
+                add_workflow_schedule(
+                    str(wf.id),
+                    config.get("cron", "0 9 * * *"),
+                    config.get("timezone", "America/Los_Angeles"),
+                )
+            except Exception as e:
+                logger.error("Failed to load workflow schedule %s: %s", wf.id, e)
+        logger.info("Loaded workflow schedules for %d workflows", len(workflows))
+    except Exception as e:
+        logger.error("Failed to load workflow schedules: %s", e)
+    finally:
+        session.close()
+
+
 def start_scheduler():
     scheduler.add_job(
         _run_ingest, "interval", hours=6, id="ingest_job", replace_existing=True
@@ -300,6 +399,19 @@ def start_scheduler():
 
     # Load monitor schedules
     load_all_monitor_jobs()
+
+    # Load workflow schedules
+    load_all_workflow_schedules()
+
+    # Seed system workflow templates
+    from .workflow.templates import seed_templates
+    session = SessionLocal()
+    try:
+        seed_templates(session)
+    except Exception as e:
+        logger.error("Failed to seed workflow templates: %s", e)
+    finally:
+        session.close()
 
 
 def stop_scheduler():
