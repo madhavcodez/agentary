@@ -1,16 +1,15 @@
-"""E2E golden path test: create mission -> assemble crew -> mock execute -> verify findings."""
+"""E2E golden path test: create mission -> assemble crew -> execute -> verify findings."""
 import uuid
-from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from app.models.agent_crew import AgentCrew, CoordinationStrategy
-from app.models.crew_run import CrewRun
-from app.models.crew_task import CrewTask
+from app.models.crew_task import CrewTask, CrewTaskStatus
 from app.models.expert_agent import AgentSpecialty, ExpertAgent
 from app.models.finding import Finding
 from app.models.mission import Mission, MissionStatus, MissionType
-from app.models.project import Project
+from app.models.mission_run import MissionRun, RunStatus, TriggerType
+from app.models.project import Project, ProjectStatus
 
 
 def _make_expert(slug: str, name: str, specialty: AgentSpecialty) -> ExpertAgent:
@@ -36,6 +35,7 @@ class TestGoldenPath:
             id=uuid.uuid4(),
             user_id=uuid.uuid4(),
             name="Test Project",
+            status=ProjectStatus.active,
         )
         mission = Mission(
             id=uuid.uuid4(),
@@ -69,49 +69,46 @@ class TestGoldenPath:
         assert "web-researcher" in slugs
         assert "synthesizer" in slugs
 
-    def test_crew_run_creation(self):
-        crew_id = uuid.uuid4()
-        mission_id = uuid.uuid4()
-        run = CrewRun(
+    def test_mission_run_creation(self):
+        run = MissionRun(
             id=uuid.uuid4(),
-            crew_id=crew_id,
-            mission_id=mission_id,
-            status="queued",
-            trigger_type="manual",
+            mission_id=uuid.uuid4(),
+            status=RunStatus.queued,
+            trigger_type=TriggerType.manual,
         )
-        assert run.status == "queued"
+        assert run.status == RunStatus.queued
 
     def test_task_creation(self):
         task = CrewTask(
             id=uuid.uuid4(),
-            run_id=uuid.uuid4(),
+            mission_run_id=uuid.uuid4(),
             expert_agent_id=uuid.uuid4(),
             task_type="web_search",
             description="Search for Austin 78704 housing data",
             input_data={"query": "Austin 78704 median home price"},
-            status="pending",
+            status=CrewTaskStatus.pending,
             thinking_log=[],
         )
-        assert task.status == "pending"
+        assert task.status == CrewTaskStatus.pending
         assert task.task_type == "web_search"
 
     def test_finding_creation_with_source_attribution(self):
+        from app.models.finding import FindingType, SourceType as FSourceType
         finding = Finding(
             id=uuid.uuid4(),
+            project_id=uuid.uuid4(),
             mission_id=uuid.uuid4(),
-            crew_task_id=uuid.uuid4(),
-            expert_agent_id=uuid.uuid4(),
-            category="statistic",
+            finding_type=FindingType.statistic,
             title="Austin 78704 Median Home Price",
             content="The median home price in 78704 is $625,000.",
-            source_type="web",
+            source_type=FSourceType.web,
             source_url="https://www.zillow.com/austin-tx-78704/",
             source_name="Zillow",
             confidence=0.85,
             verified=False,
             tags=["real_estate", "pricing"],
         )
-        assert finding.category == "statistic"
+        assert finding.finding_type == FindingType.statistic
         assert finding.confidence == 0.85
         assert finding.source_url is not None
         assert finding.source_name == "Zillow"
@@ -125,9 +122,10 @@ class TestGoldenPath:
         crew_id = uuid.uuid4()
         run_id = uuid.uuid4()
         expert_id = uuid.uuid4()
+        task_id = uuid.uuid4()
 
         # Project
-        project = Project(id=project_id, user_id=user_id, name="Test")
+        project = Project(id=project_id, user_id=user_id, name="Test", status=ProjectStatus.active)
 
         # Mission
         mission = Mission(
@@ -142,27 +140,26 @@ class TestGoldenPath:
         )
 
         # Run
-        run = CrewRun(id=run_id, crew_id=crew_id, mission_id=mission_id, status="queued")
+        run = MissionRun(id=run_id, mission_id=mission_id, status=RunStatus.queued)
 
         # Task
         task = CrewTask(
-            id=uuid.uuid4(), run_id=run_id, expert_agent_id=expert_id,
+            id=task_id, mission_run_id=run_id, expert_agent_id=expert_id,
             task_type="web_search", description="Search",
         )
 
         # Finding
+        from app.models.finding import FindingType, SourceType as FSourceType
         finding = Finding(
-            id=uuid.uuid4(), mission_id=mission_id, crew_task_id=task.id,
-            expert_agent_id=expert_id, category="fact",
+            id=uuid.uuid4(), project_id=project_id, mission_id=mission_id,
+            finding_type=FindingType.fact,
             title="Test Finding", content="Test content",
-            confidence=0.7, source_type="web",
+            confidence=0.7, source_type=FSourceType.web,
         )
 
         # Verify chain integrity
         assert mission.project_id == project.id
         assert crew.mission_id == mission.id
-        assert run.crew_id == crew.id
         assert run.mission_id == mission.id
-        assert task.run_id == run.id
+        assert task.mission_run_id == run.id
         assert finding.mission_id == mission.id
-        assert finding.crew_task_id == task.id

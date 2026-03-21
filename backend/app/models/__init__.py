@@ -11,6 +11,7 @@ from .finding import Finding, FindingType, SourceType
 from .dataset import DataSet, DataRow
 from .report import Report
 from .voice_extraction import VoiceExtraction, CallRecord, VoiceExtractionStatus, CallDirection, CallStatus
+from .workflow_run import WorkflowRun
 from .workflow import Workflow
 from .monitor import Monitor, Alert, MonitorStatus, MonitorType, AlertSeverity
 from .knowledge_base import KnowledgeBase, KBDomain

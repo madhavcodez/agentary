@@ -37,6 +37,6 @@ class Report(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    user = relationship("User", backref="reports")
-    project = relationship("Project", backref="reports")
-    mission = relationship("Mission", backref="reports")
+    user = relationship("User")
+    project = relationship("Project")
+    mission = relationship("Mission")

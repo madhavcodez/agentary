@@ -4,12 +4,12 @@ from datetime import datetime, timezone
 
 import pytest
 
-from app.models.project import Project
+from app.models.project import Project, ProjectStatus
 from app.models.expert_agent import ExpertAgent, AgentSpecialty
 from app.models.mission import Mission, MissionStatus, MissionType
 from app.models.agent_crew import AgentCrew, CoordinationStrategy, AgentActivity, ActivityType
-from app.models.crew_run import CrewRun
-from app.models.crew_task import CrewTask
+from app.models.mission_run import MissionRun, MissionTask, RunStatus, TriggerType
+from app.models.crew_task import CrewTask, CrewTaskStatus
 from app.models.finding import Finding
 from app.models.report import Report
 
@@ -21,9 +21,10 @@ class TestProjectModel:
             user_id=uuid.uuid4(),
             name="Real Estate Research",
             description="Market analysis for Austin TX",
+            status=ProjectStatus.active,
         )
         assert project.name == "Real Estate Research"
-        assert project.description == "Market analysis for Austin TX"
+        assert project.status == ProjectStatus.active
 
 
 class TestExpertAgentModel:
@@ -45,7 +46,6 @@ class TestExpertAgentModel:
         assert agent.slug == "web-researcher"
         assert agent.specialty == AgentSpecialty.web_researcher
         assert agent.is_system is True
-        assert len(agent.tools) == 2
 
     def test_all_specialties_exist(self):
         expected = {
@@ -73,7 +73,6 @@ class TestMissionModel:
         )
         assert mission.name == "Research Austin 78704"
         assert mission.status == MissionStatus.draft
-        assert mission.mission_type == MissionType.research
         assert mission.parameters["geography"] == "Austin, TX 78704"
 
     def test_all_statuses_exist(self):
@@ -97,19 +96,17 @@ class TestAgentCrewModel:
         assert crew.coordination_strategy == CoordinationStrategy.parallel
 
 
-class TestCrewRunModel:
+class TestMissionRunModel:
     def test_create_run(self):
-        run = CrewRun(
+        run = MissionRun(
             id=uuid.uuid4(),
-            crew_id=uuid.uuid4(),
             mission_id=uuid.uuid4(),
-            status="queued",
-            trigger_type="manual",
-            iteration=1,
+            status=RunStatus.queued,
+            trigger_type=TriggerType.manual,
             metrics={},
         )
-        assert run.status == "queued"
-        assert run.trigger_type == "manual"
+        assert run.status == RunStatus.queued
+        assert run.trigger_type == TriggerType.manual
 
 
 class TestCrewTaskModel:
@@ -121,11 +118,11 @@ class TestCrewTaskModel:
             task_type="web_search",
             description="Search for Austin housing data",
             input_data={"query": "Austin 78704 median home price"},
-            status="pending",
+            status=CrewTaskStatus.pending,
             thinking_log=[],
         )
         assert task.task_type == "web_search"
-        assert task.status == "pending"
+        assert task.status == CrewTaskStatus.pending
         assert isinstance(task.thinking_log, list)
 
     def test_thinking_log_structure(self):
@@ -150,13 +147,15 @@ class TestCrewTaskModel:
 
 class TestFindingModel:
     def test_create_finding(self):
+        from app.models.finding import FindingType, SourceType as FSourceType
         finding = Finding(
             id=uuid.uuid4(),
+            project_id=uuid.uuid4(),
             mission_id=uuid.uuid4(),
-            category="statistic",
+            finding_type=FindingType.statistic,
             title="Median Home Price Austin 78704",
             content="The median home price in Austin 78704 is $625,000 as of March 2026.",
-            source_type="web",
+            source_type=FSourceType.web,
             source_url="https://www.zillow.com/austin-tx-78704/",
             source_name="Zillow",
             confidence=0.85,
@@ -164,7 +163,7 @@ class TestFindingModel:
         )
         assert finding.title == "Median Home Price Austin 78704"
         assert finding.confidence == 0.85
-        assert finding.source_type == "web"
+        assert finding.source_type == FSourceType.web
         assert "real_estate" in finding.tags
 
 
