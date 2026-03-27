@@ -1,11 +1,13 @@
 from __future__ import annotations
-from uuid import UUID
+from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from ..deps import get_db, get_current_user
 from ..models.user import User
 from ..models.mission import Mission
 from ..models.mission_run import MissionRun
+from ..models.enums import RunStatus
 from ..schemas.mission import MissionCreate, MissionUpdate, MissionResponse
 from ..schemas.mission_run import MissionRunResponse
 
@@ -69,7 +71,7 @@ def update_mission(
     return mission
 
 
-@router.post("/{mission_id}/run", response_model=MissionRunResponse, status_code=201)
+@router.post("/{mission_id}/run", status_code=202)
 def trigger_mission_run(
     mission_id: UUID,
     db: Session = Depends(get_db),
@@ -78,12 +80,37 @@ def trigger_mission_run(
     mission = db.query(Mission).filter(Mission.id == mission_id, Mission.user_id == user.id).first()
     if not mission:
         raise HTTPException(status_code=404, detail="Mission not found")
-    run = MissionRun(mission_id=mission.id)
+
+    correlation = uuid4()
+
+    run = MissionRun(
+        mission_id=mission.id,
+        status=RunStatus.created,
+        correlation_id=correlation,
+    )
     db.add(run)
+    db.flush()  # populate run.id before using it
+
+    idempotency_key = f"mission_run:{mission_id}:{run.id}"
+    run.idempotency_key = idempotency_key
     db.commit()
     db.refresh(run)
-    # TODO: Dispatch Celery task to execute the mission
-    return run
+
+    # Dispatch Celery task with run_id for idempotent execution
+    try:
+        from ..tasks.crew_tasks import plan_and_start_mission
+        plan_and_start_mission.delay(str(mission.id), str(run.id))
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning(
+            "Celery dispatch failed for mission %s, run %s: %s — task will need manual retry",
+            mission_id, run.id, exc,
+        )
+
+    return JSONResponse(
+        status_code=202,
+        content={"run_id": str(run.id), "status": "queued"},
+    )
 
 
 @router.get("/{mission_id}/runs", response_model=list[MissionRunResponse])
@@ -116,7 +143,7 @@ async def start_mission(
     if not mission:
         raise HTTPException(status_code=404, detail="Mission not found")
 
-    if mission.status.value not in ("draft", "failed"):
+    if mission.status.value not in ("draft", "failed", "paused"):
         raise HTTPException(status_code=400, detail=f"Cannot start mission in {mission.status.value} status")
 
     try:
@@ -143,8 +170,18 @@ async def start_mission(
                 try:
                     runner = CrewRunner(inline_db)
                     await runner.execute_run(run.id)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    import logging
+                    _logger = logging.getLogger(__name__)
+                    _logger.error("Inline crew run failed for run %s: %s", run.id, exc, exc_info=True)
+                    try:
+                        run_obj = inline_db.query(MissionRun).filter_by(id=run.id).first()
+                        if run_obj and run_obj.status not in ("completed", "failed", "cancelled"):
+                            run_obj.status = "failed"
+                            run_obj.failure_message = str(exc)
+                            inline_db.commit()
+                    except Exception:
+                        inline_db.rollback()
                 finally:
                     inline_db.close()
 
@@ -201,7 +238,8 @@ def get_mission_findings(
 
     query = db.query(Finding).filter(Finding.mission_id == mission.id)
     if category:
-        query = query.filter(Finding.category == category)
+        # Backward-compatible filter name; underlying model uses finding_type enum.
+        query = query.filter(Finding.finding_type == category)
     if confidence_min is not None:
         query = query.filter(Finding.confidence >= confidence_min)
     if source_type:
@@ -215,11 +253,12 @@ def get_mission_findings(
         "items": [
             {
                 "id": str(f.id),
-                "category": f.category,
+                # Keep "category" key for frontend compatibility.
+                "category": f.finding_type.value if hasattr(f.finding_type, "value") else str(f.finding_type),
                 "title": f.title,
                 "content": f.content,
                 "structured_data": f.structured_data,
-                "source_type": f.source_type,
+                "source_type": f.source_type.value if hasattr(f.source_type, "value") else f.source_type,
                 "source_url": f.source_url,
                 "source_name": f.source_name,
                 "confidence": f.confidence,
@@ -252,7 +291,7 @@ def get_structured_findings(
             {
                 "id": str(f.id),
                 "title": f.title,
-                "category": f.category,
+                "category": f.finding_type.value if hasattr(f.finding_type, "value") else str(f.finding_type),
                 "confidence": f.confidence,
                 "source": f.source_name or f.source_url or "N/A",
                 "content": f.content[:200] if f.content else "",
@@ -284,8 +323,17 @@ def get_mission_status(
 
     crew = db.query(AgentCrew).filter_by(mission_id=mission.id).first()
 
+    # Find the latest run for this mission (for step trace link)
+    latest_run = (
+        db.query(CrewRun)
+        .filter(CrewRun.mission_id == mission.id)
+        .order_by(CrewRun.created_at.desc())
+        .first()
+    )
+
     return {
         "mission_id": str(mission.id),
+        "latest_run_id": str(latest_run.id) if latest_run else None,
         "status": mission.status.value if hasattr(mission.status, "value") else str(mission.status),
         "findings_count": mission.findings_count or 0,
         "confidence_score": mission.confidence_score,
@@ -338,8 +386,18 @@ async def rerun_mission(
                 try:
                     runner = CrewRunner(inline_db)
                     await runner.execute_run(run.id)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    import logging
+                    _logger = logging.getLogger(__name__)
+                    _logger.error("Inline crew run failed for run %s: %s", run.id, exc, exc_info=True)
+                    try:
+                        run_obj = inline_db.query(MissionRun).filter_by(id=run.id).first()
+                        if run_obj and run_obj.status not in ("completed", "failed", "cancelled"):
+                            run_obj.status = "failed"
+                            run_obj.failure_message = str(exc)
+                            inline_db.commit()
+                    except Exception:
+                        inline_db.rollback()
                 finally:
                     inline_db.close()
 

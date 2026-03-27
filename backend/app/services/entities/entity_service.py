@@ -8,11 +8,17 @@ from typing import Any
 from uuid import UUID
 
 from rapidfuzz import fuzz
-from sqlalchemy import or_
+from sqlalchemy import func as sa_func, or_
 from sqlalchemy.orm import Session
 
 from ...models.entity import Entity
+from ...models.entity_alias import AliasType, EntityAlias
 from ...models.entity_collection import EntityCollection
+from ...models.entity_relationship import EntityRelationship
+from ...models.evidence import Evidence
+from ...models.insight import Insight
+from ...models.observation import Observation
+from ...models.recommendation import Recommendation
 
 logger = logging.getLogger(__name__)
 
@@ -228,6 +234,345 @@ class EntityService:
                 if fuzz.ratio(c.name.lower(), name.lower()) >= _MATCH_THRESHOLD:
                     return c
         return None
+
+    # ── Alias-aware resolution (Epic 2.4) ──────────────────────────────
+
+    def find_by_alias(
+        self,
+        alias_value: str,
+        alias_type: AliasType | None = None,
+        project_id: UUID | None = None,
+        db: Session | None = None,
+    ) -> Entity | None:
+        """Find entity by any alias."""
+        session = db or getattr(self, "_db", None)
+        if session is None:
+            raise ValueError("A database session is required")
+        q = session.query(Entity).join(EntityAlias)
+        q = q.filter(EntityAlias.alias_value == alias_value)
+        if alias_type:
+            q = q.filter(EntityAlias.alias_type == alias_type)
+        if project_id:
+            q = q.filter(Entity.project_id == project_id)
+        return q.first()
+
+    def find_or_create_with_aliases(
+        self,
+        name: str,
+        entity_type: str,
+        project_id: UUID,
+        user_id: UUID,
+        db: Session,
+        aliases: list[dict] | None = None,
+        properties: dict | None = None,
+    ) -> tuple[Entity, bool]:
+        """Find existing entity by name or aliases, or create new one.
+
+        Returns (entity, is_new).
+        """
+        # 1. Exact name match
+        existing = (
+            db.query(Entity)
+            .filter(Entity.name == name, Entity.project_id == project_id)
+            .first()
+        )
+        if existing:
+            return existing, False
+
+        # 2. Check aliases
+        if aliases:
+            for alias in aliases:
+                alias_type = (
+                    AliasType(alias["type"]) if alias.get("type") else None
+                )
+                found = self.find_by_alias(
+                    alias["value"], alias_type, project_id, db
+                )
+                if found:
+                    return found, False
+
+        # 3. Fuzzy name match (case-insensitive, strip whitespace)
+        fuzzy = (
+            db.query(Entity)
+            .filter(
+                sa_func.lower(sa_func.trim(Entity.name))
+                == name.lower().strip(),
+                Entity.project_id == project_id,
+            )
+            .first()
+        )
+        if fuzzy:
+            return fuzzy, False
+
+        # 4. Create new
+        entity = Entity(
+            name=name,
+            entity_type=entity_type,
+            project_id=project_id,
+            user_id=user_id,
+            properties=properties or {},
+        )
+        db.add(entity)
+        db.flush()
+
+        # Add provided aliases
+        if aliases:
+            for alias in aliases:
+                a = EntityAlias(
+                    entity_id=entity.id,
+                    alias_type=AliasType(alias.get("type", "name_variant")),
+                    alias_value=alias["value"],
+                    source_name=alias.get("source"),
+                    confidence=alias.get("confidence", 1.0),
+                )
+                db.add(a)
+
+        # Also store the canonical name as an alias
+        name_alias = EntityAlias(
+            entity_id=entity.id,
+            alias_type=AliasType.name_variant,
+            alias_value=name,
+            confidence=1.0,
+        )
+        db.add(name_alias)
+        db.flush()
+
+        return entity, True
+
+    def get_merge_candidates(
+        self, project_id: UUID, db: Session, min_confidence: float = 0.7
+    ) -> list[dict]:
+        """Find potential entity duplicates for review."""
+        entities = (
+            db.query(Entity)
+            .filter(Entity.project_id == project_id)
+            .all()
+        )
+
+        candidates: list[dict] = []
+        seen: set[tuple[str, str]] = set()
+
+        for i, e1 in enumerate(entities):
+            for e2 in entities[i + 1 :]:
+                if e1.entity_type != e2.entity_type:
+                    continue
+                pair_key = tuple(sorted([str(e1.id), str(e2.id)]))
+                if pair_key in seen:
+                    continue
+
+                # Normalized name comparison
+                n1 = e1.name.lower().strip()
+                n2 = e2.name.lower().strip()
+
+                confidence = 0.0
+                if n1 == n2:
+                    confidence = 1.0
+                elif n1 in n2 or n2 in n1:
+                    confidence = 0.8
+                else:
+                    words1 = set(n1.split())
+                    words2 = set(n2.split())
+                    overlap = len(words1 & words2)
+                    total = max(len(words1), len(words2))
+                    if total > 0 and overlap / total > 0.5:
+                        confidence = 0.7
+
+                if confidence >= min_confidence:
+                    seen.add(pair_key)
+
+                    def _type_val(t: Any) -> str:
+                        return t.value if hasattr(t, "value") else str(t)
+
+                    candidates.append(
+                        {
+                            "entity_a": {
+                                "id": str(e1.id),
+                                "name": e1.name,
+                                "type": _type_val(e1.entity_type),
+                            },
+                            "entity_b": {
+                                "id": str(e2.id),
+                                "name": e2.name,
+                                "type": _type_val(e2.entity_type),
+                            },
+                            "confidence": confidence,
+                            "reason": "name_similarity",
+                        }
+                    )
+
+        return sorted(candidates, key=lambda x: -x["confidence"])
+
+    # ── Enhanced merge with undo support (Epic 2.4) ────────────────────
+
+    async def merge_entities_enhanced(
+        self,
+        primary_id: UUID,
+        secondary_id: UUID,
+        user_id: UUID,
+        project_id: UUID,
+        db: Session,
+    ) -> dict:
+        """Merge secondary entity into primary, with snapshot for undo."""
+        from ...models.merge_history import MergeHistory
+
+        primary = db.query(Entity).filter(Entity.id == primary_id).first()
+        if not primary:
+            raise ValueError(f"Primary entity {primary_id} not found")
+        secondary = db.query(Entity).filter(Entity.id == secondary_id).first()
+        if not secondary:
+            raise ValueError(f"Secondary entity {secondary_id} not found")
+
+        # 1. Snapshot the secondary entity
+        snapshot = {
+            "name": secondary.name,
+            "entity_type": (
+                secondary.entity_type.value
+                if hasattr(secondary.entity_type, "value")
+                else str(secondary.entity_type)
+            ),
+            "description": secondary.description,
+            "properties": secondary.properties or {},
+            "tags": secondary.tags or [],
+            "source_ids": secondary.source_ids or [],
+            "confidence_score": secondary.confidence_score,
+            "is_verified": secondary.is_verified,
+            "project_id": str(secondary.project_id) if secondary.project_id else None,
+            "user_id": str(secondary.user_id),
+        }
+
+        # 2. Collect aliases being transferred
+        secondary_aliases = (
+            db.query(EntityAlias)
+            .filter(EntityAlias.entity_id == secondary_id)
+            .all()
+        )
+        merged_aliases_data = [
+            {
+                "id": str(a.id),
+                "alias_type": a.alias_type.value,
+                "alias_value": a.alias_value,
+                "source_name": a.source_name,
+                "confidence": a.confidence,
+            }
+            for a in secondary_aliases
+        ]
+
+        # 3. Count observations to transfer
+        obs_count = (
+            db.query(Observation)
+            .filter(Observation.entity_id == secondary_id)
+            .count()
+        )
+
+        # 4. Transfer aliases
+        for alias in secondary_aliases:
+            alias.entity_id = primary_id
+        db.flush()
+
+        # 5. Transfer observations
+        db.query(Observation).filter(
+            Observation.entity_id == secondary_id
+        ).update({"entity_id": primary_id}, synchronize_session="fetch")
+
+        # 6. Transfer insights
+        db.query(Insight).filter(
+            Insight.entity_id == secondary_id
+        ).update({"entity_id": primary_id}, synchronize_session="fetch")
+
+        # 7. Transfer recommendations
+        db.query(Recommendation).filter(
+            Recommendation.entity_id == secondary_id
+        ).update({"entity_id": primary_id}, synchronize_session="fetch")
+
+        # 8. Transfer relationships
+        db.query(EntityRelationship).filter(
+            EntityRelationship.from_entity_id == secondary_id
+        ).update({"from_entity_id": primary_id}, synchronize_session="fetch")
+        db.query(EntityRelationship).filter(
+            EntityRelationship.to_entity_id == secondary_id
+        ).update({"to_entity_id": primary_id}, synchronize_session="fetch")
+
+        # 9. Merge properties
+        merged_props = _merge_dicts(
+            primary.properties or {}, secondary.properties or {}
+        )
+        primary.properties = merged_props
+
+        # 10. Create MergeHistory record
+        merge_record = MergeHistory(
+            project_id=project_id,
+            user_id=user_id,
+            primary_entity_id=primary_id,
+            merged_entity_id=secondary_id,
+            merged_entity_snapshot=snapshot,
+            merged_aliases=merged_aliases_data,
+            merged_observations_count=obs_count,
+        )
+        db.add(merge_record)
+
+        # 11. Delete the secondary entity
+        db.delete(secondary)
+        db.flush()
+
+        return {
+            "primary_entity_id": str(primary_id),
+            "merged_entity_id": str(secondary_id),
+            "merge_id": str(merge_record.id),
+            "aliases_transferred": len(merged_aliases_data),
+            "observations_transferred": obs_count,
+        }
+
+    async def undo_merge(self, merge_id: UUID, db: Session) -> dict:
+        """Undo a previous entity merge by restoring from snapshot."""
+        from ...models.merge_history import MergeHistory
+
+        record = (
+            db.query(MergeHistory)
+            .filter(MergeHistory.id == merge_id, MergeHistory.is_undone == False)
+            .first()
+        )
+        if not record:
+            raise ValueError(f"Merge record {merge_id} not found or already undone")
+
+        snapshot = record.merged_entity_snapshot
+
+        # 1. Re-create the merged entity from snapshot
+        restored = Entity(
+            id=record.merged_entity_id,
+            name=snapshot["name"],
+            entity_type=snapshot["entity_type"],
+            description=snapshot.get("description"),
+            properties=snapshot.get("properties", {}),
+            tags=snapshot.get("tags", []),
+            source_ids=snapshot.get("source_ids", []),
+            confidence_score=snapshot.get("confidence_score"),
+            is_verified=snapshot.get("is_verified", False),
+            project_id=record.project_id,
+            user_id=UUID(snapshot["user_id"]),
+        )
+        db.add(restored)
+        db.flush()
+
+        # 2. Transfer back aliases that came from the merged entity
+        alias_ids = [a["id"] for a in (record.merged_aliases or [])]
+        if alias_ids:
+            db.query(EntityAlias).filter(
+                EntityAlias.id.in_([UUID(aid) for aid in alias_ids])
+            ).update(
+                {"entity_id": record.merged_entity_id},
+                synchronize_session="fetch",
+            )
+
+        # 3. Mark merge as undone
+        record.is_undone = True
+        db.flush()
+
+        return {
+            "merge_id": str(merge_id),
+            "restored_entity_id": str(record.merged_entity_id),
+            "restored_entity_name": snapshot["name"],
+            "aliases_restored": len(alias_ids),
+        }
 
     async def update_entity(
         self, entity_id: UUID, data: dict[str, Any], db: Session

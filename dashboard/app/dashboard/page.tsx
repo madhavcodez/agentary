@@ -9,11 +9,15 @@ import {
   fetchUnreadAlertCount,
 } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
+import { useWS } from "@/components/WebSocketProvider";
+import type { WSEvent } from "@/lib/types/events";
 import type { MonitorSummary, LiveEvent } from "@/lib/types";
 import StatsBar from "@/components/dashboard/StatsBar";
 import ActiveMissions from "@/components/dashboard/ActiveMissions";
 import LiveActivityFeed from "@/components/dashboard/LiveActivityFeed";
 import MonitorsPanel from "@/components/dashboard/MonitorsPanel";
+
+const MAX_FEED_EVENTS = 200;
 
 export default function DashboardPage() {
   const [events, setEvents] = useState<LiveEvent[]>([]);
@@ -30,13 +34,15 @@ export default function DashboardPage() {
   });
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { connectionState, subscribe } = useWS();
   const hasShownError = useRef(false);
+  const disconnectedSinceRef = useRef<number | null>(null);
 
   const loadData = useCallback(async () => {
     const results = await Promise.allSettled([
       fetchRecentEvents(20),
       fetchMonitors(),
-      fetchMissions({ status: "active" }),
+      fetchMissions(),
       fetchFindings({ limit: 100 }),
       fetchUnreadAlertCount(),
     ]);
@@ -56,7 +62,9 @@ export default function DashboardPage() {
     // Active missions
     let missionList: Array<{ id: string; name: string; status: string; project_id: string; created_at: string }> = [];
     if (results[2].status === "fulfilled") {
-      missionList = results[2].value as typeof missionList;
+      missionList = (results[2].value as typeof missionList).filter((m) =>
+        ["queued", "running"].includes(m.status),
+      );
       setActiveMissions(
         missionList.map((m) => ({
           id: m.id,
@@ -96,13 +104,76 @@ export default function DashboardPage() {
     setLoading(false);
   }, [toast]);
 
+  // Initial REST fetch
   useEffect(() => {
     loadData();
+  }, [loadData]);
+
+  // Re-fetch full state on WS reconnect
+  useEffect(() => {
+    if (connectionState === "connected") {
+      disconnectedSinceRef.current = null;
+      loadData();
+    } else if (connectionState === "disconnected") {
+      if (disconnectedSinceRef.current === null) {
+        disconnectedSinceRef.current = Date.now();
+      }
+    }
+  }, [connectionState, loadData]);
+
+  // Subscribe to real-time events via WebSocket
+  useEffect(() => {
+    const handleEvent = (wsEvent: WSEvent) => {
+      // Append to live feed as a LiveEvent
+      const liveEvent: LiveEvent = {
+        event_id: wsEvent.correlation_id ?? `ws-${Date.now()}`,
+        event_type: wsEvent.event_type,
+        scope: wsEvent.project_id ? "project" : wsEvent.user_id ? "user" : "global",
+        user_id: wsEvent.user_id ?? null,
+        project_id: wsEvent.project_id ?? null,
+        data: wsEvent.data,
+        timestamp: new Date(wsEvent.timestamp).getTime() / 1000,
+      };
+      setEvents((prev) => {
+        const next = [...prev, liveEvent];
+        return next.length > MAX_FEED_EVENTS ? next.slice(-MAX_FEED_EVENTS) : next;
+      });
+
+      // Mission state changes: refresh missions + stats
+      if (wsEvent.event_type.startsWith("mission.")) {
+        loadData();
+      }
+
+      // Monitor events: refresh monitors
+      if (wsEvent.event_type.startsWith("monitor.")) {
+        loadData();
+      }
+
+      // Finding events: refresh stats
+      if (wsEvent.event_type === "finding.created") {
+        loadData();
+      }
+    };
+
+    const unsub = subscribe("*", handleEvent);
+    return unsub;
+  }, [subscribe, loadData]);
+
+  // Fallback: poll if WS disconnected for >5s
+  useEffect(() => {
+    if (connectionState !== "disconnected") return;
+
     const interval = setInterval(() => {
-      if (!document.hidden) loadData();
+      if (
+        disconnectedSinceRef.current !== null &&
+        Date.now() - disconnectedSinceRef.current > 5000 &&
+        !document.hidden
+      ) {
+        loadData();
+      }
     }, 30000);
     return () => clearInterval(interval);
-  }, [loadData]);
+  }, [connectionState, loadData]);
 
   if (loading) {
     return (

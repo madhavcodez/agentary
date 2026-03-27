@@ -17,3 +17,18 @@ from .alert import AlertCreate, AlertUpdate, AlertRecordResponse
 from .entity import EntityCreate, EntityUpdate, EntityResponse
 from .workflow_template import WorkflowTemplateCreate, WorkflowTemplateUpdate, WorkflowTemplateResponse
 from .crew_task import CrewTaskCreate, CrewTaskUpdate, CrewTaskResponse
+from .intelligence import (
+    SignalCreate, SignalResponse,
+    ObservationResponse,
+    EvidenceResponse,
+    InsightResponse,
+    RecommendationResponse, RecommendationUpdate,
+    EntityAliasCreate, EntityAliasResponse,
+    EntityRelationshipCreate, EntityRelationshipResponse,
+)
+from .actions import (
+    ActionRequestCreate, ActionRequestResponse, ActionApprove, ActionReject,
+    ActionPolicyCreate, ActionPolicyResponse,
+    ActionExecutionResponse, ActionOutcomeResponse,
+    PolicyDecision,
+)

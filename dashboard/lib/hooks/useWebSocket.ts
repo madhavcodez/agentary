@@ -2,65 +2,100 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getToken } from "@/lib/auth";
-import type { LiveEvent } from "@/lib/types";
+import type { WSEvent } from "@/lib/types/events";
 
 const WS_BASE = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8000";
-const MAX_EVENTS = 200;
+const MAX_RECONNECT_ATTEMPTS = 10;
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 30000;
 const HEARTBEAT_MS = 30000;
 
-export type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
+export type ConnectionState =
+  | "connecting"
+  | "connected"
+  | "disconnected"
+  | "reconnecting";
 
-export interface UseWebSocketReturn {
-  events: LiveEvent[];
-  status: ConnectionStatus;
-  subscribe: (projectId: string) => void;
-  clearEvents: () => void;
+type EventHandler = (event: WSEvent) => void;
+
+interface UseWebSocketOptions {
+  projectId?: string;
+  onEvent?: EventHandler;
+  enabled?: boolean;
 }
 
-export function useWebSocket(): UseWebSocketReturn {
-  const [events, setEvents] = useState<LiveEvent[]>([]);
-  const [status, setStatus] = useState<ConnectionStatus>("disconnected");
+export interface UseWebSocketReturn {
+  connectionState: ConnectionState;
+  subscribe: (eventType: string, handler: EventHandler) => () => void;
+}
+
+export function useWebSocket(
+  options: UseWebSocketOptions = {},
+): UseWebSocketReturn {
+  const { projectId, onEvent, enabled = true } = options;
+
+  const [connectionState, setConnectionState] =
+    useState<ConnectionState>("disconnected");
   const wsRef = useRef<WebSocket | null>(null);
-  const retriesRef = useRef(0);
+  const reconnectAttemptRef = useRef(0);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
+  const handlersRef = useRef<Map<string, Set<EventHandler>>>(new Map());
+  const onEventRef = useRef(onEvent);
+  onEventRef.current = onEvent;
 
-  const clearEvents = useCallback(() => setEvents([]), []);
-
-  const addEvent = useCallback((event: LiveEvent) => {
-    setEvents((prev) => {
-      const next = [...prev, event];
-      return next.length > MAX_EVENTS ? next.slice(-MAX_EVENTS) : next;
-    });
-  }, []);
-
-  const subscribe = useCallback((projectId: string) => {
-    wsRef.current?.send(JSON.stringify({ type: "subscribe", project_id: projectId }));
-  }, []);
+  const subscribe = useCallback(
+    (eventType: string, handler: EventHandler): (() => void) => {
+      if (!handlersRef.current.has(eventType)) {
+        handlersRef.current.set(eventType, new Set());
+      }
+      handlersRef.current.get(eventType)!.add(handler);
+      return () => {
+        handlersRef.current.get(eventType)?.delete(handler);
+      };
+    },
+    [],
+  );
 
   const connect = useCallback(() => {
+    if (!enabled) return;
     const token = getToken();
     if (!token) {
-      setStatus("error");
+      // No token — don't try to connect, don't trigger reconnect loop
+      setConnectionState("disconnected");
       return;
     }
 
     // Clean up existing connection
     if (wsRef.current) {
-      wsRef.current.close();
+      try { wsRef.current.close(); } catch { /* ignore */ }
       wsRef.current = null;
     }
+    if (heartbeatRef.current) {
+      clearInterval(heartbeatRef.current);
+      heartbeatRef.current = null;
+    }
 
-    setStatus("connecting");
-    const ws = new WebSocket(`${WS_BASE}/ws/live-feed?token=${encodeURIComponent(token)}`);
+    setConnectionState("connecting");
+
+    const url = projectId
+      ? `${WS_BASE}/api/live-feed/${projectId}?token=${encodeURIComponent(token)}`
+      : `${WS_BASE}/ws/live-feed?token=${encodeURIComponent(token)}`;
+
+    let ws: WebSocket;
+    try {
+      ws = new WebSocket(url);
+    } catch {
+      // WebSocket constructor can throw if URL is invalid
+      setConnectionState("disconnected");
+      return;
+    }
     wsRef.current = ws;
 
     ws.onopen = () => {
       if (!mountedRef.current) return;
-      setStatus("connected");
-      retriesRef.current = 0;
+      setConnectionState("connected");
+      reconnectAttemptRef.current = 0;
 
       // Start heartbeat
       heartbeatRef.current = setInterval(() => {
@@ -70,12 +105,25 @@ export function useWebSocket(): UseWebSocketReturn {
       }, HEARTBEAT_MS);
     };
 
-    ws.onmessage = (e) => {
+    ws.onmessage = (msgEvent) => {
       if (!mountedRef.current) return;
       try {
-        const data = JSON.parse(e.data as string) as LiveEvent;
-        if (data.event_type && data.event_type !== "pong") {
-          addEvent(data);
+        const event: WSEvent = JSON.parse(msgEvent.data as string);
+        if (!event.event_type || event.event_type === "pong") return;
+
+        // Call global onEvent handler
+        onEventRef.current?.(event);
+
+        // Call type-specific handlers
+        const handlers = handlersRef.current.get(event.event_type);
+        if (handlers) {
+          handlers.forEach((handler) => handler(event));
+        }
+
+        // Call wildcard handlers
+        const wildcardHandlers = handlersRef.current.get("*");
+        if (wildcardHandlers) {
+          wildcardHandlers.forEach((handler) => handler(event));
         }
       } catch {
         // ignore malformed messages
@@ -84,28 +132,39 @@ export function useWebSocket(): UseWebSocketReturn {
 
     ws.onerror = () => {
       if (!mountedRef.current) return;
-      setStatus("error");
+      ws.close();
     };
 
     ws.onclose = () => {
       if (!mountedRef.current) return;
+
       if (heartbeatRef.current) {
         clearInterval(heartbeatRef.current);
         heartbeatRef.current = null;
       }
-      setStatus("disconnected");
 
-      // Auto-reconnect with exponential backoff
-      const delay = Math.min(
-        RECONNECT_BASE_MS * Math.pow(2, retriesRef.current),
-        RECONNECT_MAX_MS,
-      );
-      retriesRef.current += 1;
-      setTimeout(() => {
-        if (mountedRef.current) connect();
-      }, delay);
+      wsRef.current = null;
+      setConnectionState("disconnected");
+
+      // Auto-reconnect with exponential backoff — only if we have a token
+      const hasToken = !!getToken();
+      if (
+        enabled &&
+        hasToken &&
+        reconnectAttemptRef.current < MAX_RECONNECT_ATTEMPTS
+      ) {
+        const delay = Math.min(
+          RECONNECT_BASE_MS * Math.pow(2, reconnectAttemptRef.current),
+          RECONNECT_MAX_MS,
+        );
+        reconnectAttemptRef.current++;
+        setConnectionState("reconnecting");
+        setTimeout(() => {
+          if (mountedRef.current) connect();
+        }, delay);
+      }
     };
-  }, [addEvent]);
+  }, [enabled, projectId]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -115,6 +174,7 @@ export function useWebSocket(): UseWebSocketReturn {
       mountedRef.current = false;
       if (heartbeatRef.current) {
         clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
       }
       if (wsRef.current) {
         wsRef.current.close();
@@ -123,5 +183,5 @@ export function useWebSocket(): UseWebSocketReturn {
     };
   }, [connect]);
 
-  return { events, status, subscribe, clearEvents };
+  return { connectionState, subscribe };
 }

@@ -11,6 +11,8 @@ from google import genai
 from sqlalchemy.orm import Session
 
 from ...config import settings
+from ...core.events import Event, EventType, event_bus
+from ...models.enums import FailureCategory
 from ...models.finding import Finding
 from ...models.mission import Mission
 from ...models.crew_run import CrewRun
@@ -18,6 +20,26 @@ from ...models.report import Report
 from .chart_generator import ChartGenerator
 
 logger = logging.getLogger(__name__)
+
+_REPORT_MODEL = "gemini-2.5-flash"
+
+
+def _append_report_transition(
+    report: Report,
+    from_state: str,
+    to_state: str,
+    reason: str | None = None,
+) -> None:
+    """Append a state transition record to a Report."""
+    record = {
+        "from": from_state,
+        "to": to_state,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "reason": reason,
+    }
+    transitions = list(report.state_transitions or [])
+    transitions.append(record)
+    report.state_transitions = transitions
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 
@@ -65,7 +87,7 @@ class ReportGenerator:
         Raises on API errors so callers can handle them.
         """
         response = self.client.models.generate_content(
-            model="gemini-2.5-flash",
+            model=_REPORT_MODEL,
             contents=prompt,
         )
         return response.text
@@ -490,7 +512,7 @@ class ReportGenerator:
             "generation_time_seconds": round(generation_time, 2),
             "word_count": word_count,
             "template_used": report_type,
-            "model": "gemini-2.5-flash",
+            "model": _REPORT_MODEL,
             "generated_at": datetime.now(timezone.utc).isoformat(),
         }
 
@@ -516,6 +538,8 @@ class ReportGenerator:
         )
 
         try:
+            # Track lifecycle: generating -> ready
+            _append_report_transition(report, "generating", "ready", "Report generation completed")
             db.add(report)
             db.commit()
             db.refresh(report)
@@ -527,6 +551,9 @@ class ReportGenerator:
             )
         except Exception as exc:
             db.rollback()
+            report.failure_category = FailureCategory.internal
+            report.failure_message = str(exc)
+            _append_report_transition(report, "generating", "failed", str(exc))
             logger.error("Failed to save report: %s", exc)
             raise
 

@@ -40,7 +40,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // On mount: validate token by calling /auth/me
+  // On mount: validate token by calling /auth/me (with 5s timeout)
   useEffect(() => {
     const token = getToken();
     if (!token) {
@@ -48,12 +48,21 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // Timeout: if backend doesn't respond in 5s, treat as unauthenticated
+    const timeout = setTimeout(() => {
+      clearAuth();
+      setUser(null);
+      setIsLoading(false);
+    }, 5000);
+
     fetchCurrentUser()
       .then((u) => {
+        clearTimeout(timeout);
         setUser(u);
         storeUser(u);
       })
       .catch(() => {
+        clearTimeout(timeout);
         clearAuth();
         setUser(null);
       })

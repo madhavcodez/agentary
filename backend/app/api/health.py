@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import threading
+import time as _time
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -8,23 +11,24 @@ from ..deps import get_db
 
 router = APIRouter(tags=["health"])
 
+# ── Background health cache ─────────────────────────────────────────
+# Expensive checks (Qdrant, Celery) run in a background thread every 15s.
+# The /health endpoint returns instantly from cache.
 
-@router.get("/health")
-def health(db: Session = Depends(get_db)) -> dict:
+_cache: dict = {"status": "ok", "checks": {}, "circuit_breakers": {}}
+_cache_lock = threading.Lock()
+_bg_started = False
+
+
+def _run_expensive_checks() -> dict:
+    """Run Redis, Qdrant, Celery checks. Called from background thread."""
     checks: dict[str, str] = {}
-
-    # Postgres
-    try:
-        db.execute(text("SELECT 1"))
-        checks["postgres"] = "ok"
-    except Exception as e:
-        checks["postgres"] = f"error: {e}"
 
     # Redis
     try:
-        import redis
+        import redis as _redis
         from ..config import settings
-        r = redis.from_url(settings.redis_url)
+        r = _redis.from_url(settings.redis_url, socket_connect_timeout=1, socket_timeout=1)
         try:
             r.ping()
             checks["redis"] = "ok"
@@ -37,7 +41,7 @@ def health(db: Session = Depends(get_db)) -> dict:
     try:
         from qdrant_client import QdrantClient
         from ..config import settings
-        client = QdrantClient(url=settings.qdrant_url, timeout=5, check_compatibility=False)
+        client = QdrantClient(url=settings.qdrant_url, timeout=2, check_compatibility=False)
         try:
             client.get_collections()
             checks["qdrant"] = "ok"
@@ -46,12 +50,70 @@ def health(db: Session = Depends(get_db)) -> dict:
     except Exception as e:
         checks["qdrant"] = f"error: {e}"
 
-    # Circuit breakers
-    from ..services.circuit_breakers import get_breaker_status
+    # Celery — 0.5s max
+    try:
+        from ..celery_app import celery_app
+        ping = celery_app.control.ping(timeout=0.5)
+        checks["celery_workers"] = "available" if ping else "unavailable"
+    except Exception:
+        checks["celery_workers"] = "unavailable"
 
-    all_ok = all(v == "ok" for v in checks.values())
-    return {
-        "status": "ok" if all_ok else "degraded",
-        "checks": checks,
-        "circuit_breakers": get_breaker_status(),
-    }
+    # Circuit breakers
+    try:
+        from ..services.circuit_breakers import get_breaker_status
+        breakers = get_breaker_status()
+    except Exception:
+        breakers = {}
+
+    return {"checks": checks, "circuit_breakers": breakers}
+
+
+def _background_health_loop() -> None:
+    """Runs in a daemon thread — refreshes cache every 15 seconds."""
+    while True:
+        try:
+            result = _run_expensive_checks()
+            with _cache_lock:
+                _cache["checks"].update(result["checks"])
+                _cache["circuit_breakers"] = result["circuit_breakers"]
+                all_ok = all(
+                    v == "ok" for k, v in _cache["checks"].items()
+                    if k not in ("celery_workers",)
+                )
+                _cache["status"] = "ok" if all_ok else "degraded"
+        except Exception:
+            pass
+        _time.sleep(15)
+
+
+def _ensure_bg_thread() -> None:
+    global _bg_started
+    if not _bg_started:
+        _bg_started = True
+        t = threading.Thread(target=_background_health_loop, daemon=True)
+        t.start()
+
+
+@router.get("/health")
+def health(db: Session = Depends(get_db)) -> dict:
+    """Fast health endpoint — Postgres is checked inline, everything else from cache."""
+    _ensure_bg_thread()
+
+    # Postgres is fast — always check inline
+    try:
+        db.execute(text("SELECT 1"))
+        pg = "ok"
+    except Exception as e:
+        pg = f"error: {e}"
+
+    with _cache_lock:
+        result = dict(_cache)
+        result["checks"] = dict(result.get("checks", {}))
+        result["checks"]["postgres"] = pg
+
+    all_ok = all(
+        v == "ok" for k, v in result["checks"].items()
+        if k not in ("celery_workers",)
+    )
+    result["status"] = "ok" if all_ok else "degraded"
+    return result

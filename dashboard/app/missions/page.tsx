@@ -87,7 +87,10 @@ export default function MissionsPage() {
   return (
     <div className="max-w-6xl mx-auto px-8 py-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-100 tracking-tight">Missions</h1>
+        <h1 className="text-3xl font-semibold text-gray-100 tracking-tight">Missions</h1>
+        <p className="text-sm text-gray-400 mt-2">
+          Operations overview for all mission runs, outcomes, and execution states.
+        </p>
       </div>
 
       {/* Filter pills */}
@@ -121,7 +124,7 @@ export default function MissionsPage() {
           <div className="w-6 h-6 border-2 border-gray-700 border-t-emerald-400 rounded-full animate-spin" />
         </div>
       ) : filteredMissions.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800/50 rounded-xl p-12 text-center">
+        <div className="bg-[#0b1220] border border-white/10 rounded-2xl p-12 text-center">
           <p className="text-gray-400 mb-2">
             {activeFilter === "all" ? "No missions yet" : `No ${activeFilter} missions`}
           </p>
@@ -140,7 +143,7 @@ export default function MissionsPage() {
             <button
               key={mission.id}
               onClick={() => router.push(`/missions/${mission.id}`)}
-              className="w-full text-left bg-gray-900 border border-gray-800/50 rounded-xl px-4 py-3 hover:border-gray-700/50 transition-colors flex items-center justify-between group"
+              className="w-full text-left bg-[#0b1220] border border-white/10 rounded-2xl px-4 py-3 hover:border-white/20 transition-colors flex items-center justify-between group"
             >
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusDot(mission.status)}`} />

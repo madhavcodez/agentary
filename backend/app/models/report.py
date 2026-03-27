@@ -3,11 +3,12 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import JSON, UUID
+from sqlalchemy import Boolean, Column, DateTime, Enum as SAEnum, ForeignKey, String, Text
+from sqlalchemy.dialects.postgresql import JSON, JSONB, UUID
 from sqlalchemy.orm import relationship
 
 from ..database import Base
+from .enums import FailureCategory
 
 
 class Report(Base):
@@ -20,6 +21,9 @@ class Report(Base):
     title = Column(String(500), nullable=False)
     description = Column(Text, nullable=True)
     report_type = Column(String(50), nullable=False, default="research_report")
+    # Report uses domain-specific states (generating/ready/failed) rather than RunStatus.
+    # These map to: generating=running, ready=completed, failed=failed.
+    # This is intentional — reports have a simpler lifecycle than execution runs.
     status = Column(String(20), nullable=False, default="generating")
     content_markdown = Column(Text, nullable=True)
     content_html = Column(Text, nullable=True)
@@ -36,6 +40,12 @@ class Report(Base):
     pdf_url = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Lifecycle state machine columns
+    failure_category = Column(SAEnum(FailureCategory, name="failurecategory"), nullable=True)
+    failure_message = Column(Text, nullable=True)
+    state_transitions = Column(JSONB, default=list)
+    correlation_id = Column(UUID(as_uuid=True), nullable=True, index=True)
 
     user = relationship("User")
     project = relationship("Project")

@@ -189,11 +189,49 @@ export interface VoiceExtraction {
   project_id: string;
   name: string;
   status: string;
+  objective?: string;
+  persona_name?: string | null;
+  persona_role?: string | null;
+  persona_company?: string | null;
   total_targets: number;
   calls_completed: number;
   calls_successful: number;
   data_points_extracted: number;
   created_at: string;
+  updated_at?: string;
+}
+
+export interface TranscriptTurn {
+  speaker: "agent" | "user";
+  text: string;
+  timestamp?: string;
+}
+
+export interface ExtractedDataPoint {
+  key: string;
+  value: string;
+  confidence: number;
+}
+
+export type CallStatus = "pending" | "in_progress" | "completed" | "failed" | "no_answer";
+
+export interface CallRecord {
+  id: string;
+  session_id: string;
+  target_name: string;
+  target_phone: string;
+  status: CallStatus;
+  duration_seconds: number | null;
+  confidence_score: number | null;
+  transcript: TranscriptTurn[] | null;
+  extracted_data: ExtractedDataPoint[] | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CallRecordsResponse {
+  items: CallRecord[];
+  total: number;
 }
 
 // ── Workflows ────────────────────────────────────────────────────
@@ -444,9 +482,165 @@ export interface CrewAgent {
 
 export interface MissionLiveStatus {
   mission_id: string;
+  latest_run_id: string | null;
   status: string;
   findings_count: number;
   confidence_score: number | null;
   crew: { agents: CrewAgent[] } | null;
   activities: MissionActivity[];
+}
+
+// ── Run Trace (Observability) ────────────────────────────────────────
+
+export interface RunStepItem {
+  id: string;
+  step_type: string;
+  step_name: string;
+  status: string;
+  input_summary: Record<string, unknown> | null;
+  output_summary: Record<string, unknown> | null;
+  error: Record<string, unknown> | null;
+  tokens_used: number | null;
+  cost_usd: number | null;
+  duration_ms: number | null;
+  parent_step_id: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+// ── Actions ──────────────────────────────────────────────────────
+
+export interface ActionStateTransition {
+  from: string | null;
+  to: string;
+  timestamp: string;
+  reason: string;
+}
+
+export interface ActionRequest {
+  id: string;
+  project_id: string;
+  recommendation_id: string | null;
+  entity_id: string | null;
+  user_id: string;
+  action_type: string;
+  title: string;
+  description: string | null;
+  parameters: Record<string, unknown>;
+  confidence: number;
+  priority: string;
+  requires_approval: boolean;
+  status: string;
+  state_transitions: ActionStateTransition[];
+  policy_id: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  expires_at: string | null;
+  created_at: string;
+}
+
+// ── Intelligence ─────────────────────────────────────────────────
+
+export interface Signal {
+  id: string;
+  project_id: string;
+  source_type: string;
+  signal_type: string;
+  title: string;
+  content: string | null;
+  structured_data: Record<string, unknown>;
+  entity_id: string | null;
+  confidence: number | null;
+  is_processed: boolean;
+  created_at: string;
+}
+
+export interface Observation {
+  id: string;
+  project_id: string;
+  entity_id: string | null;
+  signal_id: string | null;
+  observation_type: string;
+  subject: string;
+  content: string | null;
+  structured_value: Record<string, unknown>;
+  source_type: string | null;
+  source_url: string | null;
+  source_name: string | null;
+  confidence: number | null;
+  is_stale: boolean;
+  created_at: string;
+}
+
+export interface EvidenceItem {
+  id: string;
+  observation_id: string;
+  evidence_type: string;
+  weight: number;
+  notes: string | null;
+  observation?: Observation;
+}
+
+export interface Insight {
+  id: string;
+  project_id: string;
+  entity_id: string | null;
+  insight_type: string;
+  title: string;
+  content: string | null;
+  confidence: number | null;
+  freshness_at: string;
+  staleness_threshold_hours: number;
+  is_stale: boolean;
+  is_active: boolean;
+  created_at: string;
+  evidence_links?: EvidenceItem[];
+}
+
+export interface IntelRecommendation {
+  id: string;
+  project_id: string;
+  entity_id: string | null;
+  insight_id: string | null;
+  recommendation_type: string;
+  title: string;
+  rationale: string | null;
+  suggested_action: Record<string, unknown>;
+  confidence: number | null;
+  priority: string;
+  status: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+  evidence_links?: EvidenceItem[];
+}
+
+export interface EntityAlias {
+  id: string;
+  alias_type: string;
+  alias_value: string;
+  source_name: string | null;
+  confidence: number;
+}
+
+export interface EntityRelationship {
+  id: string;
+  from_entity_id: string;
+  to_entity_id: string;
+  relationship_type: string;
+  confidence: number;
+  from_entity?: { id: string; name: string; entity_type: string };
+  to_entity?: { id: string; name: string; entity_type: string };
+}
+
+export interface Entity {
+  id: string;
+  project_id: string;
+  name: string;
+  entity_type: string;
+  confidence: number | null;
+  verified: boolean;
+  created_at: string;
+  updated_at: string;
 }

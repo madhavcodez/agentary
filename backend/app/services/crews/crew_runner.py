@@ -2,21 +2,31 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import json
+import logging
 import time
 import uuid
 from datetime import datetime, timezone
 from typing import Any
 
+from google.genai import types
 from sqlalchemy.orm import Session
 
+from ...core.correlation import get_correlation_id
+from ...core.events import Event, EventType, event_bus
 from ...models.agent_crew import AgentCrew
 from ...models.crew_run import CrewRun
 from ...models.crew_task import CrewTask
+from ...models.enums import FailureCategory, RunStatus
 from ...models.expert_agent import ExpertAgent
-from ...models.finding import Finding
+from ...models.finding import Finding, FindingType, SourceType
 from ...models.mission import Mission, MissionStatus
+from ...models.signal import SignalSourceType, SignalType
+from ...models.run_step import RunStep, StepType
 from ..gemini import generate_text, get_client
+from ..intelligence.signal_service import SignalService
+from ..state_machine import InvalidTransition, transition as sm_transition
 from .events import (
     emit_crew_run_completed,
     emit_crew_run_started,
@@ -27,12 +37,107 @@ from .events import (
 )
 from .tool_registry import tool_registry
 
+logger = logging.getLogger(__name__)
+
+# ── Constants ────────────────────────────────────────────────────────
+_DEFAULT_MODEL = "gemini-2.5-flash"
+_MAX_TOOL_ITERATIONS = 6
+_TOKEN_COST_PER_TOKEN = 1e-6
+_API_TIMEOUT_MS = 120_000
+_TASK_TIMEOUT_SECONDS = 300
+
+
+def _truncate(data: Any, max_chars: int = 2000) -> Any:
+    """Truncate data to fit within *max_chars* when serialised as JSON."""
+    if data is None:
+        return None
+    if isinstance(data, dict):
+        serialised = json.dumps(data, default=str)
+        if len(serialised) > max_chars:
+            return {"_truncated": True, "preview": serialised[:max_chars]}
+        return data
+    return data
+
 
 class CrewRunner:
     """Executes a crew run with parallel expert research and agentic tool-calling loops."""
 
     def __init__(self, db: Session) -> None:
         self.db = db
+
+    # ── Observability: RunStep recording ──────────────────────────────
+
+    def _record_step(
+        self,
+        run_id: uuid.UUID,
+        run_type: str,
+        step_type: StepType,
+        step_name: str,
+        status: str,
+        *,
+        input_summary: Any = None,
+        output_summary: Any = None,
+        error: dict | None = None,
+        tokens_used: int | None = None,
+        duration_ms: int | None = None,
+        correlation_id: str | None = None,
+        parent_step_id: uuid.UUID | None = None,
+    ) -> RunStep:
+        """Create and persist a RunStep trace record."""
+        cid = correlation_id or get_correlation_id() or None
+        step = RunStep(
+            run_id=run_id,
+            run_type=run_type,
+            correlation_id=uuid.UUID(cid) if cid else None,
+            step_type=step_type,
+            step_name=step_name,
+            status=status,
+            input_summary=_truncate(input_summary, 2000),
+            output_summary=_truncate(output_summary, 5000),
+            error=error,
+            tokens_used=tokens_used,
+            duration_ms=duration_ms,
+            parent_step_id=parent_step_id,
+            completed_at=(
+                datetime.now(timezone.utc)
+                if status in ("completed", "failed")
+                else None
+            ),
+        )
+        self.db.add(step)
+        self.db.flush()
+        return step
+
+    async def _transition_run(
+        self,
+        run: CrewRun,
+        target: RunStatus,
+        reason: str | None = None,
+        mission: Mission | None = None,
+    ) -> None:
+        """Validate and apply a state transition on a run, persisting the record."""
+        current_str = run.status if isinstance(run.status, str) else run.status.value
+        current = RunStatus(current_str) if isinstance(current_str, str) else current_str
+        record = sm_transition(current, target, reason)
+        run.status = target.value
+        transitions = list(run.state_transitions or [])
+        transitions.append(record)
+        run.state_transitions = transitions
+        self.db.commit()
+
+        # Emit lifecycle event
+        await event_bus.broadcast(Event(
+            event_type=EventType.run_state_changed,
+            data={
+                "run_type": "crew",
+                "run_id": str(run.id),
+                "from_state": record["from"],
+                "to_state": record["to"],
+                "reason": reason,
+            },
+            project_id=str(mission.project_id) if mission else None,
+            mission_id=str(mission.id) if mission else None,
+        ))
 
     async def execute_run(self, run_id: uuid.UUID) -> CrewRun:
         """Main execution entry point.
@@ -53,7 +158,22 @@ class CrewRunner:
         crew = self.db.query(AgentCrew).filter_by(mission_id=run.mission_id).first()
 
         if not crew or not mission:
-            run.status = "failed"
+            run.failure_category = FailureCategory.validation
+            run.failure_message = "Crew or mission not found"
+            try:
+                await self._transition_run(run, RunStatus.failed, "Crew or mission not found", mission)
+            except InvalidTransition:
+                current_status = run.status if isinstance(run.status, str) else run.status.value
+                run.status = "failed"
+                transitions = list(run.state_transitions or [])
+                transitions.append({
+                    "from": current_status,
+                    "to": "failed",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "reason": "InvalidTransition fallback — forced to failed",
+                })
+                run.state_transitions = transitions
+                self.db.commit()
             run.error = {"message": "Crew or mission not found"}
             self.db.commit()
             raise ValueError("Crew or mission not found")
@@ -67,8 +187,8 @@ class CrewRunner:
         )
         expert_map = {str(e.id): e for e in experts}
 
-        # Update run status
-        run.status = "running"
+        # Transition: queued -> running
+        await self._transition_run(run, RunStatus.running, "Starting crew execution", mission)
         run.started_at = datetime.now(timezone.utc)
         self.db.commit()
 
@@ -101,14 +221,14 @@ class CrewRunner:
             if research_tasks:
                 results = await asyncio.gather(
                     *[
-                        self._execute_expert_task(task, expert_map, mission, run, crew)
+                        self._execute_expert_task_safe(task, expert_map, mission, run, crew)
                         for task in research_tasks
                     ],
                     return_exceptions=True,
                 )
                 failed_count = 0
                 failed_errors: list[str] = []
-                for result in results:
+                for i, result in enumerate(results):
                     if isinstance(result, tuple):
                         findings, tokens, cost = result
                         all_findings.extend(findings)
@@ -116,11 +236,21 @@ class CrewRunner:
                         total_cost += cost
                     elif isinstance(result, Exception):
                         failed_count += 1
-                        failed_errors.append(str(result))
+                        error_msg = str(result)
+                        failed_errors.append(error_msg)
+
+                        # Mark the task as failed with failure category
+                        task_obj = research_tasks[i]
+                        task_obj.status = "failed"
+                        task_obj.error_message = error_msg[:2000]
+                        if isinstance(result, asyncio.TimeoutError):
+                            task_obj.failure_category = FailureCategory.timeout
+                        self.db.commit()
+
                         await emit_expert_thinking(
                             self.db, mission.id, run.id, crew.id,
                             None, "System", "\u26a0\ufe0f",
-                            f"Research task failed: {result}", "error",
+                            f"Research task failed: {error_msg[:200]}", "error",
                         )
                         self.db.commit()
 
@@ -131,6 +261,16 @@ class CrewRunner:
                     )
 
             # ── SYNTHESIS PHASE ──────────────────────────────────────
+            if synthesis_tasks:
+                synth_phase_step = self._record_step(
+                    run_id=run.id, run_type="crew",
+                    step_type=StepType.synthesis,
+                    step_name="Synthesis phase",
+                    status="running",
+                )
+                self.db.commit()
+                synth_start = time.time()
+
             for task in synthesis_tasks:
                 expert = expert_map.get(str(task.expert_agent_id))
                 if not expert:
@@ -155,7 +295,23 @@ class CrewRunner:
                     total_tokens += tokens
                     total_cost += cost
 
+            if synthesis_tasks:
+                synth_phase_step.status = "completed"
+                synth_phase_step.duration_ms = int((time.time() - synth_start) * 1000)
+                synth_phase_step.completed_at = datetime.now(timezone.utc)
+                self.db.commit()
+
             # ── REPORT PHASE ─────────────────────────────────────────
+            if report_tasks:
+                report_phase_step = self._record_step(
+                    run_id=run.id, run_type="crew",
+                    step_type=StepType.synthesis,
+                    step_name="Report phase",
+                    status="running",
+                )
+                self.db.commit()
+                report_phase_start = time.time()
+
             for task in report_tasks:
                 expert = expert_map.get(str(task.expert_agent_id))
                 if not expert:
@@ -180,9 +336,48 @@ class CrewRunner:
 
                     # Store report data in task output for later report generation
 
+            if report_tasks:
+                report_phase_step.status = "completed"
+                report_phase_step.duration_ms = int((time.time() - report_phase_start) * 1000)
+                report_phase_step.completed_at = datetime.now(timezone.utc)
+                self.db.commit()
+
             # ── FINALIZE ─────────────────────────────────────────────
             elapsed = time.time() - start_time
-            run.status = "completed"
+
+            # Determine if we should use partially_failed
+            failed_task_count = sum(
+                1 for t in run.tasks
+                if (t.status.value if hasattr(t.status, 'value') else str(t.status)) == "failed"
+            )
+            total_task_count = len(run.tasks) if run.tasks else 0
+
+            if failed_task_count > 0 and failed_task_count < total_task_count:
+                await self._transition_run(
+                    run, RunStatus.partially_failed,
+                    f"{failed_task_count}/{total_task_count} tasks failed",
+                    mission,
+                )
+                # Resolve partial failure to completed since we do have findings
+                if all_findings:
+                    await self._transition_run(
+                        run, RunStatus.completed,
+                        "Resolved: partial results available",
+                        mission,
+                    )
+                else:
+                    await self._transition_run(
+                        run, RunStatus.failed,
+                        "Resolved: no findings despite partial execution",
+                        mission,
+                    )
+            else:
+                await self._transition_run(
+                    run, RunStatus.completed,
+                    f"Completed with {len(all_findings)} findings",
+                    mission,
+                )
+
             run.completed_at = datetime.now(timezone.utc)
             run.duration_seconds = elapsed
             run.summary = f"Completed with {len(all_findings)} findings from {len(experts)} experts"
@@ -194,7 +389,8 @@ class CrewRunner:
                 "experts_used": len(experts),
             }
 
-            mission.status = MissionStatus.completed
+            run_status_str = run.status.value if hasattr(run.status, "value") else str(run.status)
+            mission.status = MissionStatus.completed if run_status_str == "completed" else MissionStatus.failed
             mission.completed_at = datetime.now(timezone.utc)
             mission.findings_count = len(all_findings)
             mission.confidence_score = (
@@ -209,15 +405,80 @@ class CrewRunner:
             self.db.commit()
 
         except Exception as e:
-            run.status = "failed"
-            run.error = {"message": str(e), "type": type(e).__name__}
+            # Categorize failure
+            failure_cat = FailureCategory.internal
+            err_msg = str(e)
+            err_type = type(e).__name__
+            if "rate" in err_msg.lower() or "429" in err_msg:
+                failure_cat = FailureCategory.rate_limited
+            elif "timeout" in err_msg.lower() or "timed out" in err_msg.lower():
+                failure_cat = FailureCategory.timeout
+            elif "api" in err_type.lower() or "google" in err_type.lower():
+                failure_cat = FailureCategory.model_error
+
+            run.failure_category = failure_cat
+            run.failure_message = err_msg
+            run.error = {"message": err_msg, "type": err_type}
             run.completed_at = datetime.now(timezone.utc)
             run.duration_seconds = time.time() - start_time
+
+            try:
+                await self._transition_run(run, RunStatus.failed, err_msg, mission)
+            except InvalidTransition:
+                current_status = run.status if isinstance(run.status, str) else run.status.value
+                run.status = "failed"
+                transitions = list(run.state_transitions or [])
+                transitions.append({
+                    "from": current_status,
+                    "to": "failed",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "reason": "InvalidTransition fallback — forced to failed",
+                })
+                run.state_transitions = transitions
+                self.db.commit()
+
             mission.status = MissionStatus.failed
             self.db.commit()
             raise
 
         return run
+
+    async def _execute_expert_task_safe(
+        self,
+        task: CrewTask,
+        expert_map: dict[str, ExpertAgent],
+        mission: Mission,
+        run: CrewRun,
+        crew: AgentCrew,
+        timeout_seconds: float = _TASK_TIMEOUT_SECONDS,
+    ) -> tuple[list[Finding], int, float]:
+        """Wrapper that adds a per-task timeout and catches exceptions.
+
+        Returns the same tuple as _execute_expert_task on success.
+        Raises on timeout or unrecoverable error so asyncio.gather
+        can capture it via return_exceptions=True.
+        """
+        try:
+            return await asyncio.wait_for(
+                self._execute_expert_task(task, expert_map, mission, run, crew),
+                timeout=timeout_seconds,
+            )
+        except asyncio.TimeoutError:
+            expert = expert_map.get(str(task.expert_agent_id))
+            expert_name = expert.name if expert else "Unknown"
+            logger.error(
+                "Expert task timed out after %.0fs: expert=%s task_type=%s",
+                timeout_seconds, expert_name, task.task_type,
+            )
+            task.status = "failed"
+            task.error_message = f"Task timed out after {timeout_seconds}s"
+            self.db.commit()
+            raise
+        except Exception as exc:
+            logger.error(
+                "Expert task failed with unexpected error: %s", exc, exc_info=True,
+            )
+            raise
 
     async def _execute_expert_task(
         self,
@@ -238,7 +499,7 @@ class CrewRunner:
         expert_icon = expert.icon or "\U0001f916"
         expert_tools = expert.tools if isinstance(expert.tools, list) else []
         model_config = expert.model_config_json or {}
-        model_name = model_config.get("model", "gemini-2.5-flash")
+        model_name = model_config.get("model", _DEFAULT_MODEL)
         temperature = model_config.get("temperature", 0.3)
 
         # Mark task as running
@@ -250,6 +511,17 @@ class CrewRunner:
         await emit_task_started(
             self.db, mission.id, run.id, crew.id,
             expert.id, expert.name, task.task_type,
+        )
+        self.db.commit()
+
+        # Record RunStep: expert task started
+        task_step = self._record_step(
+            run_id=run.id,
+            run_type="crew",
+            step_type=StepType.expert_task,
+            step_name=f"{expert.name}: {task.task_type}",
+            status="running",
+            input_summary=_truncate(task.input_data, 2000),
         )
         self.db.commit()
 
@@ -268,7 +540,7 @@ class CrewRunner:
             tool_declarations = tool_registry.get_gemini_tool_declarations(expert_tools)
 
             # ── AGENTIC TOOL-CALLING LOOP ────────────────────────────
-            max_iterations = 6
+            max_iterations = _MAX_TOOL_ITERATIONS
             done = False
             iteration = 0
 
@@ -281,12 +553,11 @@ class CrewRunner:
                 config_kwargs: dict[str, Any] = {
                     "system_instruction": system_prompt,
                     "temperature": temperature,
-                    "http_options": {"timeout": 120_000},
+                    "http_options": {"timeout": _API_TIMEOUT_MS},
                 }
 
                 tools_param = None
                 if tool_declarations:
-                    from google.genai import types
                     tools_param = [types.Tool(function_declarations=[
                         types.FunctionDeclaration(
                             name=td["name"],
@@ -295,12 +566,17 @@ class CrewRunner:
                         )
                         for td in tool_declarations
                     ])]
+                    config_kwargs["tools"] = tools_param
 
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=messages,
-                    config=types.GenerateContentConfig(**config_kwargs),
-                    tools=tools_param,
+                loop = asyncio.get_event_loop()
+                response = await loop.run_in_executor(
+                    None,
+                    functools.partial(
+                        client.models.generate_content,
+                        model=model_name,
+                        contents=messages,
+                        config=types.GenerateContentConfig(**config_kwargs),
+                    ),
                 )
 
                 # Check for function calls
@@ -340,7 +616,26 @@ class CrewRunner:
                             self.db.commit()
 
                             # Execute tool
+                            tool_start = time.time()
                             tool_result = await tool_registry.execute(tool_name, **tool_args)
+                            tool_elapsed_ms = int((time.time() - tool_start) * 1000)
+
+                            # Record RunStep: tool call
+                            self._record_step(
+                                run_id=run.id,
+                                run_type="crew",
+                                step_type=StepType.tool_call,
+                                step_name=f"tool:{tool_name}",
+                                status="completed",
+                                input_summary=_truncate(tool_args, 2000),
+                                output_summary=_truncate(
+                                    tool_result if isinstance(tool_result, dict) else {"result": str(tool_result)[:2000]},
+                                    5000,
+                                ),
+                                duration_ms=tool_elapsed_ms,
+                                parent_step_id=task_step.id,
+                            )
+                            self.db.commit()
 
                             # Add thinking log entry
                             log_entry = {
@@ -357,10 +652,9 @@ class CrewRunner:
 
                             # Append tool result to messages
                             messages.append({"role": "model", "parts": [part]})
-                            from google.genai import types as gtypes
                             messages.append({
                                 "role": "user",
-                                "parts": [gtypes.Part.from_function_response(
+                                "parts": [types.Part.from_function_response(
                                     name=tool_name,
                                     response={"result": json.dumps(tool_result)[:4000]},
                                 )],
@@ -384,7 +678,6 @@ class CrewRunner:
                         # Map category string to FindingType enum
                         raw_type = f_data.get("category", f_data.get("finding_type", "data_point"))
                         try:
-                            from ...models.finding import FindingType
                             finding_type = FindingType(raw_type)
                         except ValueError:
                             finding_type = FindingType.data_point
@@ -392,7 +685,6 @@ class CrewRunner:
                         # Map source_type string to SourceType enum
                         raw_source = f_data.get("source_type", "web")
                         try:
-                            from ...models.finding import SourceType
                             source_type = SourceType(raw_source)
                         except ValueError:
                             source_type = SourceType.web
@@ -413,12 +705,31 @@ class CrewRunner:
                             tags=f_data.get("tags", []),
                         )
                         self.db.add(finding)
+                        self.db.flush()
                         findings.append(finding)
 
                         await emit_finding_added(
                             self.db, mission.id, run.id,
                             finding.title, finding.confidence, finding.source_name,
                         )
+
+                        # Emit signal for the intelligence pipeline
+                        try:
+                            signal_svc = SignalService(self.db)
+                            signal_svc.create_signal(
+                                project_id=mission.project_id,
+                                user_id=mission.user_id,
+                                source_type=SignalSourceType.mission,
+                                signal_type=SignalType.data_extracted,
+                                title=f"Finding: {finding.title}",
+                                content=finding.content,
+                                structured_data=finding.structured_data or {},
+                                source_id=run.id,
+                                entity_id=None,
+                                confidence=finding.confidence,
+                            )
+                        except Exception:
+                            logger.debug("Signal emission failed for finding %s", finding.id)
 
                     # Store raw output
                     task.output_data = {
@@ -432,7 +743,7 @@ class CrewRunner:
 
             # Finalize task
             elapsed = time.time() - start_time
-            cost = total_tokens * 0.000001  # Rough estimate
+            cost = total_tokens * _TOKEN_COST_PER_TOKEN  # Rough estimate
             task.status = "completed"
             task.completed_at = datetime.now(timezone.utc)
             task.duration_seconds = elapsed
@@ -443,17 +754,34 @@ class CrewRunner:
                 self.db, mission.id, run.id, crew.id,
                 expert.id, expert.name, task.task_type, len(findings),
             )
+
+            # Update RunStep: expert task completed
+            task_step.status = "completed"
+            task_step.tokens_used = total_tokens
+            task_step.cost_usd = cost
+            task_step.duration_ms = int(elapsed * 1000)
+            task_step.output_summary = _truncate(
+                {"findings_count": len(findings)}, 5000,
+            )
+            task_step.completed_at = datetime.now(timezone.utc)
             self.db.commit()
 
             return findings, total_tokens, cost
 
         except Exception as e:
+            logger.exception("Expert task failed for agent %s", task.expert_agent_id)
             task.status = "failed"
             task.error_message = str(e)
             task.completed_at = datetime.now(timezone.utc)
             task.duration_seconds = time.time() - start_time
+
+            # Update RunStep: expert task failed
+            task_step.status = "failed"
+            task_step.error = {"message": str(e)[:2000], "type": type(e).__name__}
+            task_step.duration_ms = int((time.time() - start_time) * 1000)
+            task_step.completed_at = datetime.now(timezone.utc)
             self.db.commit()
-            return findings, total_tokens, 0.0
+            raise  # Let gather() capture it as an Exception instance
 
     def _build_task_prompt(self, task: CrewTask, mission: Mission) -> str:
         """Build the user prompt for an expert task."""
@@ -534,8 +862,9 @@ class CrewRunner:
         """Create a text summary of all findings for synthesizer/report writer."""
         parts = []
         for i, f in enumerate(findings, 1):
+            finding_kind = f.finding_type.value if hasattr(f.finding_type, "value") else str(f.finding_type)
             parts.append(
-                f"{i}. [{f.category}] {f.title} (confidence: {f.confidence:.0%})\n"
+                f"{i}. [{finding_kind}] {f.title} (confidence: {(f.confidence or 0):.0%})\n"
                 f"   {f.content[:300]}\n"
                 f"   Source: {f.source_name or 'N/A'} | {f.source_url or 'N/A'}"
             )

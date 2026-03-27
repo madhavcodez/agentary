@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
@@ -12,7 +12,9 @@ import httpx
 from sqlalchemy.orm import Session
 
 from ..core.events import Event, EventType, event_bus
+from ..models.enums import FailureCategory, RunStatus
 from ..models.monitor import Alert, Monitor
+from ..models.monitor_run import MonitorRun
 from .change_detector import (
     ChangeResult,
     detect_new_items,
@@ -20,8 +22,27 @@ from .change_detector import (
     detect_text_change,
     detect_value_change,
 )
+from .state_machine import transition as sm_transition, InvalidTransition
 
 logger = logging.getLogger(__name__)
+
+# Default cooldown period for alert deduplication (seconds)
+DEFAULT_ALERT_COOLDOWN_SECONDS: int = 3600
+
+
+def _transition_monitor_run(
+    monitor_run: MonitorRun,
+    target: RunStatus,
+    reason: str | None = None,
+) -> None:
+    """Validate and apply a state transition on a MonitorRun."""
+    current_str = monitor_run.status.value if hasattr(monitor_run.status, 'value') else str(monitor_run.status)
+    current = RunStatus(current_str)
+    record = sm_transition(current, target, reason)
+    monitor_run.status = target
+    transitions = list(monitor_run.state_transitions or [])
+    transitions.append(record)
+    monitor_run.state_transitions = transitions
 
 
 # ── CRUD ────────────────────────────────────────────────────────────
@@ -108,6 +129,7 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
     if own_session:
         db = SessionLocal()
 
+    monitor_run = None
     try:
         monitor = db.query(Monitor).filter(Monitor.id == monitor_id).first()
         if not monitor:
@@ -117,6 +139,23 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
         if monitor.status != "active":
             return {"skipped": "not_active"}
 
+        # Create a MonitorRun record to track this check execution
+        import time as time_mod
+        check_start = time_mod.time()
+        monitor_run = MonitorRun(
+            monitor_id=monitor.id,
+            project_id=monitor.project_id,
+            status=RunStatus.created,
+        )
+        db.add(monitor_run)
+        db.flush()
+
+        # Transition: created -> queued -> running
+        _transition_monitor_run(monitor_run, RunStatus.queued, "Check queued")
+        _transition_monitor_run(monitor_run, RunStatus.running, "Check started")
+        monitor_run.started_at = datetime.now(timezone.utc)
+        db.flush()
+
         # Emit check start event
         await event_bus.broadcast(Event(
             event_type=EventType.monitor_triggered,
@@ -125,8 +164,45 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
             project_id=str(monitor.project_id) if monitor.project_id else None,
         ))
 
-        # Fetch new data based on monitor type
-        new_data = await _fetch_check_data(monitor)
+        # Fetch new data based on monitor type with timeout handling
+        try:
+            new_data = await asyncio.wait_for(
+                _fetch_check_data(monitor),
+                timeout=60.0,  # 60-second hard timeout for the fetch
+            )
+        except asyncio.TimeoutError:
+            error_msg = f"Check timed out after 60s for monitor {monitor.name}"
+            logger.warning(error_msg)
+            _transition_monitor_run(monitor_run, RunStatus.failed, error_msg)
+            monitor_run.failure_category = FailureCategory.timeout
+            monitor_run.failure_message = error_msg
+            monitor_run.completed_at = datetime.now(timezone.utc)
+            monitor_run.duration_ms = int((time_mod.time() - check_start) * 1000)
+            monitor_run.result = {"error": "timeout"}
+
+            # Update monitor error tracking without creating a false-positive alert
+            monitor.last_error = error_msg
+            monitor.last_error_at = datetime.now(timezone.utc)
+            monitor.total_checks = (monitor.total_checks or 0) + 1
+            db.commit()
+            return {"error": error_msg, "monitor_run_id": str(monitor_run.id)}
+
+        # Check for fetch errors (connection errors, unreachable targets)
+        if "error" in new_data and not new_data.get("status_code"):
+            error_msg = new_data["error"]
+            _transition_monitor_run(monitor_run, RunStatus.failed, error_msg)
+            monitor_run.failure_category = FailureCategory.transient_connector
+            monitor_run.failure_message = error_msg
+            monitor_run.completed_at = datetime.now(timezone.utc)
+            monitor_run.duration_ms = int((time_mod.time() - check_start) * 1000)
+            monitor_run.result = new_data
+
+            # Update monitor error tracking — do NOT create a false-positive alert
+            monitor.last_error = error_msg
+            monitor.last_error_at = datetime.now(timezone.utc)
+            monitor.total_checks = (monitor.total_checks or 0) + 1
+            db.commit()
+            return {"error": error_msg, "monitor_run_id": str(monitor_run.id)}
 
         # Detect changes
         changes = _detect_changes(monitor, new_data)
@@ -137,14 +213,58 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
         monitor.last_snapshot = new_data
         monitor.total_checks = (monitor.total_checks or 0) + 1
 
+        # Clear error tracking on successful fetch
+        monitor.last_error = None
+        monitor.last_error_at = None
+
         alert = None
         if changes.changed:
             monitor.last_change_at = now
-            monitor.total_alerts = (monitor.total_alerts or 0) + 1
-            alert = _create_alert(db, monitor, changes)
+
+            # Alert deduplication: check cooldown using (monitor_id, alert_type)
+            cooldown_seconds = (monitor.alert_config or {}).get(
+                "cooldown_seconds", DEFAULT_ALERT_COOLDOWN_SECONDS,
+            )
+            alert_type = "change_detected"
+            is_duplicate = _is_duplicate_alert(db, monitor.id, alert_type, cooldown_seconds)
+
+            if is_duplicate:
+                logger.info(
+                    "Skipping duplicate alert for monitor %s (cooldown %ds, type=%s)",
+                    monitor.id, cooldown_seconds, alert_type,
+                )
+            else:
+                monitor.total_alerts = (monitor.total_alerts or 0) + 1
+                alert = _create_alert(db, monitor, changes)
+
+        # Complete the MonitorRun
+        _transition_monitor_run(monitor_run, RunStatus.completed, changes.summary)
+        monitor_run.completed_at = now
+        monitor_run.duration_ms = int((time_mod.time() - check_start) * 1000)
+        monitor_run.result = {
+            "changed": changes.changed,
+            "change_type": changes.change_type,
+            "summary": changes.summary,
+        }
+        if alert:
+            monitor_run.alert_id = alert.id
 
         db.commit()
         db.refresh(monitor)
+
+        # Emit lifecycle event for the run
+        await event_bus.broadcast(Event(
+            event_type=EventType.run_state_changed,
+            data={
+                "run_type": "monitor",
+                "run_id": str(monitor_run.id),
+                "from_state": "running",
+                "to_state": "completed",
+                "reason": changes.summary,
+            },
+            user_id=str(monitor.user_id),
+            project_id=str(monitor.project_id) if monitor.project_id else None,
+        ))
 
         # Emit check done event
         await event_bus.broadcast(Event(
@@ -160,7 +280,7 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
             project_id=str(monitor.project_id) if monitor.project_id else None,
         ))
 
-        # If alert was created, emit alert event and send notifications
+        # If alert was created, emit alert event, signal, and send notifications
         if alert:
             await event_bus.broadcast(Event(
                 event_type=EventType.monitor_alert,
@@ -173,17 +293,63 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
                 user_id=str(monitor.user_id),
                 project_id=str(monitor.project_id) if monitor.project_id else None,
             ))
+
+            # Emit signal for the intelligence pipeline
+            try:
+                from .intelligence.signal_service import SignalService
+                from ..models.signal import SignalSourceType, SignalType
+
+                if monitor.project_id:
+                    signal_svc = SignalService(db)
+                    signal_type = (
+                        SignalType.threshold_breached
+                        if changes.change_type == "value"
+                        else SignalType.change_detected
+                    )
+                    signal_svc.create_signal(
+                        project_id=monitor.project_id,
+                        user_id=monitor.user_id,
+                        source_type=SignalSourceType.monitor,
+                        signal_type=signal_type,
+                        title=f"Monitor: {alert.title}",
+                        content=alert.message,
+                        structured_data=alert.data or {},
+                        source_id=monitor_run.id if monitor_run else None,
+                        confidence=None,
+                    )
+                    db.commit()
+            except Exception:
+                logger.debug("Signal emission failed for alert %s", alert.id)
+
             await _send_alert_notifications(alert, monitor)
 
         return {
             "monitor_id": str(monitor.id),
+            "monitor_run_id": str(monitor_run.id),
             "changed": changes.changed,
             "summary": changes.summary,
             "alert_id": str(alert.id) if alert else None,
         }
 
     except Exception as exc:
-        logger.error("Monitor check failed for %s: %s", monitor_id, exc)
+        logger.error("Monitor check failed for %s: %s", monitor_id, exc, exc_info=True)
+        try:
+            if monitor_run is not None:
+                monitor_run.status = RunStatus.failed
+                monitor_run.failure_category = FailureCategory.internal
+                monitor_run.failure_message = str(exc)
+                monitor_run.completed_at = datetime.now(timezone.utc)
+                transitions = list(monitor_run.state_transitions or [])
+                transitions.append({
+                    "from": "running",
+                    "to": "failed",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "reason": str(exc),
+                })
+                monitor_run.state_transitions = transitions
+                db.commit()
+        except Exception:
+            db.rollback()
         return {"error": str(exc)}
     finally:
         if own_session:
@@ -308,6 +474,35 @@ def _extract_value(data: dict, field: str) -> float | None:
         return float(current)
     except (TypeError, ValueError):
         return None
+
+
+# ── Alert deduplication ────────────────────────────────────────────
+
+def _is_duplicate_alert(
+    db: Session,
+    monitor_id: Any,
+    alert_type: str,
+    cooldown_seconds: int,
+) -> bool:
+    """Check if an alert with the same monitor_id and alert_type was created recently.
+
+    Uses (monitor_id, alert_type) instead of dynamic title for stable dedup keys.
+    Returns True if a matching alert exists within the cooldown window.
+    """
+    if cooldown_seconds <= 0:
+        return False
+
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=cooldown_seconds)
+    existing = (
+        db.query(Alert)
+        .filter(
+            Alert.monitor_id == monitor_id,
+            Alert.alert_type == alert_type,
+            Alert.created_at >= cutoff,
+        )
+        .first()
+    )
+    return existing is not None
 
 
 # ── Alert creation ──────────────────────────────────────────────────

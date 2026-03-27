@@ -57,12 +57,16 @@ class Monitor(Base):
     total_checks = Column(Integer, default=0)
     total_alerts = Column(Integer, default=0)
 
+    last_error = Column(Text, nullable=True)
+    last_error_at = Column(DateTime(timezone=True), nullable=True)
+
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     # Relationships
     project = relationship("Project", back_populates="monitors")
     alerts = relationship("Alert", back_populates="monitor", cascade="all, delete-orphan")
+    runs = relationship("MonitorRun", back_populates="monitor", cascade="all, delete-orphan")
 
 
 class Alert(Base):

@@ -10,7 +10,11 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
+from .core.logging_config import setup_logging
 from .database import init_db
+
+# Activate structured JSON logging before anything else logs
+setup_logging()
 
 logger = logging.getLogger(__name__)
 
@@ -99,15 +103,19 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 from .config import settings
+from .core.correlation import CorrelationMiddleware
 
+# Middleware is applied in reverse registration order (last registered runs first).
+# Register CorrelationMiddleware last so it executes first on every request.
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins.split(","),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "X-Correlation-ID"],
 )
+app.add_middleware(CorrelationMiddleware)
 
 
 @app.get("/")
@@ -155,6 +163,14 @@ from .api.research import router as research_router
 from .api.policies import router as policies_router
 from .api.webhooks import router as webhooks_router
 from .voice.outbound.server import router as outbound_router
+from .api.run_steps import router as run_steps_router
+from .api.signals import router as signals_router
+from .api.insights import router as insights_router
+from .api.recommendations import router as recommendations_router
+from .api.entity_aliases import router as entity_aliases_router
+from .api.entity_relationships import router as entity_relationships_router
+from .api.admin import router as admin_router
+from .api.actions import router as actions_router
 
 app.include_router(auth_router)
 app.include_router(health_router)
@@ -189,3 +205,11 @@ app.include_router(research_router)
 app.include_router(policies_router)
 app.include_router(webhooks_router)
 app.include_router(outbound_router)
+app.include_router(run_steps_router)
+app.include_router(signals_router)
+app.include_router(insights_router)
+app.include_router(recommendations_router)
+app.include_router(entity_aliases_router)
+app.include_router(entity_relationships_router)
+app.include_router(admin_router)
+app.include_router(actions_router)

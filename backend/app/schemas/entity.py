@@ -36,6 +36,40 @@ class EntityMergeRequest(BaseModel):
     strategy: str = "keep_target"  # keep_target, keep_source, merge_all
 
 
+class EntityMergeEnhancedRequest(BaseModel):
+    primary_id: UUID
+    secondary_id: UUID
+    project_id: UUID
+
+
+class MergeCandidateEntity(BaseModel):
+    id: str
+    name: str
+    type: str
+
+
+class MergeCandidateResponse(BaseModel):
+    entity_a: MergeCandidateEntity
+    entity_b: MergeCandidateEntity
+    confidence: float
+    reason: str
+
+
+class MergeResultResponse(BaseModel):
+    primary_entity_id: str
+    merged_entity_id: str
+    merge_id: str
+    aliases_transferred: int
+    observations_transferred: int
+
+
+class UndoMergeResponse(BaseModel):
+    merge_id: str
+    restored_entity_id: str
+    restored_entity_name: str
+    aliases_restored: int
+
+
 class EntityResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID

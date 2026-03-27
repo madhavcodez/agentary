@@ -8,14 +8,7 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
 from ..database import Base
-
-
-class RunStatus(str, enum.Enum):
-    queued = "queued"
-    running = "running"
-    completed = "completed"
-    failed = "failed"
-    cancelled = "cancelled"
+from .enums import FailureCategory, RunStatus
 
 
 class TriggerType(str, enum.Enum):
@@ -48,7 +41,7 @@ class MissionRun(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     mission_id = Column(UUID(as_uuid=True), ForeignKey("missions.id"), nullable=False, index=True)
-    status = Column(SAEnum(RunStatus), default=RunStatus.queued, nullable=False)
+    status = Column(SAEnum(RunStatus), default=RunStatus.created, nullable=False)
     trigger_type = Column(SAEnum(TriggerType), default=TriggerType.manual, nullable=False)
     config_snapshot = Column(JSONB, default=dict)
     started_at = Column(DateTime(timezone=True))
@@ -57,6 +50,15 @@ class MissionRun(Base):
     metrics = Column(JSONB, default=dict)  # sources_queried, findings_count, calls_made, etc.
     error = Column(JSONB)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # Lifecycle state machine columns
+    failure_category = Column(SAEnum(FailureCategory, name="failurecategory"), nullable=True)
+    failure_message = Column(Text, nullable=True)
+    state_transitions = Column(JSONB, default=list)
+    retry_count = Column(Integer, default=0)
+    max_retries = Column(Integer, default=3)
+    correlation_id = Column(UUID(as_uuid=True), nullable=True, index=True)
+    idempotency_key = Column(String(255), nullable=True, unique=True)
 
     # Relationships
     mission = relationship("Mission", back_populates="runs")

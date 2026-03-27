@@ -15,6 +15,13 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, JSON, UUID
 
+
+def _safe_create_enum(sql: str) -> None:
+    """Wrap CREATE TYPE in a PL/pgSQL block to ignore duplicates."""
+    op.execute(sa.text(
+        f"DO $$ BEGIN {sql}; EXCEPTION WHEN duplicate_object THEN null; END $$;"
+    ))
+
 revision = "009"
 down_revision = "008"
 branch_labels = None
@@ -73,91 +80,91 @@ def upgrade() -> None:
     # ──────────────────────────────────────────────────────────────────────
     # PHASE 2: Create enum types
     # ──────────────────────────────────────────────────────────────────────
-    op.execute("CREATE TYPE projectstatus AS ENUM ('active', 'archived', 'completed')")
-    op.execute(
+    _safe_create_enum("CREATE TYPE projectstatus AS ENUM ('active', 'archived', 'completed')")
+    _safe_create_enum(
         "CREATE TYPE projecttype AS ENUM ("
         "'market_research', 'competitive_intel', 'due_diligence', "
         "'data_extraction', 'real_estate', 'local_business', 'custom')"
     )
-    op.execute(
+    _safe_create_enum(
         "CREATE TYPE missionstatus AS ENUM ("
         "'draft', 'queued', 'running', 'paused', 'completed', 'failed')"
     )
-    op.execute(
+    _safe_create_enum(
         "CREATE TYPE missiontype AS ENUM ("
         "'research', 'voice_extraction', 'monitoring', "
         "'data_collection', 'competitive_analysis', 'custom')"
     )
-    op.execute(
+    _safe_create_enum(
         "CREATE TYPE agentspecialty AS ENUM ("
         "'web_researcher', 'data_extractor', 'voice_caller', "
         "'market_analyst', 'financial_analyst', 'real_estate_expert', "
         "'competitive_intel', 'due_diligence', 'synthesizer', 'local_business_intel')"
     )
-    op.execute(
+    _safe_create_enum(
         "CREATE TYPE coordinationstrategy AS ENUM ("
         "'parallel', 'sequential', 'hierarchical')"
     )
-    op.execute(
+    _safe_create_enum(
         "CREATE TYPE activitytype AS ENUM ("
         "'thinking', 'searching', 'scraping', 'calling', 'analyzing', "
         "'writing', 'found_data', 'found_insight', 'error', 'delegating', 'synthesizing')"
     )
-    op.execute(
+    _safe_create_enum(
         "CREATE TYPE runstatus AS ENUM ("
         "'queued', 'running', 'completed', 'failed', 'cancelled')"
     )
-    op.execute(
+    _safe_create_enum(
         "CREATE TYPE triggertype AS ENUM ('manual', 'scheduled', 'monitor_triggered')"
     )
-    op.execute(
+    _safe_create_enum(
         "CREATE TYPE tasktype AS ENUM ("
         "'discover', 'research', 'extract', 'call', 'analyze', "
         "'synthesize', 'report', 'monitor_check')"
     )
-    op.execute(
+    _safe_create_enum(
         "CREATE TYPE taskstatus AS ENUM ("
         "'pending', 'running', 'completed', 'failed', 'skipped')"
     )
-    op.execute(
+    _safe_create_enum(
         "CREATE TYPE findingtype AS ENUM ("
         "'fact', 'data_point', 'insight', 'quote', 'statistic', "
         "'contact_info', 'price', 'availability', 'sentiment', "
         "'trend', 'anomaly', 'opportunity', 'risk')"
     )
-    op.execute(
+    _safe_create_enum(
         "CREATE TYPE sourcetype AS ENUM ("
         "'web', 'voice_call', 'api', 'public_record', 'user_provided', 'inferred')"
     )
-    op.execute(
+    _safe_create_enum(
         "CREATE TYPE voiceextractionstatus AS ENUM ("
         "'draft', 'active', 'paused', 'completed')"
     )
-    op.execute("CREATE TYPE calldirection AS ENUM ('outbound', 'inbound')")
-    op.execute(
+    _safe_create_enum("CREATE TYPE calldirection AS ENUM ('outbound', 'inbound')")
+    _safe_create_enum(
         "CREATE TYPE callstatus AS ENUM ("
         "'pending', 'ringing', 'connected', 'completed', 'failed', 'no_answer', 'voicemail')"
     )
-    op.execute(
+    _safe_create_enum(
         "CREATE TYPE monitorstatus AS ENUM ('active', 'paused', 'archived')"
     )
-    op.execute(
+    _safe_create_enum(
         "CREATE TYPE monitortype AS ENUM ("
         "'web_content', 'api_data', 'price_tracker', "
         "'listing_watcher', 'competitor_tracker', 'custom')"
     )
-    op.execute("CREATE TYPE alertseverity AS ENUM ('info', 'warning', 'critical')")
-    op.execute(
+    _safe_create_enum("CREATE TYPE alertseverity AS ENUM ('info', 'warning', 'critical')")
+    _safe_create_enum(
         "CREATE TYPE kbdomain AS ENUM ("
         "'real_estate', 'finance', 'technology', "
         "'healthcare', 'retail', 'custom')"
     )
-    op.execute(
+    _safe_create_enum(
         "CREATE TYPE sourcekind AS ENUM ("
         "'web_search', 'web_scrape', 'api', 'public_records', 'mls', "
         "'county_records', 'voice', 'rss', 'social_media', 'file_upload', 'database')"
     )
-    op.execute(
+    _safe_create_enum(
         "CREATE TYPE auditaction AS ENUM ("
         "'created', 'updated', 'deleted', 'executed', 'accessed')"
     )

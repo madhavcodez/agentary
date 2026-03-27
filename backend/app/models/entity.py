@@ -43,3 +43,14 @@ class Entity(Base):
 
     # Relationships
     project = relationship("Project")
+    aliases = relationship("EntityAlias", back_populates="entity", lazy="dynamic")
+    observations = relationship("Observation", back_populates="entity", lazy="dynamic")
+    insights = relationship("Insight", back_populates="entity", lazy="dynamic")
+    signals = relationship("Signal", back_populates="entity", lazy="dynamic")
+    recommendations = relationship("Recommendation", back_populates="entity", lazy="dynamic")
+    outgoing_relationships = relationship(
+        "EntityRelationship", foreign_keys="EntityRelationship.from_entity_id", lazy="dynamic"
+    )
+    incoming_relationships = relationship(
+        "EntityRelationship", foreign_keys="EntityRelationship.to_entity_id", lazy="dynamic"
+    )

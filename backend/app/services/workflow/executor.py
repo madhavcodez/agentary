@@ -5,14 +5,17 @@ from __future__ import annotations
 import logging
 import time
 from collections import defaultdict, deque
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from ...core.events import Event, EventType, event_bus
+from ...models.enums import FailureCategory, RunStatus
 from ...models.workflow import Workflow
 from ...models.workflow_run import WorkflowRun
+from ..state_machine import InvalidTransition, transition as sm_transition
 from .node_handlers import execute_handler
 
 logger = logging.getLogger(__name__)
@@ -24,6 +27,36 @@ class WorkflowExecutor:
     def __init__(self, db: Session):
         self.db = db
 
+    async def _transition_run(
+        self,
+        run: WorkflowRun,
+        target: RunStatus,
+        reason: str | None = None,
+    ) -> None:
+        """Validate and apply a state transition on a workflow run."""
+        current_str = run.status if isinstance(run.status, str) else run.status.value
+        try:
+            current = RunStatus(current_str)
+        except ValueError:
+            current = RunStatus.queued  # fallback for legacy string statuses
+        record = sm_transition(current, target, reason)
+        run.status = target.value
+        transitions = list(run.state_transitions or [])
+        transitions.append(record)
+        run.state_transitions = transitions
+        self.db.commit()
+
+        await event_bus.broadcast(Event(
+            event_type=EventType.run_state_changed,
+            data={
+                "run_type": "workflow",
+                "run_id": str(run.id),
+                "from_state": record["from"],
+                "to_state": record["to"],
+                "reason": reason,
+            },
+        ))
+
     async def execute_run(self, run_id: UUID) -> WorkflowRun:
         run = self.db.query(WorkflowRun).filter(WorkflowRun.id == run_id).first()
         if not run:
@@ -33,8 +66,8 @@ class WorkflowExecutor:
         if not workflow:
             raise ValueError(f"Workflow {run.workflow_id} not found")
 
-        run.status = "running"
-        run.started_at = datetime.utcnow()
+        await self._transition_run(run, RunStatus.running, "Starting workflow execution")
+        run.started_at = datetime.now(timezone.utc)
         run.node_results = {}
         self.db.commit()
 
@@ -61,7 +94,7 @@ class WorkflowExecutor:
 
                 # Update status
                 node_results = dict(run.node_results)
-                node_results[node_id] = {"status": "running", "started_at": datetime.utcnow().isoformat()}
+                node_results[node_id] = {"status": "running", "started_at": datetime.now(timezone.utc).isoformat()}
                 run.node_results = node_results
                 self.db.commit()
 
@@ -104,7 +137,7 @@ class WorkflowExecutor:
                         "output": self._truncate_output(output),
                         "duration": round(node_duration, 2),
                         "started_at": node_results[node_id]["started_at"],
-                        "completed_at": datetime.utcnow().isoformat(),
+                        "completed_at": datetime.now(timezone.utc).isoformat(),
                     }
                     run.node_results = node_results
                     self.db.commit()
@@ -117,7 +150,7 @@ class WorkflowExecutor:
                         "error": str(e),
                         "duration": round(node_duration, 2),
                         "started_at": node_results[node_id]["started_at"],
-                        "completed_at": datetime.utcnow().isoformat(),
+                        "completed_at": datetime.now(timezone.utc).isoformat(),
                     }
                     run.node_results = node_results
                     self.db.commit()
@@ -132,13 +165,49 @@ class WorkflowExecutor:
                     final_output[tn_id] = node_outputs[tn_id]
 
             total_duration = time.time() - start_time
-            run.status = "completed"
-            run.completed_at = datetime.utcnow()
+
+            # Check if any nodes failed
+            failed_nodes = [
+                nid for nid, nr in (run.node_results or {}).items()
+                if isinstance(nr, dict) and nr.get("status") == "failed"
+            ]
+            if failed_nodes and len(failed_nodes) < len(execution_order):
+                await self._transition_run(
+                    run, RunStatus.partially_failed,
+                    f"{len(failed_nodes)} node(s) failed",
+                )
+                await self._transition_run(
+                    run, RunStatus.completed,
+                    "Resolved: partial results available",
+                )
+            else:
+                await self._transition_run(run, RunStatus.completed, "Workflow completed")
+
+            run.completed_at = datetime.now(timezone.utc)
             run.duration_seconds = round(total_duration, 2)
             run.output_data = final_output
 
+            # Emit signal for the intelligence pipeline
+            try:
+                from ..intelligence.signal_service import SignalService
+                from ...models.signal import SignalSourceType, SignalType
+
+                if workflow.project_id:
+                    signal_svc = SignalService(self.db)
+                    signal_svc.create_signal(
+                        project_id=workflow.project_id,
+                        user_id=workflow.user_id,
+                        source_type=SignalSourceType.workflow,
+                        signal_type=SignalType.data_extracted,
+                        title=f"Workflow completed: {workflow.name}",
+                        structured_data=run.output_data or {},
+                        source_id=run.id,
+                    )
+            except Exception:
+                logger.debug("Signal emission failed for workflow run %s", run.id)
+
             # Update workflow stats
-            workflow.last_run_at = datetime.utcnow()
+            workflow.last_run_at = datetime.now(timezone.utc)
             workflow.total_runs = (workflow.total_runs or 0) + 1
             if workflow.avg_duration_seconds:
                 workflow.avg_duration_seconds = (
@@ -152,11 +221,26 @@ class WorkflowExecutor:
 
         except Exception as e:
             logger.error("Workflow run %s failed: %s", run_id, e)
-            run.status = "failed"
-            run.completed_at = datetime.utcnow()
+            err_msg = str(e)
+            run.failure_category = FailureCategory.internal
+            run.failure_message = err_msg
+            run.completed_at = datetime.now(timezone.utc)
             run.duration_seconds = round(time.time() - start_time, 2)
-            run.error = {"message": str(e), "type": type(e).__name__}
-            self.db.commit()
+            run.error = {"message": err_msg, "type": type(e).__name__}
+            try:
+                await self._transition_run(run, RunStatus.failed, err_msg)
+            except InvalidTransition:
+                current_status = run.status if isinstance(run.status, str) else run.status.value
+                run.status = "failed"
+                transitions = list(run.state_transitions or [])
+                transitions.append({
+                    "from": current_status,
+                    "to": "failed",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "reason": "InvalidTransition fallback — forced to failed",
+                })
+                run.state_transitions = transitions
+                self.db.commit()
             return run
 
     def _topological_sort(self, nodes: list[dict], edges: list[dict]) -> list[str]:

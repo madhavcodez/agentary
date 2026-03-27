@@ -140,7 +140,10 @@ async def get_active_info(
 
     active_missions = (
         db.query(Mission)
-        .filter(Mission.user_id == user_id, Mission.status == "active")
+        .filter(
+            Mission.user_id == user_id,
+            Mission.status.in_(["queued", "running"]),
+        )
         .all()
     )
 
@@ -148,8 +151,8 @@ async def get_active_info(
         "active_missions": [
             {
                 "id": str(m.id),
-                "title": m.title,
-                "status": m.status,
+                "title": m.name,
+                "status": m.status.value if hasattr(m.status, "value") else str(m.status),
                 "project_id": str(m.project_id) if m.project_id else None,
                 "created_at": m.created_at.isoformat() if m.created_at else None,
             }

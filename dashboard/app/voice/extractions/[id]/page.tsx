@@ -3,55 +3,17 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-
-// ── Types ────────────────────────────────────────────────────────────
-
-interface VoiceExtraction {
-  id: string;
-  name: string;
-  status: "draft" | "active" | "paused" | "completed";
-  objective: string;
-  persona_name: string | null;
-  persona_role: string | null;
-  persona_company: string | null;
-  total_targets: number;
-  calls_completed: number;
-  successful_calls: number;
-  data_points_extracted: number;
-  created_at: string;
-  updated_at: string;
-}
-
-interface TranscriptTurn {
-  speaker: "agent" | "user";
-  text: string;
-  timestamp?: string;
-}
-
-interface ExtractedDataPoint {
-  key: string;
-  value: string;
-  confidence: number;
-}
-
-interface CallRecord {
-  id: string;
-  session_id: string;
-  target_name: string;
-  target_phone: string;
-  status: "pending" | "in_progress" | "completed" | "failed" | "no_answer";
-  duration_seconds: number | null;
-  confidence_score: number | null;
-  transcript: TranscriptTurn[] | null;
-  extracted_data: ExtractedDataPoint[] | null;
-  created_at: string;
-  updated_at: string;
-}
-
-interface CallRecordsResponse {
-  items: CallRecord[];
-  total: number;
-}
+import {
+  fetchVoiceExtraction,
+  fetchVoiceExtractionCalls,
+  executeVoiceBatch,
+  reExtractCallData,
+} from "@/lib/api";
+import type {
+  VoiceExtraction,
+  CallRecord,
+  ExtractedDataPoint,
+} from "@/lib/types";
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -64,7 +26,8 @@ const STATUS_STYLES: Record<string, string> = {
 
 const CALL_STATUS_STYLES: Record<string, string> = {
   pending: "bg-gray-500/10 text-gray-400 border-gray-500/20",
-  in_progress: "bg-blue-500/10 text-blue-400 border-blue-500/20 animate-pulse",
+  in_progress:
+    "bg-blue-500/10 text-blue-400 border-blue-500/20 animate-pulse",
   completed: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   failed: "bg-red-500/10 text-red-400 border-red-500/20",
   no_answer: "bg-amber-500/10 text-amber-400 border-amber-500/20",
@@ -107,6 +70,11 @@ function computeProgress(extraction: VoiceExtraction): number {
 }
 
 // ── Toast ────────────────────────────────────────────────────────────
+
+interface ToastData {
+  message: string;
+  type: "success" | "error" | "info";
+}
 
 function Toast({
   message,
@@ -152,24 +120,13 @@ export default function VoiceExtractionDetailPage() {
   const [expandedCallId, setExpandedCallId] = useState<string | null>(null);
   const [batchExecuting, setBatchExecuting] = useState(false);
   const [reExtractingId, setReExtractingId] = useState<string | null>(null);
-  const [toast, setToast] = useState<{
-    message: string;
-    type: "success" | "error" | "info";
-  } | null>(null);
+  const [toast, setToast] = useState<ToastData | null>(null);
 
   const loadExtraction = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:8000/voice/sessions/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        const body = await res.text().catch(() => "Unknown error");
-        throw new Error(`API ${res.status}: ${body}`);
-      }
-      const data: VoiceExtraction = await res.json();
+      const data = await fetchVoiceExtraction(id);
       setExtraction(data);
     } catch (err) {
       setError(
@@ -183,18 +140,7 @@ export default function VoiceExtractionDetailPage() {
   const loadCalls = useCallback(async () => {
     setCallsLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(
-        `http://localhost:8000/voice/sessions/${id}/calls`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-      if (!res.ok) {
-        const body = await res.text().catch(() => "Unknown error");
-        throw new Error(`API ${res.status}: ${body}`);
-      }
-      const data: CallRecordsResponse = await res.json();
+      const data = await fetchVoiceExtractionCalls(id);
       setCallRecords(data.items);
     } catch (err) {
       setError(
@@ -213,18 +159,7 @@ export default function VoiceExtractionDetailPage() {
   async function handleExecuteBatch() {
     setBatchExecuting(true);
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(
-        `http://localhost:8000/voice/batch/${id}/execute`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-      if (!res.ok) {
-        const body = await res.text().catch(() => "Unknown error");
-        throw new Error(`API ${res.status}: ${body}`);
-      }
+      await executeVoiceBatch(id);
       setToast({ message: "Batch execution started", type: "success" });
       loadExtraction();
       loadCalls();
@@ -242,18 +177,7 @@ export default function VoiceExtractionDetailPage() {
   async function handleReExtract(callId: string) {
     setReExtractingId(callId);
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(
-        `http://localhost:8000/voice/sessions/${id}/calls/${callId}/re-extract`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-      if (!res.ok) {
-        const body = await res.text().catch(() => "Unknown error");
-        throw new Error(`API ${res.status}: ${body}`);
-      }
+      await reExtractCallData(id, callId);
       setToast({ message: "Re-extraction started", type: "success" });
       loadCalls();
     } catch (err) {
@@ -276,7 +200,7 @@ export default function VoiceExtractionDetailPage() {
   if (loading) {
     return (
       <div className="text-center py-16">
-        <div className="inline-block w-6 h-6 border-2 border-gray-700 border-t-indigo-400 rounded-full animate-spin" />
+        <div className="inline-block w-6 h-6 border-2 border-gray-700 border-t-emerald-400 rounded-full animate-spin" />
         <p className="text-sm text-gray-500 mt-3">Loading extraction...</p>
       </div>
     );
@@ -284,7 +208,7 @@ export default function VoiceExtractionDetailPage() {
 
   if (error && !extraction) {
     return (
-      <div className="max-w-4xl">
+      <div className="max-w-4xl mx-auto px-8 py-8">
         <div className="mb-6">
           <Link
             href="/voice/extractions"
@@ -320,7 +244,7 @@ export default function VoiceExtractionDetailPage() {
     STATUS_STYLES[extraction.status] ?? STATUS_STYLES.draft;
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto px-8 py-8">
       {toast && (
         <Toast
           message={toast.message}
@@ -385,11 +309,11 @@ export default function VoiceExtractionDetailPage() {
             batchExecuting ||
             extraction.status === "completed"
           }
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {batchExecuting ? (
             <>
-              <div className="w-4 h-4 border-2 border-indigo-300 border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-emerald-300 border-t-transparent rounded-full animate-spin" />
               Executing...
             </>
           ) : (
@@ -414,7 +338,7 @@ export default function VoiceExtractionDetailPage() {
       </div>
 
       {/* Progress Bar */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
+      <div className="bg-gray-900 border border-gray-800/50 rounded-xl p-5 mb-6">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-gray-300">
             Overall Progress
@@ -428,7 +352,7 @@ export default function VoiceExtractionDetailPage() {
             className={`h-full rounded-full transition-all ${
               extraction.status === "completed"
                 ? "bg-emerald-500"
-                : "bg-indigo-500"
+                : "bg-emerald-500"
             }`}
             style={{ width: `${progress}%` }}
           />
@@ -438,7 +362,7 @@ export default function VoiceExtractionDetailPage() {
 
       {/* Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="bg-gray-900 border border-gray-800/50 rounded-xl p-5">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
             Total Calls
           </p>
@@ -449,28 +373,28 @@ export default function VoiceExtractionDetailPage() {
             of {extraction.total_targets} targets
           </p>
         </div>
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="bg-gray-900 border border-gray-800/50 rounded-xl p-5">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
             Successful
           </p>
           <p className="text-2xl font-bold text-emerald-400">
-            {extraction.successful_calls}
+            {extraction.calls_successful}
           </p>
           <p className="text-xs text-gray-500 mt-1">
             {extraction.calls_completed > 0
               ? `${Math.round(
-                  (extraction.successful_calls /
+                  (extraction.calls_successful /
                     extraction.calls_completed) *
                     100,
                 )}% success rate`
               : "No calls yet"}
           </p>
         </div>
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="bg-gray-900 border border-gray-800/50 rounded-xl p-5">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
             Data Points
           </p>
-          <p className="text-2xl font-bold text-indigo-400">
+          <p className="text-2xl font-bold text-emerald-400">
             {extraction.data_points_extracted}
           </p>
           <p className="text-xs text-gray-500 mt-1">extracted from calls</p>
@@ -485,7 +409,7 @@ export default function VoiceExtractionDetailPage() {
       )}
 
       {/* Call Records */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="bg-gray-900 border border-gray-800/50 rounded-xl overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-800">
           <h2 className="text-base font-semibold text-gray-200">
             Call Records
@@ -494,7 +418,7 @@ export default function VoiceExtractionDetailPage() {
 
         {callsLoading ? (
           <div className="text-center py-12">
-            <div className="inline-block w-5 h-5 border-2 border-gray-700 border-t-indigo-400 rounded-full animate-spin" />
+            <div className="inline-block w-5 h-5 border-2 border-gray-700 border-t-emerald-400 rounded-full animate-spin" />
             <p className="text-sm text-gray-500 mt-3">Loading calls...</p>
           </div>
         ) : callRecords.length === 0 ? (
@@ -675,7 +599,7 @@ function CallRecordRow({
                           className={`max-w-[80%] rounded-xl px-4 py-2.5 ${
                             turn.speaker === "user"
                               ? "bg-gray-700 text-gray-200"
-                              : "bg-indigo-600/20 text-indigo-200 border border-indigo-500/20"
+                              : "bg-emerald-600/20 text-emerald-200 border border-emerald-500/20"
                           }`}
                         >
                           <p className="text-xs font-medium mb-0.5 opacity-60">
@@ -735,26 +659,28 @@ function CallRecordRow({
                 </div>
                 {call.extracted_data && call.extracted_data.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {call.extracted_data.map((dp, idx) => (
-                      <div
-                        key={idx}
-                        className="bg-gray-900 border border-gray-700 rounded-lg p-3"
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {dp.key}
-                          </span>
-                          <span
-                            className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-medium ${confidenceBadgeClass(
-                              dp.confidence,
-                            )}`}
-                          >
-                            {Math.round(dp.confidence * 100)}%
-                          </span>
+                    {call.extracted_data.map(
+                      (dp: ExtractedDataPoint, idx: number) => (
+                        <div
+                          key={idx}
+                          className="bg-gray-900 border border-gray-700 rounded-lg p-3"
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              {dp.key}
+                            </span>
+                            <span
+                              className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-medium ${confidenceBadgeClass(
+                                dp.confidence,
+                              )}`}
+                            >
+                              {Math.round(dp.confidence * 100)}%
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-200">{dp.value}</p>
                         </div>
-                        <p className="text-sm text-gray-200">{dp.value}</p>
-                      </div>
-                    ))}
+                      ),
+                    )}
                   </div>
                 ) : (
                   <p className="text-sm text-gray-500 italic">

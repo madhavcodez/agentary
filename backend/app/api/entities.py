@@ -1,4 +1,4 @@
-"""API routes for entities — CRUD, merge, search."""
+"""API routes for entities — CRUD, merge, search, merge candidates."""
 
 from __future__ import annotations
 
@@ -12,9 +12,13 @@ from ..models.entity import Entity
 from ..models.user import User
 from ..schemas.entity import (
     EntityCreate,
+    EntityMergeEnhancedRequest,
     EntityMergeRequest,
     EntityResponse,
     EntityUpdate,
+    MergeCandidateResponse,
+    MergeResultResponse,
+    UndoMergeResponse,
 )
 from ..services.entities.entity_service import EntityService
 
@@ -51,6 +55,53 @@ async def list_entities(
         offset=offset,
         db=db,
     )
+
+
+@router.get("/merge-candidates", response_model=list[MergeCandidateResponse])
+def get_merge_candidates(
+    project_id: UUID = Query(...),
+    min_confidence: float = Query(0.7, ge=0.0, le=1.0),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Find potential entity duplicates for review."""
+    return _service.get_merge_candidates(project_id, db, min_confidence)
+
+
+@router.post("/merge-enhanced", response_model=MergeResultResponse)
+async def merge_entities_enhanced(
+    body: EntityMergeEnhancedRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Merge secondary entity into primary, with undo support."""
+    try:
+        result = await _service.merge_entities_enhanced(
+            primary_id=body.primary_id,
+            secondary_id=body.secondary_id,
+            user_id=user.id,
+            project_id=body.project_id,
+            db=db,
+        )
+        db.commit()
+        return result
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.post("/merge/{merge_id}/undo", response_model=UndoMergeResponse)
+async def undo_merge(
+    merge_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Undo a previous entity merge."""
+    try:
+        result = await _service.undo_merge(merge_id, db)
+        db.commit()
+        return result
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
 
 
 @router.get("/search", response_model=list[EntityResponse])

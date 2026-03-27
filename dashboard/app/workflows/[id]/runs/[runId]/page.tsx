@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ReactFlow, { Background, Controls, type Node, type Edge, type NodeTypes } from "reactflow";
 import "reactflow/dist/style.css";
 import Nav from "@/components/Nav";
 import { fetchWorkflow, fetchWorkflowRun } from "@/lib/api";
+import { useWS } from "@/components/WebSocketProvider";
+import { EventTypes } from "@/lib/types/events";
+import type { WSEvent } from "@/lib/types/events";
 import type { WorkflowData, WorkflowRun, WorkflowNodeResult } from "@/lib/types";
 import RunStatusNode from "@/components/workflow/nodes/RunStatusNode";
 
@@ -22,43 +25,79 @@ export default function WorkflowRunPage() {
   const router = useRouter();
   const workflowId = params.id as string;
   const runId = params.runId as string;
+  const { connectionState, subscribe } = useWS();
 
   const [workflow, setWorkflow] = useState<WorkflowData | null>(null);
   const [run, setRun] = useState<WorkflowRun | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const disconnectedSinceRef = useRef<number | null>(null);
 
   const nodeTypes: NodeTypes = useMemo(() => ({ runStatus: RunStatusNode }), []);
 
+  // Fetch workflow definition (once)
   useEffect(() => {
     fetchWorkflow(workflowId).then(setWorkflow).catch(() => {});
   }, [workflowId]);
 
-  useEffect(() => {
-    let active = true;
-
-    // Initial fetch
+  // Fetch run data via REST
+  const loadRun = useCallback(() => {
     fetchWorkflowRun(workflowId, runId)
-      .then((r) => { if (active) setRun(r); })
-      .catch(() => { if (active) router.push(`/workflows/${workflowId}`); });
+      .then(setRun)
+      .catch(() => router.push(`/workflows/${workflowId}`));
+  }, [workflowId, runId, router]);
 
-    // Poll only while running, with setInterval + cleanup
-    const interval = setInterval(async () => {
-      if (!active || document.hidden) return;
-      try {
-        const r = await fetchWorkflowRun(workflowId, runId);
-        if (active) {
-          setRun(r);
-          if (r.status !== "queued" && r.status !== "running") {
-            clearInterval(interval);
-          }
-        }
-      } catch {
-        // ignore poll errors
+  // Initial REST fetch
+  useEffect(() => {
+    loadRun();
+  }, [loadRun]);
+
+  // Re-fetch full state on WS reconnect
+  useEffect(() => {
+    if (connectionState === "connected") {
+      disconnectedSinceRef.current = null;
+      loadRun();
+    } else if (connectionState === "disconnected") {
+      if (disconnectedSinceRef.current === null) {
+        disconnectedSinceRef.current = Date.now();
+      }
+    }
+  }, [connectionState, loadRun]);
+
+  // Subscribe to real-time events via WebSocket
+  useEffect(() => {
+    const handleEvent = (event: WSEvent) => {
+      // Only process events for this run
+      if (event.run_id && event.run_id !== runId) return;
+
+      // Run state changed or workflow node events: re-fetch full run
+      if (
+        event.event_type === EventTypes.RUN_STATE_CHANGED ||
+        event.event_type.startsWith("workflow.")
+      ) {
+        loadRun();
+      }
+    };
+
+    const unsub = subscribe("*", handleEvent);
+    return unsub;
+  }, [runId, subscribe, loadRun]);
+
+  // Fallback: poll if WS disconnected for >5s and run is active
+  useEffect(() => {
+    if (connectionState !== "disconnected") return;
+    if (!run || (run.status !== "queued" && run.status !== "running")) return;
+
+    const interval = setInterval(() => {
+      if (
+        disconnectedSinceRef.current !== null &&
+        Date.now() - disconnectedSinceRef.current > 5000 &&
+        !document.hidden
+      ) {
+        loadRun();
       }
     }, 5000);
-
-    return () => { active = false; clearInterval(interval); };
-  }, [workflowId, runId, router]);
+    return () => clearInterval(interval);
+  }, [connectionState, run?.status, loadRun]);
 
   if (!workflow || !run) {
     return (

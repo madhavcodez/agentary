@@ -1,4 +1,5 @@
 import type {
+  ActionRequest,
   ExpertAgent,
   Finding,
   HealthCheck,
@@ -14,7 +15,16 @@ import type {
   ReportFull,
   ShareResponse,
   VoiceExtraction,
+  CallRecordsResponse,
   Workflow,
+  Signal,
+  Observation,
+  Insight,
+  EvidenceItem,
+  IntelRecommendation,
+  EntityAlias,
+  EntityRelationship,
+  Entity,
 } from "./types";
 import { type AuthUser, getToken, setToken, setUser } from "./auth";
 
@@ -41,6 +51,13 @@ async function request<T>(
   });
 
   if (!res.ok) {
+    // On 401, clear token and redirect to login (avoid infinite loops)
+    if (res.status === 401 && typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+      const { logout } = await import("./auth");
+      logout();
+      window.location.href = "/login";
+      throw new Error("Session expired");
+    }
     const body = await res.text().catch(() => "Unknown error");
     throw new Error(`API ${res.status}: ${body}`);
   }
@@ -56,6 +73,17 @@ interface TokenResponse {
   user: AuthUser;
 }
 
+function extractErrorMessage(body: unknown, fallback: string): string {
+  if (!body || typeof body !== "object") return fallback;
+  const b = body as Record<string, unknown>;
+  if (typeof b.detail === "string") return b.detail;
+  if (Array.isArray(b.detail) && b.detail.length > 0) {
+    const first = b.detail[0] as Record<string, unknown>;
+    return (first.msg as string) ?? fallback;
+  }
+  return fallback;
+}
+
 export async function loginApi(email: string, password: string): Promise<TokenResponse> {
   const url = `${BASE_URL}/auth/login`;
   const res = await fetch(url, {
@@ -67,7 +95,7 @@ export async function loginApi(email: string, password: string): Promise<TokenRe
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ detail: "Login failed" }));
-    throw new Error(body.detail || "Invalid credentials");
+    throw new Error(extractErrorMessage(body, "Invalid credentials"));
   }
 
   const data = (await res.json()) as TokenResponse;
@@ -91,7 +119,7 @@ export async function registerApi(
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ detail: "Registration failed" }));
-    throw new Error(body.detail || "Registration failed");
+    throw new Error(extractErrorMessage(body, "Registration failed"));
   }
 
   const data = (await res.json()) as TokenResponse;
@@ -270,6 +298,34 @@ export function fetchVoiceExtractions(params?: {
   if (params?.limit) sp.set("limit", String(params.limit));
   const qs = sp.toString();
   return request<VoiceExtraction[]>(`/api/voice-extractions${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchVoiceExtraction(id: string): Promise<VoiceExtraction> {
+  return request<VoiceExtraction>(`/voice/sessions/${id}`);
+}
+
+export function fetchVoiceExtractionCalls(
+  sessionId: string,
+): Promise<CallRecordsResponse> {
+  return request<CallRecordsResponse>(`/voice/sessions/${sessionId}/calls`);
+}
+
+export function executeVoiceBatch(
+  sessionId: string,
+): Promise<Record<string, unknown>> {
+  return request<Record<string, unknown>>(`/voice/batch/${sessionId}/execute`, {
+    method: "POST",
+  });
+}
+
+export function reExtractCallData(
+  sessionId: string,
+  callId: string,
+): Promise<Record<string, unknown>> {
+  return request<Record<string, unknown>>(
+    `/voice/sessions/${sessionId}/calls/${callId}/re-extract`,
+    { method: "POST" },
+  );
 }
 
 // ── Workflows ───────────────────────────────────────────────────────
@@ -543,4 +599,242 @@ export function createReport(data: {
   });
 }
 
+// ── Run Steps (Observability) ──────────────────────────────────────
+
+import type { RunStepItem } from "./types";
+
+export function fetchRunSteps(runId: string): Promise<RunStepItem[]> {
+  return request<RunStepItem[]>(`/api/runs/${runId}/steps`);
+}
+
 // (Report CRUD, share, and export functions defined above)
+
+// ── Signals ──────────────────────────────────────────────────────
+
+export function fetchSignals(params?: {
+  project_id?: string;
+  source_type?: string;
+  signal_type?: string;
+  entity_id?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<Signal[]> {
+  const sp = new URLSearchParams();
+  if (params?.project_id) sp.set("project_id", params.project_id);
+  if (params?.source_type) sp.set("source_type", params.source_type);
+  if (params?.signal_type) sp.set("signal_type", params.signal_type);
+  if (params?.entity_id) sp.set("entity_id", params.entity_id);
+  if (params?.limit) sp.set("limit", String(params.limit));
+  if (params?.offset) sp.set("offset", String(params.offset));
+  const qs = sp.toString();
+  return request<Signal[]>(`/api/signals${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchSignalDetail(id: string): Promise<Signal> {
+  return request<Signal>(`/api/signals/${id}`);
+}
+
+export function fetchSignalObservations(signalId: string): Promise<Observation[]> {
+  return request<Observation[]>(`/api/signals/${signalId}/observations`);
+}
+
+export function createSignal(data: {
+  project_id: string;
+  source_type: string;
+  signal_type: string;
+  title: string;
+  content?: string;
+  structured_data?: Record<string, unknown>;
+}): Promise<Signal> {
+  return request<Signal>("/api/signals", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// ── Insights ─────────────────────────────────────────────────────
+
+export function fetchInsights(params?: {
+  project_id?: string;
+  entity_id?: string;
+  insight_type?: string;
+  is_stale?: boolean;
+  limit?: number;
+  offset?: number;
+}): Promise<Insight[]> {
+  const sp = new URLSearchParams();
+  if (params?.project_id) sp.set("project_id", params.project_id);
+  if (params?.entity_id) sp.set("entity_id", params.entity_id);
+  if (params?.insight_type) sp.set("insight_type", params.insight_type);
+  if (params?.is_stale !== undefined) sp.set("is_stale", String(params.is_stale));
+  if (params?.limit) sp.set("limit", String(params.limit));
+  if (params?.offset) sp.set("offset", String(params.offset));
+  const qs = sp.toString();
+  return request<Insight[]>(`/api/insights${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchInsightDetail(id: string): Promise<Insight> {
+  return request<Insight>(`/api/insights/${id}`);
+}
+
+export function fetchInsightEvidence(insightId: string): Promise<EvidenceItem[]> {
+  return request<EvidenceItem[]>(`/api/insights/${insightId}/evidence`);
+}
+
+export function triggerInsightGeneration(
+  projectId: string,
+  entityId?: string,
+): Promise<Record<string, unknown>> {
+  const sp = new URLSearchParams({ project_id: projectId });
+  if (entityId) sp.set("entity_id", entityId);
+  return request<Record<string, unknown>>(`/api/insights/generate?${sp}`, {
+    method: "POST",
+  });
+}
+
+// ── Recommendations ──────────────────────────────────────────────
+
+export function fetchRecommendations(params?: {
+  project_id?: string;
+  entity_id?: string;
+  status?: string;
+  priority?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<IntelRecommendation[]> {
+  const sp = new URLSearchParams();
+  if (params?.project_id) sp.set("project_id", params.project_id);
+  if (params?.entity_id) sp.set("entity_id", params.entity_id);
+  if (params?.status) sp.set("status", params.status);
+  if (params?.priority) sp.set("priority", params.priority);
+  if (params?.limit) sp.set("limit", String(params.limit));
+  if (params?.offset) sp.set("offset", String(params.offset));
+  const qs = sp.toString();
+  return request<IntelRecommendation[]>(`/api/recommendations${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchRecommendationInbox(params?: {
+  project_id?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<IntelRecommendation[]> {
+  const sp = new URLSearchParams();
+  if (params?.project_id) sp.set("project_id", params.project_id);
+  if (params?.limit) sp.set("limit", String(params.limit));
+  if (params?.offset) sp.set("offset", String(params.offset));
+  const qs = sp.toString();
+  return request<IntelRecommendation[]>(`/api/recommendations/inbox${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchRecommendationDetail(id: string): Promise<IntelRecommendation> {
+  return request<IntelRecommendation>(`/api/recommendations/${id}`);
+}
+
+export function acceptRecommendation(id: string): Promise<IntelRecommendation> {
+  return request<IntelRecommendation>(`/api/recommendations/${id}/accept`, {
+    method: "PUT",
+  });
+}
+
+export function rejectRecommendation(
+  id: string,
+  reason: string,
+): Promise<IntelRecommendation> {
+  return request<IntelRecommendation>(`/api/recommendations/${id}/reject`, {
+    method: "PUT",
+    body: JSON.stringify({ rejection_reason: reason }),
+  });
+}
+
+// ── Actions ──────────────────────────────────────────────────────
+
+export function fetchActions(params?: {
+  project_id?: string;
+  status?: string;
+  action_type?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<ActionRequest[]> {
+  const sp = new URLSearchParams();
+  if (params?.project_id) sp.set("project_id", params.project_id);
+  if (params?.status) sp.set("status", params.status);
+  if (params?.action_type) sp.set("action_type", params.action_type);
+  if (params?.limit) sp.set("limit", String(params.limit));
+  if (params?.offset) sp.set("offset", String(params.offset));
+  const qs = sp.toString();
+  return request<ActionRequest[]>(`/api/actions${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchPendingActions(projectId?: string): Promise<ActionRequest[]> {
+  const qs = projectId ? `?project_id=${projectId}` : "";
+  return request<ActionRequest[]>(`/api/actions/pending${qs}`);
+}
+
+export function fetchActionDetail(id: string): Promise<ActionRequest> {
+  return request<ActionRequest>(`/api/actions/${id}`);
+}
+
+export function createAction(data: {
+  project_id: string;
+  action_type: string;
+  title: string;
+  description?: string;
+  parameters?: Record<string, unknown>;
+  recommendation_id?: string;
+  entity_id?: string;
+  confidence?: number;
+  priority?: string;
+}): Promise<ActionRequest> {
+  return request<ActionRequest>("/api/actions", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function approveAction(id: string): Promise<ActionRequest> {
+  return request<ActionRequest>(`/api/actions/${id}/approve`, {
+    method: "PUT",
+  });
+}
+
+export function rejectAction(id: string, reason: string): Promise<ActionRequest> {
+  return request<ActionRequest>(`/api/actions/${id}/reject`, {
+    method: "PUT",
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export function cancelAction(id: string): Promise<ActionRequest> {
+  return request<ActionRequest>(`/api/actions/${id}/cancel`, {
+    method: "PUT",
+  });
+}
+
+// ── Entity Intelligence ──────────────────────────────────────────
+
+export function fetchEntities(params?: {
+  project_id?: string;
+  entity_type?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<Entity[]> {
+  const sp = new URLSearchParams();
+  if (params?.project_id) sp.set("project_id", params.project_id);
+  if (params?.entity_type) sp.set("entity_type", params.entity_type);
+  if (params?.limit) sp.set("limit", String(params.limit));
+  if (params?.offset) sp.set("offset", String(params.offset));
+  const qs = sp.toString();
+  return request<Entity[]>(`/entities${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchEntityDetail(id: string): Promise<Entity> {
+  return request<Entity>(`/entities/${id}`);
+}
+
+export function fetchEntityAliases(entityId: string): Promise<EntityAlias[]> {
+  return request<EntityAlias[]>(`/api/entities/${entityId}/aliases`);
+}
+
+export function fetchEntityRelationships(entityId: string): Promise<EntityRelationship[]> {
+  return request<EntityRelationship[]>(`/api/entities/${entityId}/relationships`);
+}

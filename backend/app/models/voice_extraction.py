@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
 from ..database import Base
+from .enums import FailureCategory
 
 
 class VoiceExtractionStatus(str, enum.Enum):
@@ -85,6 +86,12 @@ class CallRecord(Base):
     started_at = Column(DateTime(timezone=True))
     ended_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # Lifecycle state machine columns
+    failure_category = Column(SAEnum(FailureCategory, name="failurecategory"), nullable=True)
+    failure_message = Column(Text, nullable=True)
+    state_transitions = Column(JSONB, default=list)
+    correlation_id = Column(UUID(as_uuid=True), nullable=True, index=True)
 
     # Relationships
     voice_extraction = relationship("VoiceExtraction", back_populates="call_records")

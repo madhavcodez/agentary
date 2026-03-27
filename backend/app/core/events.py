@@ -54,6 +54,20 @@ class EventType(str, enum.Enum):
     report_completed = "report.completed"
     report_failed = "report.failed"
 
+    # Run lifecycle events
+    run_state_changed = "run.state_changed"
+
+    # Intelligence pipeline events
+    signal_created = "signal.created"
+    recommendation_created = "recommendation.created"
+    insight_created = "insight.created"
+
+    # Action events
+    action_pending_approval = "action.pending_approval"
+    action_approved = "action.approved"
+    action_executed = "action.executed"
+    action_failed = "action.failed"
+
 
 class Event:
     def __init__(

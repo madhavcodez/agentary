@@ -12,6 +12,8 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from ...core.events import Event, EventType, event_bus
+from ...models.enums import FailureCategory
 from ...models.voice_extraction import (
     CallDirection,
     CallRecord,
@@ -23,6 +25,36 @@ from . import extraction_service, transcript_processor, voice_pipeline_adapter
 from .call_script_generator import generate_script
 
 logger = logging.getLogger(__name__)
+
+
+def _append_call_transition(
+    call_record: CallRecord,
+    from_state: str,
+    to_state: str,
+    reason: str | None = None,
+) -> None:
+    """Append a state transition record to a CallRecord.
+
+    Validates the transition using CALL_VALID_TRANSITIONS from the state machine.
+    """
+    from ..state_machine import call_transition, InvalidTransition
+
+    try:
+        record = call_transition(from_state, to_state, reason)
+    except InvalidTransition:
+        logger.warning(
+            "Invalid call transition %s -> %s (reason=%s); recording anyway",
+            from_state, to_state, reason,
+        )
+        record = {
+            "from": from_state,
+            "to": to_state,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "reason": reason,
+        }
+    transitions = list(call_record.state_transitions or [])
+    transitions.append(record)
+    call_record.state_transitions = transitions
 
 
 async def create_voice_extraction(
@@ -154,9 +186,26 @@ async def start_call(
         voice_extraction.status = VoiceExtractionStatus.active
         db.add(voice_extraction)
 
+    old_status = call_record.status.value if hasattr(call_record.status, 'value') else str(call_record.status)
     result = await voice_pipeline_adapter.create_outbound_call(
         call_record, voice_extraction, db
     )
+    new_status = call_record.status.value if hasattr(call_record.status, 'value') else str(call_record.status)
+    if old_status != new_status:
+        _append_call_transition(call_record, old_status, new_status, "Call initiated")
+
+    await event_bus.broadcast(Event(
+        event_type=EventType.run_state_changed,
+        data={
+            "run_type": "voice",
+            "run_id": str(call_record.id),
+            "from_state": old_status,
+            "to_state": new_status,
+            "reason": "Call initiated",
+        },
+        project_id=str(voice_extraction.project_id) if voice_extraction.project_id else None,
+        mission_id=str(voice_extraction.mission_id) if voice_extraction.mission_id else None,
+    ))
 
     db.commit()
     return result
@@ -165,12 +214,17 @@ async def start_call(
 async def process_completed_call(
     call_record_id: uuid.UUID,
     db: Session,
+    *,
+    skip_completion_check: bool = False,
 ) -> dict[str, Any]:
     """Run post-call processing: transcript analysis, extraction, findings.
 
     Args:
         call_record_id: UUID of the completed CallRecord.
         db: Database session.
+        skip_completion_check: When True, skip the per-call COUNT query that
+            checks if all calls are done. Callers like execute_batch do a
+            single aggregation after the loop instead (avoids N+1).
 
     Returns:
         Dict with extraction_result and findings_count.
@@ -222,20 +276,43 @@ async def process_completed_call(
         voice_extraction.data_points_extracted or 0
     ) + len(findings)
 
-    # Check if all calls are done
-    total_completed = (
-        db.query(CallRecord)
-        .filter(
-            CallRecord.voice_extraction_id == voice_extraction.id,
-            CallRecord.status == CallStatus.completed,
+    # Check if all calls are done (skipped during batch to avoid N+1)
+    if not skip_completion_check:
+        total_completed = (
+            db.query(CallRecord)
+            .filter(
+                CallRecord.voice_extraction_id == voice_extraction.id,
+                CallRecord.status == CallStatus.completed,
+            )
+            .count()
         )
-        .count()
-    )
-    if total_completed >= voice_extraction.total_targets:
-        voice_extraction.status = VoiceExtractionStatus.completed
+        if total_completed >= voice_extraction.total_targets:
+            voice_extraction.status = VoiceExtractionStatus.completed
 
     db.add(voice_extraction)
     db.commit()
+
+    # Emit signal for the intelligence pipeline
+    try:
+        from ..intelligence.signal_service import SignalService
+        from ...models.signal import SignalSourceType, SignalType
+
+        if call_record.project_id:
+            signal_svc = SignalService(db)
+            signal_svc.create_signal(
+                project_id=call_record.project_id,
+                user_id=getattr(voice_extraction, "user_id", None) or call_record.project_id,
+                source_type=SignalSourceType.voice,
+                signal_type=SignalType.data_extracted,
+                title=f"Call extraction: {call_record.target_name}",
+                content=call_record.transcript[:500] if call_record.transcript else None,
+                structured_data=call_record.extracted_data or {},
+                source_id=call_record.id,
+                confidence=call_record.extraction_confidence,
+            )
+            db.commit()
+    except Exception:
+        logger.debug("Signal emission failed for call_record %s", call_record.id)
 
     logger.info(
         "Post-processing complete for call_record %s: "
@@ -302,33 +379,50 @@ async def execute_batch(
 
             # If simulated, process immediately
             if call_result.get("simulated"):
-                post_result = await process_completed_call(record.id, db)
+                post_result = await process_completed_call(record.id, db, skip_completion_check=True)
+                status = "completed"
                 results.append(
                     {
                         "call_record_id": str(record.id),
                         "target_name": record.target_name,
-                        "status": "completed",
+                        "status": status,
                         **post_result,
                     }
                 )
                 completed += 1
             else:
                 # Real calls are processed via Twilio webhooks
+                status = "initiated"
                 results.append(
                     {
                         "call_record_id": str(record.id),
                         "target_name": record.target_name,
-                        "status": "initiated",
+                        "status": status,
                         "call_sid": call_result.get("call_sid"),
                     }
                 )
                 completed += 1
 
-        except Exception:
+            # Emit per-call event
+            await event_bus.broadcast(Event(
+                event_type=EventType.run_state_changed,
+                data={
+                    "run_type": "voice",
+                    "call_id": str(record.id),
+                    "status": status,
+                },
+                project_id=str(voice_extraction.project_id) if voice_extraction.project_id else None,
+            ))
+
+        except Exception as exc:
             logger.exception(
                 "Failed to execute call for record %s", record.id
             )
+            old_st = record.status.value if hasattr(record.status, 'value') else str(record.status)
             record.status = CallStatus.failed
+            record.failure_category = FailureCategory.internal
+            record.failure_message = str(exc)
+            _append_call_transition(record, old_st, "failed", str(exc))
             db.add(record)
             db.commit()
             results.append(
@@ -339,6 +433,31 @@ async def execute_batch(
                 }
             )
             failed += 1
+
+            # Emit per-call failure event
+            await event_bus.broadcast(Event(
+                event_type=EventType.run_state_changed,
+                data={
+                    "run_type": "voice",
+                    "call_id": str(record.id),
+                    "status": "failed",
+                },
+                project_id=str(voice_extraction.project_id) if voice_extraction.project_id else None,
+            ))
+
+    # Single aggregation after batch loop (avoids N+1 per-call COUNT queries)
+    total_completed = (
+        db.query(CallRecord)
+        .filter(
+            CallRecord.voice_extraction_id == voice_extraction_id,
+            CallRecord.status == CallStatus.completed,
+        )
+        .count()
+    )
+    if total_completed >= voice_extraction.total_targets:
+        voice_extraction.status = VoiceExtractionStatus.completed
+        db.add(voice_extraction)
+        db.commit()
 
     return {
         "total": len(pending_records),

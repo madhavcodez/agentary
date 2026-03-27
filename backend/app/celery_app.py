@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from celery import Celery
+from celery.schedules import crontab
 
 from .config import settings
 
@@ -19,20 +20,31 @@ celery_app.conf.update(
     enable_utc=True,
     task_track_started=True,
     task_acks_late=True,
+    task_reject_on_worker_lost=True,
     worker_prefetch_multiplier=1,
     task_default_queue="default",
     task_routes={
         "app.tasks.crew_tasks.*": {"queue": "research"},
-        "app.tasks.mission_runs.*": {"queue": "research"},
+        "app.tasks.mission_runs.*": {"queue": "missions"},
         "app.tasks.research_tasks.*": {"queue": "research"},
         "app.tasks.voice_tasks.*": {"queue": "voice"},
         "app.tasks.monitor_tasks.*": {"queue": "monitors"},
         "app.tasks.report_tasks.*": {"queue": "reports"},
+        "app.tasks.workflow_tasks.*": {"queue": "workflows"},
+        "app.tasks.analytics_tasks.*": {"queue": "analytics"},
+        "app.tasks.signal_tasks.*": {"queue": "signals"},
+        "app.tasks.migration_tasks.*": {"queue": "migrations"},
+        "app.tasks.insight_tasks.*": {"queue": "signals"},
+        "app.tasks.action_tasks.*": {"queue": "actions"},
     },
     beat_schedule={
         "check-monitors-every-5m": {
             "task": "app.tasks.monitor_tasks.check_all_monitors",
             "schedule": 300.0,
+        },
+        "mark-stale-insights-daily": {
+            "task": "app.tasks.insight_tasks.mark_stale_insights",
+            "schedule": crontab(hour=2, minute=0),
         },
     },
 )
@@ -45,4 +57,8 @@ celery_app.autodiscover_tasks([
     "app.tasks.voice_tasks",
     "app.tasks.monitor_tasks",
     "app.tasks.report_tasks",
+    "app.tasks.signal_tasks",
+    "app.tasks.migration_tasks",
+    "app.tasks.insight_tasks",
+    "app.tasks.action_tasks",
 ])
