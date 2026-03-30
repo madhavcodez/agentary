@@ -6,23 +6,55 @@ import { useCallback, useEffect, useState } from "react";
 import { useWS } from "@/components/WebSocketProvider";
 import { fetchPendingActions } from "@/lib/api";
 
-const NAV_ITEMS = [
-  { href: "/", label: "Home", icon: HomeIcon },
-  { href: "/dashboard", label: "Dashboard", icon: DashboardIcon },
-  { href: "/projects", label: "Projects", icon: ProjectsIcon },
-  { href: "/missions", label: "Missions", icon: MissionsIcon },
-  { href: "/workflows", label: "Workflows", icon: WorkflowsIcon },
-  { href: "/voice", label: "Voice", icon: VoiceIcon },
-  { href: "/reports", label: "Reports", icon: ReportsIcon },
-  { href: "/monitors", label: "Monitors", icon: MonitorsIcon },
-  { href: "/signals", label: "Signals", icon: SignalsIcon },
-  { href: "/recommendations", label: "Recommendations", icon: RecommendationsIcon },
-  { href: "/approvals", label: "Approvals", icon: ApprovalsIcon, badge: true },
-  { href: "/actions", label: "Actions", icon: ActionsIcon },
-  { href: "/analytics", label: "Analytics", icon: AnalyticsIcon },
-  { href: "/operator", label: "Operator", icon: OperatorIcon },
-  { href: "/settings", label: "Settings", icon: SettingsIcon },
-] as const;
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ active: boolean }>;
+  badge?: boolean;
+}
+
+interface NavSection {
+  title: string;
+  items: NavItem[];
+}
+
+const NAV_SECTIONS: NavSection[] = [
+  {
+    title: "Overview",
+    items: [
+      { href: "/", label: "Home", icon: HomeIcon },
+      { href: "/dashboard", label: "Dashboard", icon: DashboardIcon },
+      { href: "/projects", label: "Projects", icon: ProjectsIcon },
+    ],
+  },
+  {
+    title: "Execution",
+    items: [
+      { href: "/missions", label: "Missions", icon: MissionsIcon },
+      { href: "/workflows", label: "Workflows", icon: WorkflowsIcon },
+      { href: "/voice", label: "Voice", icon: VoiceIcon },
+      { href: "/reports", label: "Reports", icon: ReportsIcon },
+    ],
+  },
+  {
+    title: "Intelligence",
+    items: [
+      { href: "/signals", label: "Signals", icon: SignalsIcon },
+      { href: "/recommendations", label: "Recommendations", icon: RecommendationsIcon },
+      { href: "/approvals", label: "Approvals", icon: ApprovalsIcon, badge: true },
+      { href: "/actions", label: "Actions", icon: ActionsIcon },
+    ],
+  },
+  {
+    title: "System",
+    items: [
+      { href: "/monitors", label: "Monitors", icon: MonitorsIcon },
+      { href: "/analytics", label: "Analytics", icon: AnalyticsIcon },
+      { href: "/operator", label: "Operator", icon: OperatorIcon },
+      { href: "/settings", label: "Settings", icon: SettingsIcon },
+    ],
+  },
+];
 
 const CONNECTION_DOT: Record<string, { color: string; label: string }> = {
   connected: { color: "bg-emerald-400", label: "Connected" },
@@ -72,30 +104,40 @@ export default function Nav() {
         <p className="text-[11px] text-gray-600 mt-0.5">Research & Intelligence</p>
       </Link>
 
-      <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
-        {NAV_ITEMS.map((item) => {
-          const active = isActive(item.href);
-          const showBadge = "badge" in item && item.badge && pendingCount > 0;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
-                active
-                  ? "bg-gray-800/80 text-gray-100"
-                  : "text-gray-500 hover:text-gray-300 hover:bg-gray-800/40"
-              }`}
-            >
-              <item.icon active={active} />
-              <span className="flex-1">{item.label}</span>
-              {showBadge && (
-                <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-gray-950 px-1">
-                  {pendingCount > 99 ? "99+" : pendingCount}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 px-3 py-3 overflow-y-auto" aria-label="Main navigation">
+        {NAV_SECTIONS.map((section, idx) => (
+          <div key={section.title} className={idx > 0 ? "mt-5" : ""}>
+            <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-600">
+              {section.title}
+            </p>
+            <div className="space-y-0.5">
+              {section.items.map((item) => {
+                const active = isActive(item.href);
+                const showBadge = item.badge && pendingCount > 0;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={active ? "page" : undefined}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
+                      active
+                        ? "bg-gray-800/80 text-gray-100"
+                        : "text-gray-500 hover:text-gray-300 hover:bg-gray-800/40"
+                    }`}
+                  >
+                    <item.icon active={active} />
+                    <span className="flex-1">{item.label}</span>
+                    {showBadge && (
+                      <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-gray-950 px-1" aria-label={`${pendingCount} pending approvals`}>
+                        {pendingCount > 99 ? "99+" : pendingCount}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       <div className="px-5 py-4 border-t border-gray-800/50">

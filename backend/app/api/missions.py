@@ -1,9 +1,12 @@
 from __future__ import annotations
+import logging
 from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from ..deps import get_db, get_current_user
+
+logger = logging.getLogger(__name__)
 from ..models.user import User
 from ..models.mission import Mission
 from ..models.mission_run import MissionRun
@@ -159,8 +162,8 @@ async def start_mission(
         try:
             from ..tasks.crew_tasks import execute_crew_run
             execute_crew_run.delay(str(run.id))
-        except Exception:
-            # Celery not available — run inline in background
+        except Exception as celery_exc:
+            logger.warning("Celery unavailable, falling back to inline execution: %s", celery_exc)
             import asyncio
             from ..services.crews.crew_runner import CrewRunner
 
@@ -171,16 +174,15 @@ async def start_mission(
                     runner = CrewRunner(inline_db)
                     await runner.execute_run(run.id)
                 except Exception as exc:
-                    import logging
-                    _logger = logging.getLogger(__name__)
-                    _logger.error("Inline crew run failed for run %s: %s", run.id, exc, exc_info=True)
+                    logger.error("Inline crew run failed for run %s: %s", run.id, exc, exc_info=True)
                     try:
                         run_obj = inline_db.query(MissionRun).filter_by(id=run.id).first()
                         if run_obj and run_obj.status not in ("completed", "failed", "cancelled"):
                             run_obj.status = "failed"
                             run_obj.failure_message = str(exc)
                             inline_db.commit()
-                    except Exception:
+                    except Exception as db_exc:
+                        logger.error("Failed to mark run %s as failed: %s", run.id, db_exc)
                         inline_db.rollback()
                 finally:
                     inline_db.close()
@@ -376,7 +378,8 @@ async def rerun_mission(
         try:
             from ..tasks.crew_tasks import execute_crew_run
             execute_crew_run.delay(str(run.id))
-        except Exception:
+        except Exception as celery_exc:
+            logger.warning("Celery unavailable for rerun, falling back to inline: %s", celery_exc)
             import asyncio
             from ..services.crews.crew_runner import CrewRunner
 
@@ -387,16 +390,15 @@ async def rerun_mission(
                     runner = CrewRunner(inline_db)
                     await runner.execute_run(run.id)
                 except Exception as exc:
-                    import logging
-                    _logger = logging.getLogger(__name__)
-                    _logger.error("Inline crew run failed for run %s: %s", run.id, exc, exc_info=True)
+                    logger.error("Inline crew rerun failed for run %s: %s", run.id, exc, exc_info=True)
                     try:
                         run_obj = inline_db.query(MissionRun).filter_by(id=run.id).first()
                         if run_obj and run_obj.status not in ("completed", "failed", "cancelled"):
                             run_obj.status = "failed"
                             run_obj.failure_message = str(exc)
                             inline_db.commit()
-                    except Exception:
+                    except Exception as db_exc:
+                        logger.error("Failed to mark rerun %s as failed: %s", run.id, db_exc)
                         inline_db.rollback()
                 finally:
                     inline_db.close()

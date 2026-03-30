@@ -87,8 +87,8 @@ export default function MissionsPage() {
   return (
     <div className="max-w-6xl mx-auto px-8 py-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-semibold text-gray-100 tracking-tight">Missions</h1>
-        <p className="text-sm text-gray-400 mt-2">
+        <h1 className="text-3xl font-bold text-gray-100 tracking-tight">Missions</h1>
+        <p className="text-gray-500 mt-2">
           Operations overview for all mission runs, outcomes, and execution states.
         </p>
       </div>
@@ -146,7 +146,7 @@ export default function MissionsPage() {
               className="w-full text-left bg-[#0b1220] border border-white/10 rounded-2xl px-4 py-3 hover:border-white/20 transition-colors flex items-center justify-between group"
             >
               <div className="flex items-center gap-3 min-w-0 flex-1">
-                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusDot(mission.status)}`} />
+                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusDot(mission.status)}`} role="img" aria-label={`Status: ${mission.status}`} />
                 <div className="min-w-0">
                   <p className="text-gray-100 text-sm font-medium truncate group-hover:text-white transition-colors">
                     {mission.name}

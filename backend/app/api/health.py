@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import threading
 import time as _time
 
@@ -9,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from ..deps import get_db
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["health"])
 
 # ── Background health cache ─────────────────────────────────────────
@@ -55,14 +57,16 @@ def _run_expensive_checks() -> dict:
         from ..celery_app import celery_app
         ping = celery_app.control.ping(timeout=0.5)
         checks["celery_workers"] = "available" if ping else "unavailable"
-    except Exception:
+    except Exception as e:
+        logger.debug("Celery ping failed: %s", e)
         checks["celery_workers"] = "unavailable"
 
     # Circuit breakers
     try:
         from ..services.circuit_breakers import get_breaker_status
         breakers = get_breaker_status()
-    except Exception:
+    except Exception as e:
+        logger.debug("Circuit breaker status unavailable: %s", e)
         breakers = {}
 
     return {"checks": checks, "circuit_breakers": breakers}
@@ -81,8 +85,10 @@ def _background_health_loop() -> None:
                     if k not in ("celery_workers",)
                 )
                 _cache["status"] = "ok" if all_ok else "degraded"
-        except Exception:
-            pass
+        except (ConnectionError, OSError, RuntimeError) as exc:
+            logger.warning("Health check loop error: %s", exc)
+        except Exception as exc:
+            logger.error("Unexpected health check error: %s", exc)
         _time.sleep(15)
 
 

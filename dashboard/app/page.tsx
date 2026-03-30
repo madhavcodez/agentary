@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { fetchProjects, createProject } from "@/lib/api";
+import { useToast } from "@/components/ui/Toast";
 import type { Project } from "@/lib/types";
 
 const TEMPLATES = [
@@ -52,17 +53,20 @@ const TEMPLATES = [
 
 export default function HomePage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [projectName, setProjectName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   const loadProjects = useCallback(async () => {
     try {
+      setLoadError(false);
       const data = await fetchProjects();
       setProjects(data);
     } catch {
-      /* silent */
+      setLoadError(true);
     }
   }, []);
 
@@ -86,6 +90,7 @@ export default function HomePage() {
       });
       router.push(`/projects/${project.id}`);
     } catch {
+      toast("Failed to create project", "error");
       setCreating(false);
     }
   }
@@ -132,7 +137,9 @@ export default function HomePage() {
       {selectedType && (
         <div className="mb-16 animate-in fade-in duration-200">
           <div className="flex gap-3">
+            <label htmlFor="project-name" className="sr-only">Project name</label>
             <input
+              id="project-name"
               type="text"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
@@ -175,6 +182,16 @@ export default function HomePage() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Load Error */}
+      {loadError && projects.length === 0 && (
+        <div className="mb-8 bg-red-500/5 border border-red-500/20 rounded-xl p-4 flex items-center justify-between">
+          <p className="text-sm text-red-400">Failed to load recent projects.</p>
+          <button onClick={loadProjects} className="text-xs text-red-400 hover:text-red-300 underline transition-colors">
+            Retry
+          </button>
         </div>
       )}
 

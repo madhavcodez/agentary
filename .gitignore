@@ -35,3 +35,6 @@ htmlcov/
 
 # Alembic
 *.db
+
+# Celery
+celerybeat-schedule*
