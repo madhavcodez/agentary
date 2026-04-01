@@ -19,16 +19,133 @@
 
 ---
 
-## Product Tour
+## Product Tour (Deep UI Walkthrough)
+
+### 1) Mission kickoff and prompt-driven setup
 
 <p align="center">
-  <img src="docs/screenshots/home.png" alt="Agentary - Home and Mission Setup" width="100%" />
+  <img src="docs/screenshots/ui-home-template-grid.png" alt="Home page with research templates and navigation" width="100%" />
 </p>
 
 <p align="center">
-  <strong>Mission Pipeline</strong><br/>
-  Create research missions with expert crews, then monitor execution from the live dashboard.
+  <img src="docs/screenshots/ui-prompt-usecase-filled.png" alt="Prompt-driven project setup with custom research objective" width="100%" />
 </p>
+
+This is the fastest path to launch: choose a template, refine with a natural-language objective, and hand execution to the agent crew.
+
+---
+
+### 2) Orchestration and workflow generation
+
+<p align="center">
+  <img src="docs/screenshots/ui-workflows-hub.png" alt="Workflow hub showing automation entry point" width="100%" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/ui-workflow-create-modes.png" alt="Workflow creation modes including template, natural language, and blank canvas" width="100%" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/ui-workflow-natural-language-prompt.png" alt="Natural language workflow generation prompt for multi-step market intelligence" width="100%" />
+</p>
+
+Agentary supports both deterministic automation and prompt-first orchestration. The natural-language flow is ideal for quickly encoding multi-step research, calling, scoring, and reporting routines.
+
+---
+
+### 3) Live operations and execution telemetry
+
+<p align="center">
+  <img src="docs/screenshots/ui-dashboard-live-ops.png" alt="System dashboard with live activity, active missions, monitors, and findings" width="100%" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/ui-missions-status-filters.png" alt="Mission control list with execution state filters" width="100%" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/ui-operator-console.png" alt="Operator console with queue health, stale recommendations, and escalation cards" width="100%" />
+</p>
+
+These surfaces provide operational awareness: execution state, queue health, recommendation freshness, and escalation posture.
+
+---
+
+### 4) Intelligence layer: signals, recommendations, actions, approvals
+
+<p align="center">
+  <img src="docs/screenshots/ui-signals-feed-filters.png" alt="Signal feed with source and type filtering controls" width="100%" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/ui-signals-filter-interaction.png" alt="Interactive signal filtering workflow" width="100%" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/ui-recommendations-queue.png" alt="Recommendations queue with pending accepted rejected filters" width="100%" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/ui-actions-history-filters.png" alt="Action history with status and type filters" width="100%" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/ui-actions-type-filter-interaction.png" alt="Action type filtering interaction" width="100%" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/ui-approvals-inbox.png" alt="Approvals inbox for human-in-the-loop governance" width="100%" />
+</p>
+
+This is the closed loop: detect -> interpret -> recommend -> execute -> approve/audit.
+
+---
+
+### 5) Voice intelligence and domain modules
+
+<p align="center">
+  <img src="docs/screenshots/ui-voice-extraction-templates.png" alt="Voice extraction center with reusable structured call templates" width="100%" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/ui-reports-center.png" alt="Reports center with generation entry point" width="100%" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/ui-projects-overview.png" alt="Projects workspace overview" width="100%" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/ui-monitors-panel.png" alt="Monitors management panel" width="100%" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/ui-dashboard-monitoring-view.png" alt="Monitoring dashboard view" width="100%" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/ui-analytics-overview.png" alt="Analytics overview panel" width="100%" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/ui-settings-platform.png" alt="Settings and integration status surface" width="100%" />
+</p>
+
+---
+
+### Prompt-to-Outcome Use Case (Example)
+
+**Prompt:**  
+"Every weekday at 8 AM, search for newly opened med spas in Austin, score them by review velocity and pricing gaps, call top 5 for package rates, detect churn risk signals, and generate an executive report with recommended outreach actions."
+
+**System path:**  
+1. Parse objective into a workflow graph and mission tasks  
+2. Run web + voice + extraction stages  
+3. Emit signals and score confidence  
+4. Generate recommendations and route to approvals  
+5. Produce narrative report + structured exports
+
+> Note: some screenshots show the frontend running while backend services are intentionally unreachable. This demonstrates graceful degraded-mode UX (connection banners, empty states, retry affordances, and operational status surfaces) rather than hard failures.
 
 ---
 
@@ -267,6 +384,19 @@ agentary/
 ---
 
 <div align="center">
+
+## Design
+
+The dashboard UI was redesigned with inspiration from [chenglou/pretext](https://github.com/chenglou/pretext) — a pure TypeScript text layout engine with a warm, editorial aesthetic. Key design principles adopted:
+
+- **Editorial typography** — Lora serif for report headings, Inter for body text
+- **Generous whitespace** — Constrained reading widths with breathing room
+- **Smooth 180ms transitions** — Consistent, purposeful micro-interactions
+- **Warm dark palette** — Softer backgrounds (`#0d1017`, `#131820`) with emerald accents
+- **Accessibility-first** — ARIA labels, keyboard navigation, semantic HTML
+- **Expandable information** — Click any finding card to see full details in a modal
+
+---
 
 **MIT License**
 

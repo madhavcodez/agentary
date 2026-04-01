@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
+import { sanitizeUrl } from "@/lib/security";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -57,6 +58,19 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const POLL_INTERVAL_MS = 3000;
+
+// Safe markdown link renderer — prevents javascript: protocol injection
+const markdownComponents = {
+  a: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { children?: React.ReactNode }) => {
+    const safeHref = sanitizeUrl(href ?? null);
+    if (!safeHref) return <span {...props}>{children}</span>;
+    return (
+      <a href={safeHref} target="_blank" rel="noopener noreferrer" {...props}>
+        {children}
+      </a>
+    );
+  },
+};
 
 // ---------------------------------------------------------------------------
 // Reusable: ChartRenderer
@@ -126,7 +140,7 @@ function ChartRenderer({ config }: ChartRendererProps) {
   };
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4 my-6 max-w-2xl">
+    <div className="bg-[#0d1017] border border-white/[0.06] rounded-xl p-5 my-6 max-w-2xl">
       {config.type === "bar" && <Bar data={chartData} options={chartOptions} />}
       {config.type === "line" && (
         <Line data={chartData} options={chartOptions} />
@@ -154,23 +168,26 @@ function SourceCitation({
   index: number;
 }) {
   return (
-    <li className="flex items-start gap-2 text-sm">
-      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center text-xs font-medium text-gray-400">
+    <li className="flex items-start gap-3 text-sm py-2">
+      <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-xs font-semibold text-gray-400 tabular-nums">
         {index + 1}
       </span>
-      <div>
-        {source.url ? (
-          <a
-            href={source.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-indigo-400 hover:text-indigo-300 transition-colors underline underline-offset-2"
-          >
-            {source.name}
-          </a>
-        ) : (
-          <span className="text-gray-300">{source.name}</span>
-        )}
+      <div className="pt-0.5">
+        {(() => {
+          const safeUrl = sanitizeUrl(source.url);
+          return safeUrl ? (
+            <a
+              href={safeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:text-emerald-300 transition-colors underline underline-offset-2"
+            >
+              {source.name}
+            </a>
+          ) : (
+            <span className="text-gray-300">{source.name}</span>
+          );
+        })()}
         {source.type && (
           <span className="ml-2 text-xs text-gray-500">({source.type})</span>
         )}
@@ -206,34 +223,24 @@ function RegenModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
       />
-      <div className="relative bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md mx-4">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
+      <div className="relative bg-[#131820] border border-white/[0.08] rounded-2xl w-full max-w-md mx-4 animate-scale-in">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.06]">
           <h3 className="text-sm font-semibold text-gray-100">
             Regenerate: {sectionTitle}
           </h3>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition-colors"
+            className="p-2 rounded-lg text-gray-500 hover:text-gray-200 hover:bg-white/[0.06] transition-all duration-[180ms]"
           >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
-        <div className="px-6 py-4">
+        <div className="px-6 py-5">
           <label className="block text-sm font-medium text-gray-300 mb-2">
             Additional instructions (optional)
           </label>
@@ -242,24 +249,24 @@ function RegenModal({
             onChange={(e) => setInstructions(e.target.value)}
             placeholder="e.g. Focus more on competitor pricing..."
             rows={4}
-            className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors resize-none"
+            className="w-full px-4 py-3 bg-[#0d1017] border border-white/[0.08] rounded-xl text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20 transition-all duration-[180ms] resize-none"
           />
         </div>
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-800">
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/[0.06]">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-sm text-gray-300 font-medium rounded-lg transition-colors"
+            className="px-4 py-2.5 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-sm text-gray-300 font-medium rounded-xl transition-all duration-[180ms]"
           >
             Cancel
           </button>
           <button
             onClick={() => onSubmit(instructions)}
             disabled={loading}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-xl transition-all duration-[180ms] flex items-center gap-2 disabled:opacity-50"
           >
             {loading ? (
               <>
-                <div className="w-4 h-4 border-2 border-indigo-300 border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-emerald-300 border-t-transparent rounded-full animate-spin" />
                 Regenerating...
               </>
             ) : (
@@ -296,32 +303,22 @@ function ShareDialog({ url, onClose, onRevoke, revoking }: ShareDialogProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
       />
-      <div className="relative bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md mx-4">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
+      <div className="relative bg-[#131820] border border-white/[0.08] rounded-2xl w-full max-w-md mx-4 animate-scale-in">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.06]">
           <h3 className="text-sm font-semibold text-gray-100">Share Report</h3>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition-colors"
+            className="p-2 rounded-lg text-gray-500 hover:text-gray-200 hover:bg-white/[0.06] transition-all duration-[180ms]"
           >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
-        <div className="px-6 py-4 space-y-4">
+        <div className="px-6 py-5 space-y-4">
           <p className="text-sm text-gray-400">
             Anyone with this link can view the report.
           </p>
@@ -330,27 +327,27 @@ function ShareDialog({ url, onClose, onRevoke, revoking }: ShareDialogProps) {
               type="text"
               readOnly
               value={url}
-              className="flex-1 px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-200 font-mono truncate focus:outline-none"
+              className="flex-1 px-4 py-2.5 bg-[#0d1017] border border-white/[0.08] rounded-xl text-sm text-gray-200 font-mono truncate focus:outline-none"
             />
             <button
               onClick={handleCopy}
-              className="px-3 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-xl transition-all duration-[180ms] whitespace-nowrap"
             >
               {copied ? "Copied!" : "Copy"}
             </button>
           </div>
         </div>
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-800">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-white/[0.06]">
           <button
             onClick={onRevoke}
             disabled={revoking}
-            className="px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
+            className="px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-all duration-[180ms] disabled:opacity-50"
           >
             {revoking ? "Revoking..." : "Revoke Link"}
           </button>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-sm text-gray-300 font-medium rounded-lg transition-colors"
+            className="px-4 py-2.5 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-sm text-gray-300 font-medium rounded-xl transition-all duration-[180ms]"
           >
             Done
           </button>
@@ -371,6 +368,7 @@ interface ExportDropdownProps {
 function ExportDropdown({ reportId }: ExportDropdownProps) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const safeReportId = encodeURIComponent(reportId);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -391,7 +389,7 @@ function ExportDropdown({ reportId }: ExportDropdownProps) {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setOpen((prev) => !prev)}
-        className="flex items-center gap-2 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-300 hover:bg-gray-700 transition-colors"
+        className="flex items-center gap-2 px-3 py-2 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-gray-300 hover:bg-white/[0.08] transition-all duration-[180ms]"
       >
         <svg
           className="w-4 h-4"
@@ -424,7 +422,7 @@ function ExportDropdown({ reportId }: ExportDropdownProps) {
       {open && (
         <div className="absolute right-0 mt-2 w-40 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-20 overflow-hidden">
           <a
-            href={`${baseUrl}/reports/${reportId}/export/csv`}
+            href={`${baseUrl}/reports/${safeReportId}/export/csv`}
             target="_blank"
             rel="noopener noreferrer"
             className="block px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-800 transition-colors"
@@ -433,7 +431,7 @@ function ExportDropdown({ reportId }: ExportDropdownProps) {
             CSV
           </a>
           <a
-            href={`${baseUrl}/reports/${reportId}/export/excel`}
+            href={`${baseUrl}/reports/${safeReportId}/export/excel`}
             target="_blank"
             rel="noopener noreferrer"
             className="block px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-800 transition-colors border-t border-gray-800"
@@ -442,7 +440,7 @@ function ExportDropdown({ reportId }: ExportDropdownProps) {
             Excel
           </a>
           <a
-            href={`${baseUrl}/reports/${reportId}/export/json`}
+            href={`${baseUrl}/reports/${safeReportId}/export/json`}
             target="_blank"
             rel="noopener noreferrer"
             className="block px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-800 transition-colors border-t border-gray-800"
@@ -807,41 +805,31 @@ export default function ReportDetailPage() {
     <div className="flex min-h-screen">
       {/* ── Left sidebar: Table of Contents ──────────────────────────── */}
       <aside
-        className={`fixed top-0 left-64 h-screen bg-gray-950 border-r border-gray-800 transition-all duration-200 z-30 print:hidden ${
-          sidebarOpen ? "w-64" : "w-0 overflow-hidden"
+        className={`fixed top-0 left-56 h-screen bg-[#111318] border-r border-white/[0.04] transition-all duration-[180ms] z-30 print:hidden ${
+          sidebarOpen ? "w-60" : "w-0 overflow-hidden"
         }`}
       >
-        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-800">
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+        <div className="flex items-center justify-between px-5 py-5 border-b border-white/[0.06]">
+          <h3 className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest">
             Contents
           </h3>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="p-1 rounded text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors"
+            className="p-1.5 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-white/[0.06] transition-all duration-[180ms]"
           >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5"
-              />
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5" />
             </svg>
           </button>
         </div>
-        <nav className="px-3 py-4 space-y-0.5 overflow-y-auto max-h-[calc(100vh-56px)]">
+        <nav className="px-3 py-5 space-y-1 overflow-y-auto max-h-[calc(100vh-60px)]">
           {report.executive_summary && (
             <button
               onClick={() => scrollToSection("executive-summary")}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+              className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all duration-[180ms] ${
                 activeSection === "executive-summary"
-                  ? "bg-indigo-500/10 text-indigo-400"
-                  : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/60"
+                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/15"
+                  : "text-gray-400 hover:text-gray-200 hover:bg-white/[0.04] border border-transparent"
               }`}
             >
               Executive Summary
@@ -853,23 +841,24 @@ export default function ReportDetailPage() {
               <button
                 key={slug}
                 onClick={() => scrollToSection(slug)}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all duration-[180ms] flex items-center gap-2 ${
                   activeSection === slug
-                    ? "bg-indigo-500/10 text-indigo-400"
-                    : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/60"
+                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/15"
+                    : "text-gray-400 hover:text-gray-200 hover:bg-white/[0.04] border border-transparent"
                 }`}
               >
-                {section.title}
+                <span className="text-[11px] text-gray-600 tabular-nums w-5 flex-shrink-0">{idx + 1}</span>
+                <span className="truncate">{section.title}</span>
               </button>
             );
           })}
           {report.methodology && (
             <button
               onClick={() => scrollToSection("methodology")}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+              className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all duration-[180ms] ${
                 activeSection === "methodology"
-                  ? "bg-indigo-500/10 text-indigo-400"
-                  : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/60"
+                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/15"
+                  : "text-gray-400 hover:text-gray-200 hover:bg-white/[0.04] border border-transparent"
               }`}
             >
               Methodology
@@ -878,10 +867,10 @@ export default function ReportDetailPage() {
           {sources.length > 0 && (
             <button
               onClick={() => scrollToSection("sources")}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+              className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all duration-[180ms] ${
                 activeSection === "sources"
-                  ? "bg-indigo-500/10 text-indigo-400"
-                  : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/60"
+                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/15"
+                  : "text-gray-400 hover:text-gray-200 hover:bg-white/[0.04] border border-transparent"
               }`}
             >
               Sources ({sources.length})
@@ -892,13 +881,13 @@ export default function ReportDetailPage() {
 
       {/* ── Main content ─────────────────────────────────────────────── */}
       <main
-        className={`flex-1 transition-all duration-200 ${
-          sidebarOpen ? "ml-64" : "ml-0"
+        className={`flex-1 transition-all duration-[180ms] ${
+          sidebarOpen ? "ml-60" : "ml-0"
         }`}
       >
         {/* ── Toolbar ──────────────────────────────────────────────── */}
-        <div className="sticky top-0 z-20 bg-gray-950/95 backdrop-blur-sm border-b border-gray-800 print:hidden">
-          <div className="max-w-4xl mx-auto px-6 py-3 flex items-center gap-2 flex-wrap">
+        <div className="sticky top-0 z-20 bg-[#0d1017]/95 backdrop-blur-sm border-b border-white/[0.06] print:hidden">
+          <div className="max-w-4xl mx-auto px-8 py-3 flex items-center gap-2 flex-wrap">
             {!sidebarOpen && (
               <button
                 onClick={() => setSidebarOpen(true)}
@@ -923,7 +912,7 @@ export default function ReportDetailPage() {
 
             <button
               onClick={handleDownloadPdf}
-              className="flex items-center gap-2 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-300 hover:bg-gray-700 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-gray-300 hover:bg-white/[0.08] transition-all duration-[180ms]"
               title="Download PDF"
             >
               <svg
@@ -945,7 +934,7 @@ export default function ReportDetailPage() {
             <button
               onClick={handleDownloadMarkdown}
               disabled={!report.content_markdown}
-              className="flex items-center gap-2 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-300 hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-3 py-2 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-gray-300 hover:bg-white/[0.08] transition-all duration-[180ms] disabled:opacity-40 disabled:cursor-not-allowed"
               title="Download Markdown"
             >
               <svg
@@ -969,7 +958,7 @@ export default function ReportDetailPage() {
             <button
               onClick={handleShare}
               disabled={sharingLoading}
-              className="flex items-center gap-2 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-300 hover:bg-gray-700 transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-3 py-2 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-gray-300 hover:bg-white/[0.08] transition-all duration-[180ms] disabled:opacity-50"
               title="Share report"
             >
               {sharingLoading ? (
@@ -994,7 +983,7 @@ export default function ReportDetailPage() {
 
             <button
               onClick={handlePrint}
-              className="flex items-center gap-2 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-300 hover:bg-gray-700 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-gray-300 hover:bg-white/[0.08] transition-all duration-[180ms]"
               title="Print report"
             >
               <svg
@@ -1057,42 +1046,32 @@ export default function ReportDetailPage() {
         )}
 
         {/* ── Report content ───────────────────────────────────────── */}
-        <article className="max-w-4xl mx-auto px-6 py-8">
+        <article className="max-w-4xl mx-auto px-8 py-10">
           {/* Title block */}
-          <header className="mb-10">
-            <div className="flex items-center gap-3 mb-3">
-              <span className="inline-flex items-center px-2.5 py-1 rounded-md border text-xs font-medium bg-indigo-500/10 text-indigo-400 border-indigo-500/20">
+          <header className="mb-12">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="inline-flex items-center px-3 py-1.5 rounded-lg border text-xs font-medium bg-emerald-500/10 text-emerald-400 border-emerald-500/15">
                 {typeLabel}
               </span>
-              <span className="inline-flex items-center px-2.5 py-1 rounded-md border text-xs font-medium bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+              <span className="inline-flex items-center px-3 py-1.5 rounded-lg border text-xs font-medium bg-white/[0.04] text-gray-400 border-white/[0.06]">
                 Ready
               </span>
               {report.share_enabled && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border text-xs font-medium bg-blue-500/10 text-blue-400 border-blue-500/20">
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={1.5}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"
-                    />
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium bg-blue-500/10 text-blue-400 border-blue-500/15">
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
                   </svg>
                   Shared
                 </span>
               )}
             </div>
-            <h1 className="text-3xl font-bold text-gray-100 mb-3">
+            <h1 className="text-3xl font-editorial font-bold text-gray-100 mb-4 leading-tight">
               {report.title}
             </h1>
             {report.description && (
-              <p className="text-base text-gray-400">{report.description}</p>
+              <p className="text-base text-gray-400 leading-relaxed max-w-2xl">{report.description}</p>
             )}
-            <div className="flex items-center gap-4 mt-4 text-xs text-gray-500">
+            <div className="flex items-center gap-4 mt-5 text-xs text-gray-500">
               <span>
                 Created{" "}
                 {new Date(report.created_at).toLocaleDateString("en-US", {
@@ -1111,31 +1090,37 @@ export default function ReportDetailPage() {
                   })}
                 </span>
               )}
+              {sections.length > 0 && (
+                <span>{sections.length} sections</span>
+              )}
+              {sources.length > 0 && (
+                <span>{sources.length} sources</span>
+              )}
             </div>
           </header>
 
-          {/* Executive Summary */}
+          {/* Executive Summary — the "here's what matters" section */}
           {report.executive_summary && (
             <section
               id="executive-summary"
               ref={(el) => {
                 sectionRefs.current["executive-summary"] = el;
               }}
-              className="mb-10 scroll-mt-20"
+              className="mb-12 scroll-mt-20"
             >
-              <h2 className="text-xl font-bold text-gray-100 mb-4 pb-2 border-b border-gray-800">
+              <h2 className="text-lg font-editorial font-bold text-gray-100 mb-5 pb-3 border-b border-white/[0.06]">
                 Executive Summary
               </h2>
-              <div className="bg-indigo-500/5 border border-indigo-500/10 rounded-xl p-6">
-                <div className="prose prose-invert prose-sm max-w-none prose-p:text-gray-300 prose-headings:text-gray-100 prose-strong:text-gray-200 prose-a:text-indigo-400">
-                  <ReactMarkdown>{report.executive_summary}</ReactMarkdown>
+              <div className="bg-emerald-500/[0.03] border border-emerald-500/10 rounded-2xl p-8">
+                <div className="prose prose-invert prose-base max-w-none prose-p:text-gray-300 prose-p:leading-relaxed prose-headings:text-gray-100 prose-headings:font-editorial prose-strong:text-gray-200 prose-a:text-emerald-400 prose-ul:text-gray-300 prose-li:text-gray-300 prose-li:leading-relaxed">
+                  <ReactMarkdown components={markdownComponents}>{report.executive_summary}</ReactMarkdown>
                 </div>
               </div>
             </section>
           )}
 
-          {/* Sections */}
-          {sections
+          {/* Sections — structured, numbered, with clear hierarchy */}
+          {[...sections]
             .sort((a, b) => a.order - b.order)
             .map((section, idx) => {
               const slug = sectionSlug(section.title, idx);
@@ -1148,50 +1133,47 @@ export default function ReportDetailPage() {
                   ref={(el) => {
                     sectionRefs.current[slug] = el;
                   }}
-                  className="mb-10 scroll-mt-20 group/section"
+                  className="mb-12 scroll-mt-20 group/section"
                 >
-                  <div className="flex items-center gap-3 mb-4 pb-2 border-b border-gray-800">
-                    <h2 className="text-xl font-bold text-gray-100 flex-1">
+                  <div className="flex items-center gap-4 mb-6 pb-3 border-b border-white/[0.06]">
+                    <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center text-sm font-semibold text-emerald-400 tabular-nums">
+                      {idx + 1}
+                    </span>
+                    <h2 className="text-lg font-editorial font-bold text-gray-100 flex-1">
                       {section.title}
                     </h2>
                     <button
                       onClick={() => setRegenSectionIdx(idx)}
-                      className="opacity-0 group-hover/section:opacity-100 p-1.5 rounded-lg text-gray-500 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
+                      className="opacity-0 group-hover/section:opacity-100 p-2 rounded-lg text-gray-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all duration-[180ms]"
                       title="Regenerate this section"
                     >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={1.5}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"
-                        />
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
                       </svg>
                     </button>
                   </div>
 
-                  <div className="prose prose-invert prose-sm max-w-none prose-p:text-gray-300 prose-headings:text-gray-100 prose-strong:text-gray-200 prose-a:text-indigo-400 prose-li:text-gray-300 prose-code:text-indigo-300 prose-code:bg-gray-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-pre:bg-gray-800 prose-pre:border prose-pre:border-gray-700 prose-blockquote:border-indigo-500/40 prose-blockquote:text-gray-400 prose-table:text-gray-300 prose-th:text-gray-200 prose-td:border-gray-700 prose-th:border-gray-700">
-                    <ReactMarkdown>{section.content_md}</ReactMarkdown>
+                  <div className="prose prose-invert prose-base max-w-none prose-p:text-gray-300 prose-p:leading-relaxed prose-headings:text-gray-100 prose-headings:font-editorial prose-strong:text-gray-200 prose-a:text-emerald-400 prose-li:text-gray-300 prose-li:leading-relaxed prose-code:text-emerald-300 prose-code:bg-[#131820] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-pre:bg-[#131820] prose-pre:border prose-pre:border-white/[0.06] prose-pre:rounded-xl prose-blockquote:border-emerald-500/30 prose-blockquote:text-gray-400 prose-blockquote:bg-white/[0.01] prose-blockquote:rounded-r-xl prose-blockquote:py-1 prose-table:text-gray-300 prose-th:text-gray-200 prose-td:border-white/[0.06] prose-th:border-white/[0.06]">
+                    <ReactMarkdown components={markdownComponents}>{section.content_md}</ReactMarkdown>
                   </div>
 
                   {/* Section-specific charts */}
-                  {sectionCharts.map((chart) => (
-                    <ChartRenderer key={chart.id} config={chart} />
-                  ))}
+                  {sectionCharts.length > 0 && (
+                    <div className="mt-6 space-y-4">
+                      {sectionCharts.map((chart) => (
+                        <ChartRenderer key={chart.id} config={chart} />
+                      ))}
+                    </div>
+                  )}
                 </section>
               );
             })}
 
           {/* Global charts (not tied to a section) */}
           {globalCharts.length > 0 && (
-            <section className="mb-10">
-              <h2 className="text-xl font-bold text-gray-100 mb-4 pb-2 border-b border-gray-800">
-                Charts
+            <section className="mb-12">
+              <h2 className="text-lg font-editorial font-bold text-gray-100 mb-5 pb-3 border-b border-white/[0.06]">
+                Data & Charts
               </h2>
               <div className="space-y-6">
                 {globalCharts.map((chart) => (
@@ -1208,13 +1190,15 @@ export default function ReportDetailPage() {
               ref={(el) => {
                 sectionRefs.current["methodology"] = el;
               }}
-              className="mb-10 scroll-mt-20"
+              className="mb-12 scroll-mt-20"
             >
-              <h2 className="text-xl font-bold text-gray-100 mb-4 pb-2 border-b border-gray-800">
+              <h2 className="text-lg font-editorial font-bold text-gray-100 mb-5 pb-3 border-b border-white/[0.06]">
                 Methodology
               </h2>
-              <div className="prose prose-invert prose-sm max-w-none prose-p:text-gray-300 prose-headings:text-gray-100 prose-strong:text-gray-200 prose-a:text-indigo-400">
-                <ReactMarkdown>{report.methodology}</ReactMarkdown>
+              <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+                <div className="prose prose-invert prose-sm max-w-none prose-p:text-gray-400 prose-p:leading-relaxed prose-headings:text-gray-200 prose-strong:text-gray-300 prose-a:text-emerald-400">
+                  <ReactMarkdown components={markdownComponents}>{report.methodology}</ReactMarkdown>
+                </div>
               </div>
             </section>
           )}
@@ -1226,12 +1210,12 @@ export default function ReportDetailPage() {
               ref={(el) => {
                 sectionRefs.current["sources"] = el;
               }}
-              className="mb-10 scroll-mt-20"
+              className="mb-12 scroll-mt-20"
             >
-              <h2 className="text-xl font-bold text-gray-100 mb-4 pb-2 border-b border-gray-800">
-                Sources
+              <h2 className="text-lg font-editorial font-bold text-gray-100 mb-5 pb-3 border-b border-white/[0.06]">
+                Sources ({sources.length})
               </h2>
-              <ol className="space-y-3">
+              <ol className="space-y-1">
                 {sources.map((source, idx) => (
                   <SourceCitation
                     key={`${source.name}-${idx}`}

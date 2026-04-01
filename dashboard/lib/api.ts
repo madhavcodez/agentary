@@ -30,6 +30,12 @@ import { type AuthUser, getToken, setToken, setUser } from "./auth";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+/** Retry-eligible status codes (server errors + rate limits). */
+const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
+
+/** Max retries for GET requests; mutations (POST/PUT/DELETE) are not retried. */
+const MAX_RETRIES = 2;
+
 async function request<T>(
   path: string,
   options: RequestInit = {},
@@ -44,25 +50,45 @@ async function request<T>(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(url, {
-    ...options,
-    headers,
-    cache: "no-store",
-  });
+  const method = (options.method ?? "GET").toUpperCase();
+  const isSafeToRetry = method === "GET" || method === "HEAD";
+  const maxAttempts = isSafeToRetry ? MAX_RETRIES + 1 : 1;
 
-  if (!res.ok) {
-    // On 401, clear token and redirect to login (avoid infinite loops)
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (attempt > 0) {
+      // Exponential backoff: 500ms, 1500ms
+      await new Promise((r) => setTimeout(r, 500 * Math.pow(3, attempt - 1)));
+    }
+
+    const res = await fetch(url, {
+      ...options,
+      headers,
+      cache: "no-store",
+    });
+
+    if (res.ok) {
+      return res.json() as Promise<T>;
+    }
+
+    // On 401, clear token and redirect to login
     if (res.status === 401 && typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
       const { logout } = await import("./auth");
       logout();
       window.location.href = "/login";
       throw new Error("Session expired");
     }
+
     const body = await res.text().catch(() => "Unknown error");
-    throw new Error(`API ${res.status}: ${body}`);
+    lastError = new Error(`API ${res.status}: ${body}`);
+
+    // Only retry on retryable status codes
+    if (!RETRYABLE_STATUSES.has(res.status)) {
+      throw lastError;
+    }
   }
 
-  return res.json() as Promise<T>;
+  throw lastError ?? new Error("Request failed");
 }
 
 // ── Auth ───────────────────────────────────────────────────────────
@@ -607,6 +633,14 @@ export function fetchRunSteps(runId: string): Promise<RunStepItem[]> {
   return request<RunStepItem[]>(`/api/runs/${runId}/steps`);
 }
 
+// ── Mission Report Synthesis ──────────────────────────────────────
+
+export function synthesizeMissionReport(missionId: string): Promise<{ report: { id: string } }> {
+  return request<{ report: { id: string } }>(`/api/missions/${missionId}/synthesize-report`, {
+    method: "POST",
+  });
+}
+
 // (Report CRUD, share, and export functions defined above)
 
 // ── Signals ──────────────────────────────────────────────────────
@@ -837,4 +871,42 @@ export function fetchEntityAliases(entityId: string): Promise<EntityAlias[]> {
 
 export function fetchEntityRelationships(entityId: string): Promise<EntityRelationship[]> {
   return request<EntityRelationship[]>(`/api/entities/${entityId}/relationships`);
+}
+
+// ── Project Onboarding ──────────────────────────────────────────
+
+export interface OnboardingQuestion {
+  id: string;
+  question: string;
+  type: "text" | "select" | "multiselect";
+  options: string[] | null;
+  placeholder: string;
+}
+
+export function generateProjectQuestions(
+  projectId: string,
+  title: string,
+  projectType: string,
+): Promise<{ questions: OnboardingQuestion[] }> {
+  return request<{ questions: OnboardingQuestion[] }>(
+    `/api/projects/${projectId}/generate-questions`,
+    {
+      method: "POST",
+      body: JSON.stringify({ title, project_type: projectType }),
+    },
+  );
+}
+
+export function configureAndStartProject(
+  projectId: string,
+  answers: Record<string, string | string[]>,
+  projectTitle: string,
+): Promise<{ project: Project; mission: { id: string } }> {
+  return request<{ project: Project; mission: { id: string } }>(
+    `/api/projects/${projectId}/configure-and-start`,
+    {
+      method: "POST",
+      body: JSON.stringify({ answers, project_title: projectTitle }),
+    },
+  );
 }

@@ -19,7 +19,7 @@ export default function EmptyState({
   return (
     <div
       className={cn(
-        "bg-gray-900 border border-gray-800 rounded-xl p-12 text-center",
+        "glass-card rounded-xl p-12 text-center",
         className,
       )}
     >

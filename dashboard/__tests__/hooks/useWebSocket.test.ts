@@ -95,10 +95,11 @@ describe('useWebSocket', () => {
     expect(mockWSInstance).toBeNull()
   })
 
-  it('does not connect when no token is present', () => {
+  it('connects with empty token when no token is present (dev mode)', () => {
     delete mockStorage['agentary_token']
     renderHook(() => useWebSocket({ enabled: true }))
-    expect(mockWSInstance).toBeNull()
+    expect(mockWSInstance).not.toBeNull()
+    expect(mockWSInstance!.url).toContain('token=')
   })
 
   it('connects to correct URL without projectId', () => {

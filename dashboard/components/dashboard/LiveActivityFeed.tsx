@@ -62,7 +62,6 @@ export default function LiveActivityFeed({ events }: LiveActivityFeedProps) {
   const [autoScroll, setAutoScroll] = useState(true);
   const lastScrollTop = useRef(0);
 
-  // Auto-scroll to bottom when new events arrive
   useEffect(() => {
     if (autoScroll && containerRef.current) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
@@ -73,7 +72,6 @@ export default function LiveActivityFeed({ events }: LiveActivityFeedProps) {
     const el = containerRef.current;
     if (!el) return;
     const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 50;
-    // Pause auto-scroll if user scrolled up
     if (el.scrollTop < lastScrollTop.current && !atBottom) {
       setAutoScroll(false);
     } else if (atBottom) {
@@ -83,14 +81,14 @@ export default function LiveActivityFeed({ events }: LiveActivityFeedProps) {
   }, []);
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-lg flex flex-col">
-      <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-200">Live Activity Feed</h2>
-        <div className="flex items-center gap-2">
+    <div className="rounded-xl flex flex-col">
+      <div className="px-1 pb-3 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-gray-200">Live Activity</h2>
+        <div className="flex items-center gap-3">
           {!autoScroll && (
             <button
               onClick={() => setAutoScroll(true)}
-              className="text-xs text-indigo-400 hover:text-indigo-300"
+              className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
             >
               Resume auto-scroll
             </button>
@@ -101,23 +99,23 @@ export default function LiveActivityFeed({ events }: LiveActivityFeedProps) {
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="flex-1 min-h-[200px] max-h-[400px] overflow-y-auto px-4 py-2 space-y-1"
+        className="flex-1 overflow-y-auto px-1 py-1 space-y-0.5"
       >
         {events.length === 0 && (
-          <div className="py-8 text-center text-sm text-gray-500">
+          <div className="py-10 text-center text-sm text-gray-500">
             Waiting for activity...
           </div>
         )}
         {events.map((event, idx) => (
           <div
             key={event.event_id ?? idx}
-            className="flex items-start gap-2 py-1.5 animate-fade-in"
+            className="flex items-start gap-3 py-2 animate-fade-in"
           >
-            <span className="text-xs text-gray-500 font-mono shrink-0 mt-0.5">
+            <span className="text-[11px] text-gray-600 font-mono shrink-0 mt-0.5 tabular-nums">
               {formatTime(event.timestamp)}
             </span>
             <span className="shrink-0">{EVENT_ICONS[event.event_type] ?? "\u25CF"}</span>
-            <span className="text-sm text-gray-300 leading-snug">
+            <span className="text-sm text-gray-300 leading-relaxed">
               {eventMessage(event)}
             </span>
           </div>

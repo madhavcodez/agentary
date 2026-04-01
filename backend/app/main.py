@@ -77,7 +77,7 @@ async def lifespan(app: FastAPI):
         pass
 
 
-limiter = Limiter(key_func=get_remote_address)
+from .core.rate_limiter import limiter
 
 app = FastAPI(
     title="Agentary",
@@ -89,6 +89,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -107,6 +108,7 @@ from .core.correlation import CorrelationMiddleware
 
 # Middleware is applied in reverse registration order (last registered runs first).
 # Register CorrelationMiddleware last so it executes first on every request.
+app.add_middleware(GZipMiddleware, minimum_size=500)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,

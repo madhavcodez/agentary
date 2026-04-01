@@ -1,5 +1,7 @@
 "use client";
 
+import { STATUS_COLORS } from "@/lib/constants";
+
 interface Mission {
   id: string;
   title: string;
@@ -20,34 +22,28 @@ interface ActiveMissionsProps {
   runs: ActiveRun[];
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  active: "bg-emerald-500",
-  running: "bg-indigo-500 animate-pulse",
-  pending: "bg-amber-500",
-};
-
 export default function ActiveMissions({ missions, runs }: ActiveMissionsProps) {
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-lg">
-      <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
+    <div className="rounded-xl">
+      <div className="px-1 pb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-200">Active Missions</h2>
-        <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400">
+        <span className="text-xs px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 font-medium">
           {missions.length} active
         </span>
       </div>
-      <div className="divide-y divide-gray-800 max-h-64 overflow-y-auto">
+      <div className="divide-y divide-white/[0.04] max-h-64 overflow-y-auto">
         {missions.length === 0 && runs.length === 0 && (
-          <div className="px-4 py-6 text-center text-sm text-gray-500">
+          <div className="px-5 py-8 text-center text-sm text-gray-500">
             No active missions
           </div>
         )}
         {missions.map((m) => (
-          <div key={m.id} className="px-4 py-3 flex items-center gap-3">
+          <div key={m.id} className="px-5 py-3.5 flex items-center gap-3 hover:bg-white/[0.02] transition-colors duration-[180ms]">
             <div
               className={`w-2 h-2 rounded-full shrink-0 ${STATUS_COLORS[m.status] ?? "bg-gray-500"}`}
             />
             <div className="min-w-0 flex-1">
-              <div className="text-sm text-gray-200 truncate">{m.title}</div>
+              <div className="text-sm text-gray-200 truncate font-medium">{m.title}</div>
               <div className="text-xs text-gray-500 mt-0.5">
                 {m.created_at
                   ? new Date(m.created_at).toLocaleString(undefined, {
@@ -62,7 +58,7 @@ export default function ActiveMissions({ missions, runs }: ActiveMissionsProps) 
           </div>
         ))}
         {runs.map((r) => (
-          <div key={r.id} className="px-4 py-3 flex items-center gap-3">
+          <div key={r.id} className="px-5 py-3.5 flex items-center gap-3 hover:bg-white/[0.02] transition-colors duration-[180ms]">
             <div
               className={`w-2 h-2 rounded-full shrink-0 ${STATUS_COLORS[r.status] ?? "bg-gray-500"}`}
             />

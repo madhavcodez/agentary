@@ -13,6 +13,8 @@ from ..models.mission_run import MissionRun
 from ..models.enums import RunStatus
 from ..schemas.mission import MissionCreate, MissionUpdate, MissionResponse
 from ..schemas.mission_run import MissionRunResponse
+from ..schemas.onboarding import SynthesizeReportResponse
+from ..core.correlation import get_correlation_id
 
 router = APIRouter(prefix="/api/missions", tags=["missions"])
 
@@ -102,7 +104,7 @@ def trigger_mission_run(
     # Dispatch Celery task with run_id for idempotent execution
     try:
         from ..tasks.crew_tasks import plan_and_start_mission
-        plan_and_start_mission.delay(str(mission.id), str(run.id))
+        plan_and_start_mission.delay(str(mission.id), str(run.id), correlation_id=get_correlation_id())
     except Exception as exc:
         import logging
         logging.getLogger(__name__).warning(
@@ -161,7 +163,7 @@ async def start_mission(
         # Enqueue Celery task (with fallback to inline execution)
         try:
             from ..tasks.crew_tasks import execute_crew_run
-            execute_crew_run.delay(str(run.id))
+            execute_crew_run.delay(str(run.id), correlation_id=get_correlation_id())
         except Exception as celery_exc:
             logger.warning("Celery unavailable, falling back to inline execution: %s", celery_exc)
             import asyncio
@@ -192,7 +194,7 @@ async def start_mission(
         db.rollback()
         mission.status = MissionStatus.failed
         db.commit()
-        raise HTTPException(status_code=500, detail=f"Failed to start mission: {e}")
+        raise HTTPException(status_code=500, detail="Failed to start mission. Please try again.")
 
     return {
         "mission_id": str(mission.id),
@@ -377,7 +379,7 @@ async def rerun_mission(
 
         try:
             from ..tasks.crew_tasks import execute_crew_run
-            execute_crew_run.delay(str(run.id))
+            execute_crew_run.delay(str(run.id), correlation_id=get_correlation_id())
         except Exception as celery_exc:
             logger.warning("Celery unavailable for rerun, falling back to inline: %s", celery_exc)
             import asyncio
@@ -408,11 +410,53 @@ async def rerun_mission(
         db.rollback()
         mission.status = MissionStatus.failed
         db.commit()
-        raise HTTPException(status_code=500, detail=f"Failed to rerun mission: {e}")
+        raise HTTPException(status_code=500, detail="Failed to rerun mission. Please try again.")
 
     return {
         "mission_id": str(mission.id),
         "run_id": str(run.id),
         "status": "queued",
         "message": "Mission re-run queued",
+    }
+
+
+# ── Report Synthesis Endpoint ────────────────────────────────────────
+
+
+@router.post("/{mission_id}/synthesize-report", response_model=SynthesizeReportResponse)
+async def synthesize_report(
+    mission_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Synthesize a report from all mission findings using Gemini."""
+    from ..services.report_synthesis import synthesize_report_from_findings
+
+    mission = db.query(Mission).filter(Mission.id == mission_id, Mission.user_id == user.id).first()
+    if not mission:
+        raise HTTPException(status_code=404, detail="Mission not found")
+
+    try:
+        report = await synthesize_report_from_findings(mission, user.id, db)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except RuntimeError:
+        raise HTTPException(status_code=502, detail="AI report synthesis failed. Please try again.")
+    except Exception as exc:
+        db.rollback()
+        logger.error("Failed to save synthesized report for mission %s: %s", mission_id, exc)
+        raise HTTPException(status_code=500, detail="Failed to save report. Please try again.")
+
+    return {
+        "report": {
+            "id": str(report.id),
+            "title": report.title,
+            "status": report.status,
+            "executive_summary": report.executive_summary,
+            "sections": report.sections,
+            "content_markdown": report.content_markdown,
+            "sources": report.sources,
+            "methodology": report.methodology,
+            "created_at": report.created_at.isoformat() if report.created_at else None,
+        },
     }

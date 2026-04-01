@@ -6,6 +6,7 @@ import logging
 import uuid
 
 from ..celery_app import celery_app
+from ..core.correlation import correlation_id_var
 from ..database import SessionLocal
 from ..models.enums import RunStatus
 from ..services.crews.crew_runner import CrewRunner
@@ -43,8 +44,11 @@ def _is_already_completed(db, model_class, record_id: uuid.UUID) -> bool:
     soft_time_limit=3600,
     time_limit=3900,
 )
-def execute_crew_run(self, run_id: str) -> dict:
+def execute_crew_run(self, run_id: str, correlation_id: str | None = None) -> dict:
     """Execute a crew run in the background."""
+    if correlation_id:
+        correlation_id_var.set(correlation_id)
+
     db = SessionLocal()
     try:
         # Idempotency check — skip if already completed
@@ -77,8 +81,11 @@ def execute_crew_run(self, run_id: str) -> dict:
     soft_time_limit=3600,
     time_limit=3900,
 )
-def plan_and_start_mission(self, mission_id: str, run_id: str | None = None) -> dict:
+def plan_and_start_mission(self, mission_id: str, run_id: str | None = None, correlation_id: str | None = None) -> dict:
     """Plan a mission, assemble crew, and execute."""
+    if correlation_id:
+        correlation_id_var.set(correlation_id)
+
     db = SessionLocal()
     try:
         mission = db.query(Mission).filter_by(id=uuid.UUID(mission_id)).first()

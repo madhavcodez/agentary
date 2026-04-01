@@ -59,12 +59,7 @@ export function useWebSocket(
 
   const connect = useCallback(() => {
     if (!enabled) return;
-    const token = getToken();
-    if (!token) {
-      // No token — don't try to connect, don't trigger reconnect loop
-      setConnectionState("disconnected");
-      return;
-    }
+    const token = getToken() ?? "";
 
     // Clean up existing connection
     if (wsRef.current) {

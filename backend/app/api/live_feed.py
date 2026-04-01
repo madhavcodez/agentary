@@ -49,18 +49,36 @@ event_bus.broadcast = types.MethodType(_broadcast_with_buffer, event_bus)
 # ── WebSocket endpoint ──────────────────────────────────────────────
 
 @router.websocket("/ws/live-feed")
-async def live_feed_ws(websocket: WebSocket, token: str = Query(...)):
+async def live_feed_ws(websocket: WebSocket, token: str = Query(default="")):
     """Real-time event stream. Authenticate via ?token=<jwt>.
 
     Client can send:
         {"type": "subscribe", "project_id": "..."}
     to scope events to a specific project.
     """
-    try:
-        user_id = verify_token(token)
-    except Exception:
-        await websocket.close(code=4001, reason="Invalid token")
-        return
+    from ..config import settings
+    user_id = None
+
+    if token:
+        try:
+            user_id = verify_token(token)
+        except Exception:
+            pass
+
+    # Dev mode: allow connection without valid token
+    if user_id is None:
+        if settings.app_env == "dev":
+            from ..deps import _get_or_create_dev_user
+            from ..database import get_session
+            db = next(get_session())
+            try:
+                dev_user = _get_or_create_dev_user(db)
+                user_id = dev_user.id
+            finally:
+                db.close()
+        else:
+            await websocket.close(code=4001, reason="Invalid token")
+            return
 
     client = await ws_manager.connect(websocket, str(user_id))
 

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Lora } from "next/font/google";
 import "./globals.css";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -8,6 +8,12 @@ import AuthProvider from "@/components/AuthProvider";
 import AuthGate from "@/components/AuthGate";
 
 const inter = Inter({ subsets: ["latin"] });
+const lora = Lora({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-lora",
+});
 
 export const metadata: Metadata = {
   title: "Agentary",
@@ -21,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={inter.className}>
+      <body className={`${inter.className} ${lora.variable}`}>
         <ToastProvider>
           <AuthProvider>
             <WebSocketProvider>

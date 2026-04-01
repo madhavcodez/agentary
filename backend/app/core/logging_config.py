@@ -6,6 +6,23 @@ import sys
 from datetime import datetime, timezone
 
 
+class CorrelationFilter(logging.Filter):
+    """Inject the current request's correlation ID into every log record.
+
+    The correlation ID is read from the :data:`correlation_id_var` context
+    variable that is set by :class:`CorrelationMiddleware`.  If no
+    correlation ID is present (e.g. during startup or in background tasks)
+    the attribute defaults to an empty string.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        # Lazy import to avoid circular dependency at module load time
+        from .correlation import get_correlation_id
+
+        record.correlation_id = get_correlation_id()  # type: ignore[attr-defined]
+        return True
+
+
 class JSONFormatter(logging.Formatter):
     """Emit every log record as a single-line JSON object."""
 
@@ -20,7 +37,7 @@ class JSONFormatter(logging.Formatter):
             "line": record.lineno,
         }
 
-        # Correlation ID (set by CorrelationMiddleware via contextvars)
+        # Correlation ID (injected by CorrelationFilter from contextvars)
         correlation_id = getattr(record, "correlation_id", None)
         if correlation_id:
             log_entry["correlation_id"] = str(correlation_id)
@@ -47,6 +64,7 @@ def setup_logging(level: str = "INFO") -> None:
 
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JSONFormatter())
+    handler.addFilter(CorrelationFilter())
     root.addHandler(handler)
 
     # Quiet noisy libraries

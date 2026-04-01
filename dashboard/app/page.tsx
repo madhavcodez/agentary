@@ -96,46 +96,47 @@ export default function HomePage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-8 py-16">
+    <div className="max-w-3xl mx-auto px-8 py-10">
       {/* Hero */}
-      <div className="mb-12">
-        <h1 className="text-3xl font-bold text-gray-100 tracking-tight">
-          Welcome to Agentary
+      <div className="mb-10">
+        <h1 className="text-2xl font-editorial font-bold text-gray-100 tracking-tight">
+          New Research
         </h1>
-        <p className="text-gray-500 mt-2 text-lg">
-          Deploy AI agents that research, analyze, and report — automatically.
+        <p className="text-gray-500 mt-1.5 text-sm">
+          Pick a template and launch your agents.
         </p>
       </div>
 
       {/* Type Selection */}
-      <div className="mb-8">
-        <p className="text-sm font-medium text-gray-400 mb-4">
-          What would you like to research?
-        </p>
+      <div className="mb-8" role="radiogroup" aria-label="Research type">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {TEMPLATES.map((t) => (
             <button
               key={t.type}
+              role="radio"
+              aria-checked={selectedType === t.type}
               onClick={() => handleSelectType(t.type)}
-              className={`text-left p-4 rounded-xl border transition-all duration-150 ${
+              className={`text-left px-4 py-3.5 rounded-xl border transition-all duration-[180ms] ${
                 selectedType === t.type
-                  ? "bg-emerald-500/10 border-emerald-500/30 ring-1 ring-emerald-500/20"
-                  : "bg-gray-900 border-gray-800/50 hover:border-gray-700/60 hover:bg-gray-900/80"
+                  ? "bg-emerald-500/10 border-emerald-500/20 ring-1 ring-emerald-500/10"
+                  : "glass-card card-hover hover:border-white/[0.12]"
               }`}
             >
-              <div className="text-2xl mb-2">{t.icon}</div>
-              <div className={`text-sm font-medium ${selectedType === t.type ? "text-emerald-400" : "text-gray-200"}`}>
-                {t.label}
+              <div className="flex items-center gap-2.5">
+                <span className="text-lg">{t.icon}</span>
+                <span className={`text-sm font-medium ${selectedType === t.type ? "text-emerald-400" : "text-gray-200"}`}>
+                  {t.label}
+                </span>
               </div>
-              <div className="text-xs text-gray-500 mt-1">{t.hint}</div>
+              <div className="text-[11px] text-gray-500 mt-1.5 leading-relaxed pl-[30px]">{t.hint}</div>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Name + Create — appears after type selection */}
+      {/* Name + Create -- appears after type selection */}
       {selectedType && (
-        <div className="mb-16 animate-in fade-in duration-200">
+        <div className="mb-10 animate-slide-up">
           <div className="flex gap-3">
             <label htmlFor="project-name" className="sr-only">Project name</label>
             <input
@@ -143,51 +144,25 @@ export default function HomePage() {
               type="text"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+              onKeyDown={(e) => e.key === "Enter" && !creating && handleCreate()}
               placeholder="Name your project..."
               autoFocus
-              className="flex-1 bg-gray-900 border border-gray-800/50 rounded-xl px-4 py-3 text-sm text-gray-100 placeholder-gray-600 focus:border-emerald-500/40 focus:outline-none focus:ring-1 focus:ring-emerald-500/20 transition-all"
+              className="flex-1 glass-card rounded-xl px-5 py-3 text-sm text-gray-100 placeholder-gray-600 focus:border-emerald-500/40 focus:outline-none focus:ring-1 focus:ring-emerald-500/20 transition-all duration-[180ms]"
             />
             <button
               onClick={handleCreate}
               disabled={creating || !projectName.trim()}
-              className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-800 disabled:text-gray-600 text-white text-sm font-medium rounded-xl transition-colors whitespace-nowrap"
+              className="px-7 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#1a2030] disabled:text-gray-600 text-white text-sm font-semibold rounded-xl transition-all duration-[180ms] whitespace-nowrap"
             >
-              {creating ? "Creating..." : "Create Project →"}
+              {creating ? "Creating..." : "Create Project"}
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* Quick Start */}
-      {!selectedType && (
-        <div className="mb-16 bg-gray-900/50 border border-gray-800/30 rounded-xl p-6">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-4">
-            How it works
-          </p>
-          <div className="grid grid-cols-3 gap-6">
-            {[
-              { step: "1", title: "Pick a type", desc: "Choose what you want to research" },
-              { step: "2", title: "Define a mission", desc: "Tell agents what to find" },
-              { step: "3", title: "Get results", desc: "Findings, reports, data — automatically" },
-            ].map((s) => (
-              <div key={s.step} className="flex gap-3">
-                <div className="w-6 h-6 rounded-full bg-gray-800 text-gray-500 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
-                  {s.step}
-                </div>
-                <div>
-                  <div className="text-sm text-gray-300 font-medium">{s.title}</div>
-                  <div className="text-xs text-gray-600 mt-0.5">{s.desc}</div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       )}
 
       {/* Load Error */}
       {loadError && projects.length === 0 && (
-        <div className="mb-8 bg-red-500/5 border border-red-500/20 rounded-xl p-4 flex items-center justify-between">
+        <div className="mb-6 glass-card rounded-xl p-4 flex items-center justify-between border-red-500/15">
           <p className="text-sm text-red-400">Failed to load recent projects.</p>
           <button onClick={loadProjects} className="text-xs text-red-400 hover:text-red-300 underline transition-colors">
             Retry
@@ -198,26 +173,27 @@ export default function HomePage() {
       {/* Recent Projects */}
       {projects.length > 0 && (
         <div>
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-3">
             Recent projects
           </p>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {projects.slice(0, 5).map((p) => (
               <button
                 key={p.id}
                 onClick={() => router.push(`/projects/${p.id}`)}
-                className="w-full text-left flex items-center gap-4 px-4 py-3 bg-gray-900 border border-gray-800/50 rounded-xl hover:border-gray-700/60 transition-colors"
+                onMouseEnter={() => router.prefetch(`/projects/${p.id}`)}
+                className="w-full text-left flex items-center gap-3.5 px-4 py-3 glass-card rounded-xl hover:border-white/[0.12] transition-all duration-[180ms] card-hover"
               >
-                <div className="text-lg">
-                  {TEMPLATES.find((t) => t.type === p.project_type)?.icon ?? "📁"}
+                <div className="text-base">
+                  {TEMPLATES.find((t) => t.type === p.project_type)?.icon ?? "\u{1F4C1}"}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm text-gray-200 font-medium truncate">{p.name}</div>
-                  <div className="text-xs text-gray-600 mt-0.5">
+                  <div className="text-[11px] text-gray-500 mt-0.5">
                     {p.total_missions} missions · {p.total_findings} findings
                   </div>
                 </div>
-                <div className="text-xs text-gray-600">
+                <div className="text-[11px] text-gray-600">
                   {new Date(p.created_at).toLocaleDateString()}
                 </div>
               </button>

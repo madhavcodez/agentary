@@ -21,8 +21,9 @@ const WebSocketContext = createContext<WebSocketContextValue>({
 });
 
 export function WebSocketProvider({ children }: { children: ReactNode }) {
-  // Only attempt WS connection if user has a token
-  const ws = useWebSocket({ enabled: isAuthenticated() });
+  // In dev mode, always enable WS (backend accepts empty token)
+  const isDev = process.env.NODE_ENV === "development";
+  const ws = useWebSocket({ enabled: isDev || isAuthenticated() });
   return (
     <WebSocketContext.Provider value={ws}>{children}</WebSocketContext.Provider>
   );
