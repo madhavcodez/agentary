@@ -2,7 +2,7 @@
 
 ## YOUR MISSION
 
-You are a Claude Code agent. Build the **voice extraction system** — expert agents make phone calls to businesses/people, have natural conversations, and extract structured data. Generalize the existing Pipecat + Gemini Live + Twilio pipeline from "call recruiters" to "call anyone about anything."
+You are a coding agent. Build the **voice extraction system** — expert agents make phone calls to businesses/people, have natural conversations, and extract structured data. Generalize the existing Pipecat + Gemini Live + Twilio pipeline from "call recruiters" to "call anyone about anything."
 
 **Start:** `/plan Read this entire file, explore existing voice code (Pipecat, Gemini Live, Twilio), then build everything.`
 

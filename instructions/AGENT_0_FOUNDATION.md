@@ -1,9 +1,10 @@
 # AGENT 0 — Foundation & Domain Restructure
 
 ## YOUR MISSION
-You are an autonomous Claude Code agent. Fully complete Phase 0 — rename SecretAIRY → Agentary, replace ALL job-search domain language with research/intelligence domain language, create every new database model, set up Celery, events, telemetry, and scaffold the entire new directory structure.
+You are an autonomous coding agent. Fully complete Phase 0 — rename SecretAIRY → Agentary, replace ALL job-search domain language with research/intelligence domain language, create every new database model, set up Celery, events, telemetry, and scaffold the entire new directory structure.
 
-**Run with:** `claude --dangerously-skip-permissions -p "Read AGENT_0_FOUNDATION.md in the current directory, then execute every step. Use /plan first to create your approach, then build everything. Do not stop until all success criteria are met. Loop back and verify." --max-turns 200`
+**Run with:** `agent-cli --dangerously-skip-permissions -p "Read AGENT_0_FOUNDATION.md in the current directory, then execute every step. Use /plan first to create your approach, then build everything. Do not stop until all success criteria are met. Loop back and verify." --max-turns 200`  
+Replace `agent-cli` with your installed coding CLI command.
 
 ---
 

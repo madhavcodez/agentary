@@ -2,7 +2,7 @@
 
 ## YOUR MISSION
 
-You are a Claude Code agent. Build the **workflow engine** — users define custom research workflows via three interfaces: **templates** (quick start), **natural language** ("do X then Y then Z"), and a **visual node editor** (drag-and-drop for power users).
+You are a coding agent. Build the **workflow engine** — users define custom research workflows via three interfaces: **templates** (quick start), **natural language** ("do X then Y then Z"), and a **visual node editor** (drag-and-drop for power users).
 
 **Start:** `/plan Read this entire file, explore the repo, then build everything.`
 

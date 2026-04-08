@@ -2,7 +2,8 @@
 
 ## Overview
 
-You will run **8 Claude Code CLI terminals** in parallel, each working on a different phase of Agentary. They'll run all night on 2x usage with max effort.
+You will run **8 coding-agent CLI terminals** in parallel, each working on a different phase of Agentary. They'll run all night on 2x usage with max effort.
+In all commands below, replace `agent-cli` with your installed coding CLI command.
 
 ```
 Terminal 0: Agent 0 — Foundation & Domain Rename     (STARTS FIRST — 30min head start)
@@ -19,7 +20,7 @@ Terminal 7: Agent 7 — Orchestrator                     (starts after ~2hrs)
 
 ## Prerequisites
 
-1. **Claude CLI installed** with your API key configured
+1. **coding-agent CLI installed** with your API key configured
 2. **The SecretAIRY repo** cloned locally
 3. **Docker + Docker Compose** installed
 4. **Node.js 18+** installed
@@ -94,9 +95,9 @@ tmux select-window -t agentary:agent0
 cd ~/projects/agentary
 
 # Launch Agent 0
-claude --dangerously-skip-permissions
+agent-cli --dangerously-skip-permissions
 
-# Once Claude CLI is open, paste:
+# Once coding-agent CLI is open, paste:
 /plan Read docs/agent-instructions/AGENT_0_FOUNDATION.md completely. Then explore the entire repo structure. Then execute every step in the file end-to-end. Do not stop until every success criteria is met. After completing all steps, loop back and verify everything, fixing any issues found. Keep iterating until perfect.
 ```
 
@@ -112,7 +113,7 @@ In each tmux window, launch the corresponding agent:
 ```bash
 tmux select-window -t agentary:agent1
 cd ~/projects/agentary
-claude --dangerously-skip-permissions
+agent-cli --dangerously-skip-permissions
 
 # Paste:
 /plan Read docs/agent-instructions/AGENT_1_RESEARCH_ENGINE.md completely. Explore what Agent 0 has set up so far. Then build the entire research engine and expert crew system end-to-end. Create all models, services, API routes, Celery tasks, and frontend pages. Do not stop until every success criteria is met. If Agent 0 hasn't created a directory you need yet, create it yourself. Keep iterating until perfect.
@@ -122,7 +123,7 @@ claude --dangerously-skip-permissions
 ```bash
 tmux select-window -t agentary:agent2
 cd ~/projects/agentary
-claude --dangerously-skip-permissions
+agent-cli --dangerously-skip-permissions
 
 # Paste:
 /plan Read docs/agent-instructions/AGENT_2_VOICE_EXTRACTION.md completely. Explore the existing Pipecat + Gemini Live + Twilio voice code. Then build the voice extraction system end-to-end. Create all models, services, API routes, and frontend pages. Do not stop until every success criteria is met. Keep iterating until perfect.
@@ -132,7 +133,7 @@ claude --dangerously-skip-permissions
 ```bash
 tmux select-window -t agentary:agent3
 cd ~/projects/agentary
-claude --dangerously-skip-permissions
+agent-cli --dangerously-skip-permissions
 
 # Paste:
 /plan Read docs/agent-instructions/AGENT_3_WORKFLOW_ENGINE.md completely. Then build the entire workflow engine end-to-end. Create all models, services (including the natural language workflow builder and visual editor), API routes, templates, and frontend pages. Do not stop until every success criteria is met. Keep iterating until perfect.
@@ -142,7 +143,7 @@ claude --dangerously-skip-permissions
 ```bash
 tmux select-window -t agentary:agent4
 cd ~/projects/agentary
-claude --dangerously-skip-permissions
+agent-cli --dangerously-skip-permissions
 
 # Paste:
 /plan Read docs/agent-instructions/AGENT_4_LIVE_DASHBOARD.md completely. Explore the existing WebSocket/Scout code. Then build the live dashboard, WebSocket system, monitoring service, and alert system end-to-end. Create all models, services, API routes, and frontend pages. Do not stop until every success criteria is met. Keep iterating until perfect.
@@ -152,7 +153,7 @@ claude --dangerously-skip-permissions
 ```bash
 tmux select-window -t agentary:agent5
 cd ~/projects/agentary
-claude --dangerously-skip-permissions
+agent-cli --dangerously-skip-permissions
 
 # Paste:
 /plan Read docs/agent-instructions/AGENT_5_DATA_SOURCES.md completely. Explore existing connectors (Exa, Gemini). Then build the entire data source connector system with all 10 connectors, the source registry, and the entity system. Create all models, services, API routes. Do not stop until every success criteria is met. Keep iterating until perfect.
@@ -162,7 +163,7 @@ claude --dangerously-skip-permissions
 ```bash
 tmux select-window -t agentary:agent6
 cd ~/projects/agentary
-claude --dangerously-skip-permissions
+agent-cli --dangerously-skip-permissions
 
 # Paste:
 /plan Read docs/agent-instructions/AGENT_6_REPORTS_EXPORT.md completely. Then build the report generation system, chart generator, PDF exporter, data exporter, and sharing service end-to-end. Create all models, services, API routes, and frontend pages. Do not stop until every success criteria is met. Keep iterating until perfect.
@@ -177,7 +178,7 @@ Wait until the other agents have made substantial progress before launching the 
 ```bash
 tmux select-window -t agentary:agent7
 cd ~/projects/agentary
-claude --dangerously-skip-permissions
+agent-cli --dangerously-skip-permissions
 
 # Paste:
 /plan Read docs/agent-instructions/AGENT_7_ORCHESTRATOR.md completely. Then check the progress of all other agents by examining the codebase, running tests, and verifying success criteria. Fix any integration issues, wire everything together, run end-to-end tests, and keep iterating until the entire platform works as one system. Never stop — keep finding and fixing issues, adding tests, and improving code quality.
@@ -271,8 +272,8 @@ Multiple agents writing to the same repo WILL create conflicts. Mitigation:
 
 1. **Make sure your machine won't sleep** — disable sleep/hibernate
 2. **Plenty of disk space** — these agents generate a lot of code
-3. **Stable internet** — needed for Claude API calls
+3. **Stable internet** — needed for model API calls
 4. **tmux keeps running** even if you close the terminal window
 5. **Check logs periodically** if you're still awake — agents might get stuck
 6. **Git auto-commit** — each agent commits frequently, so progress is saved
-7. **If an agent seems stuck** — kill it and restart with the same /plan command. Claude Code will pick up where it left off by reading the codebase.
+7. **If an agent seems stuck** — kill it and restart with the same /plan command. The coding agent will pick up where it left off by reading the codebase.

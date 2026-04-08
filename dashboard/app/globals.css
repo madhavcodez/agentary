@@ -122,7 +122,7 @@ body {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
-/* Thinking dots animation (like Claude/ChatGPT) */
+/* Thinking dots animation (for assistant replies) */
 @keyframes thinking-dot {
   0%, 20% { opacity: 0.2; transform: translateY(0); }
   50% { opacity: 1; transform: translateY(-4px); }

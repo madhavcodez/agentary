@@ -2,7 +2,7 @@
 
 ## YOUR MISSION
 
-You are a Claude Code agent. Build the **output layer** — everything that turns raw research findings into polished, usable deliverables: narrative reports, charts, PDFs, data exports, interactive tables, and shareable links.
+You are a coding agent. Build the **output layer** — everything that turns raw research findings into polished, usable deliverables: narrative reports, charts, PDFs, data exports, interactive tables, and shareable links.
 
 **Start:** `/plan Read this entire file, explore the repo, then build everything.`
 

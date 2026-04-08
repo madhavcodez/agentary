@@ -2,7 +2,7 @@
 
 ## YOUR MISSION
 
-You are a Claude Code agent. Build the **pluggable data source connector system** — the adapter layer connecting Agentary to external APIs, web scrapers, databases, and services. Every expert agent and workflow node depends on these connectors to fetch real-world data.
+You are a coding agent. Build the **pluggable data source connector system** — the adapter layer connecting Agentary to external APIs, web scrapers, databases, and services. Every expert agent and workflow node depends on these connectors to fetch real-world data.
 
 **Start:** `/plan Read this entire file, explore existing connectors (Exa, Gemini Search), then build everything.`
 

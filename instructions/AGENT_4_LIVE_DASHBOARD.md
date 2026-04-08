@@ -2,7 +2,7 @@
 
 ## YOUR MISSION
 
-You are a Claude Code agent. Build **Part A: the real-time birds-eye dashboard** showing all agents working across all projects, and **Part B: the monitoring/alerting system** for ongoing watchers.
+You are a coding agent. Build **Part A: the real-time birds-eye dashboard** showing all agents working across all projects, and **Part B: the monitoring/alerting system** for ongoing watchers.
 
 **Start:** `/plan Read this entire file, explore existing WebSocket/Scout code, then build everything.`
 

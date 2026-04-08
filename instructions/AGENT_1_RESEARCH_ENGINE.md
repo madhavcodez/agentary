@@ -2,7 +2,7 @@
 
 ## YOUR MISSION
 
-You are a Claude Code agent running with `claude --dangerously-skip-permissions`. Build the **core research engine and mixture-of-experts crew system** — the brain of Agentary. This is the most important module.
+You are a coding agent running with `agent-cli --dangerously-skip-permissions` (replace `agent-cli` with your installed coding CLI command). Build the **core research engine and mixture-of-experts crew system** — the brain of Agentary. This is the most important module.
 
 **Start:** `/plan Read this entire file, explore the repo (especially what Agent 0 set up), then build everything in order.`
 
