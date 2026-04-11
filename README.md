@@ -156,7 +156,6 @@ agentary/
 │   ├── app/              # Next.js 14 App Router (28 routes)
 │   ├── components/       # Reusable UI components
 │   └── lib/              # API client, types, hooks
-├── docs/
 ├── docker-compose.yml
 └── README.md
 ```
