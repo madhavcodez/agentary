@@ -1,4 +1,3 @@
-import React from "react";
 import { STATUS_COLORS } from "@/lib/constants";
 import type { MissionLiveStatus, CrewAgent } from "@/lib/types";
 import GlassCard from "@/components/ui/GlassCard";

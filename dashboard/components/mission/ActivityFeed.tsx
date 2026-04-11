@@ -1,4 +1,3 @@
-import React from "react";
 import { ACTIVITY_ICONS } from "@/lib/constants";
 import type { MissionActivity } from "@/lib/types";
 import GlassCard from "@/components/ui/GlassCard";

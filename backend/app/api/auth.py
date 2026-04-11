@@ -3,11 +3,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
-
-
 
 from ..auth import create_access_token, hash_password, verify_password
 from ..deps import get_current_user, get_db
@@ -25,7 +21,6 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
-
 def register(body: RegisterRequest, request: Request, db: Session = Depends(get_db)):
     """Register a new user account.
 
@@ -67,7 +62,6 @@ def register(body: RegisterRequest, request: Request, db: Session = Depends(get_
 
 
 @router.post("/login", response_model=TokenResponse)
-
 def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
     """Authenticate a user and return a JWT.
 

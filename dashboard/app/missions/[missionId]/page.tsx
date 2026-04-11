@@ -234,9 +234,7 @@ export default function MissionDetailPage() {
       if (event.event_type === EventTypes.FINDING_CREATED) {
         fetchMissionFindings(missionId)
           .then((data) => setFindings(data.items))
-          .catch((err) => {
-            console.error("Failed to refresh findings:", err);
-          });
+          .catch(() => {});
       }
     };
 
@@ -273,7 +271,6 @@ export default function MissionDetailPage() {
 
   // Derive suggested missions from findings
   const suggestedMissions = useMemo(() => deriveSuggestions(findings), [findings]);
-
 
   const handleSuggestionClick = useCallback((suggestion: string) => {
     router.push(`/missions?new=1&name=${encodeURIComponent(suggestion)}`);
