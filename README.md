@@ -11,78 +11,376 @@
 [![Gemini](https://img.shields.io/badge/Gemini_2.5-Flash-4285F4?style=flat-square&logo=google&logoColor=white)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
-**Define an objective, run multi-step research missions, and get structured outputs (signals, actions, reports) from one unified system.**
+**Define an objective. Agentary scouts the landscape, deep-dives every angle in parallel, audits its own gaps, and delivers structured intelligence — all autonomously.**
 
-[Description](#description) · [Architecture Breakdown](#architecture-breakdown) · [Quick Start](#quick-start) · [Project Structure](#project-structure)
+[Architecture](#architecture) · [Research Methodology](#deerflow-research-methodology) · [Execution Pipeline](#execution-pipeline) · [Quick Start](#quick-start) · [Project Structure](#project-structure)
 
 </div>
 
 ---
 
-## Description
+## What Is Agentary
 
-Agentary is a full-stack platform for autonomous research operations.
+Agentary is a full-stack platform for autonomous research operations. You provide a mission objective, and the system handles everything from research planning through intelligence delivery.
 
-You provide a mission objective, and the system handles:
+**What it does:**
+- Plans and decomposes research missions into expert-agent tasks
+- Runs multi-source collection in parallel (web search, data extraction, voice calls)
+- Scores, attributes, and structures every finding with confidence levels
+- Generates intelligence layers (signals, insights, recommendations)
+- Produces exportable reports with executive summaries, charts, and citations
 
-- planning and task orchestration
-- multi-source collection (web/data/voice)
-- structured findings and confidence scoring
-- intelligence generation (signals, insights, recommendations)
-- controlled execution through approvals and actions
-- report/export delivery
-
-Use cases include market intelligence, competitor monitoring, due diligence, and local business data collection.
+**Use cases:** Market intelligence, competitor monitoring, due diligence, lead research, local business data collection, technology landscape analysis.
 
 ---
 
-## Architecture Breakdown
+## Architecture
 
-### 1) Frontend Layer (`dashboard/`)
+Agentary is a four-layer system: a Next.js dashboard talks to a FastAPI orchestration layer, which dispatches work to Celery workers backed by PostgreSQL, Redis, and Qdrant.
 
-- Next.js App Router + TypeScript + TailwindCSS
-- Mission control and operational views (missions, workflows, reports, monitors, approvals, analytics)
-- Live updates through WebSocket + REST hydration
+```
+                                 +---------------------+
+                                 |    Next.js 14       |
+                                 |    Dashboard        |
+                                 |  (App Router + WS)  |
+                                 +---------+-----------+
+                                           |
+                              REST + WebSocket (real-time)
+                                           |
+                                 +---------v-----------+
+                                 |    FastAPI           |
+                                 |    Orchestration     |
+                                 |  (40+ API routes)    |
+                                 +---------+-----------+
+                                           |
+                    +----------------------+----------------------+
+                    |                      |                      |
+          +---------v------+    +---------v------+    +---------v------+
+          |  Celery Workers |    |  PostgreSQL    |    |  Redis         |
+          |  (6 queues)     |    |  (50+ tables)  |    |  (queue/pubsub)|
+          +--------+--------+    +----------------+    +----------------+
+                   |
+          +--------v--------+
+          |  AI + External   |
+          |  Gemini, Exa,    |
+          |  Twilio, Scrapers|
+          +------------------+
+```
 
-### 2) API & Orchestration Layer (`backend/app/`)
+### Layer 1: Frontend (`dashboard/`)
 
-- FastAPI router surface for core resources and workflows
-- Mission runner and expert-agent crew orchestration
-- Workflow DAG execution
-- Voice extraction orchestration
-- Intelligence pipeline: findings -> signals -> insights -> recommendations -> actions
-- Reporting services (narrative, charts, export)
+Next.js 14 App Router with TypeScript and Tailwind CSS. 28 routes covering missions, projects, reports, monitors, workflows, analytics, voice management, and settings. Real-time updates via WebSocket for mission progress, finding discovery, and report readiness.
 
-### 3) Data & Execution Layer
+### Layer 2: API and Orchestration (`backend/app/`)
 
-- PostgreSQL: primary relational data and migrations
-- Redis: queueing, pub/sub, and runtime state
-- Qdrant: vector search for semantic retrieval
-- Celery + scheduler: asynchronous execution for missions, monitors, reports, workflows, and actions
+FastAPI serving 40+ endpoints. Core orchestration services:
 
-### 4) AI & Integrations Layer
+| Service | Path | Responsibility |
+|---------|------|----------------|
+| **Crew Runner** | `services/crews/crew_runner.py` | Expert-agent execution engine (DeerFlow 5-phase) |
+| **Task Planner** | `services/crews/task_planner.py` | Gemini-powered mission decomposition |
+| **Expert Registry** | `services/crews/expert_registry.py` | 10 builtin specialist agents |
+| **Tool Registry** | `services/crews/tool_registry.py` | Agentic tool dispatch (search, scrape, call, analyze) |
+| **Research Engine** | `services/research/engine.py` | Deep research for match/company intel |
+| **Report Generator** | `services/reports/report_generator.py` | Markdown/HTML synthesis from findings |
+| **Signal Service** | `services/intelligence/signal_service.py` | Signal detection and tracking |
+| **Insight Generator** | `services/intelligence/insight_generator.py` | LLM-driven insight synthesis |
+| **Workflow Engine** | `services/workflow/service.py` | DAG-based workflow execution |
+| **State Machine** | `services/state_machine.py` | Run lifecycle and transition validation |
 
-- Gemini for generation, reasoning, extraction, and tool-calling
-- External connectors for web and domain data sources
-- Voice stack integrations for outbound calls and transcript processing
+### Layer 3: Data and Execution
+
+- **PostgreSQL** (50+ tables): Projects, missions, findings, expert agents, crew tasks, reports, entities, signals, insights, recommendations, audit logs. Full migration history via Alembic.
+- **Redis**: Celery task broker, pub/sub for WebSocket events, runtime state caching.
+- **Qdrant**: Vector embeddings for semantic search across findings and entities.
+- **Celery** (6 queues): `research`, `missions`, `voice`, `monitors`, `reports`, `workflows`. Beat scheduler for periodic monitoring.
+
+### Layer 4: AI and Integrations
+
+| Integration | Usage |
+|-------------|-------|
+| **Gemini 2.5 Flash** | Core LLM for reasoning, extraction, tool-calling, and report synthesis |
+| **Gemini Grounding** | Google Search grounding for live web intelligence |
+| **Exa Search** | Neural web search and contact discovery |
+| **Web Scraper** | Content extraction from target URLs |
+| **Twilio** | Outbound voice calls with transcript extraction |
+| **Resend** | Email delivery for notifications and reports |
 
 ---
 
-## End-to-End Flow
+## DeerFlow Research Methodology
 
-1. User creates project + mission objective
-2. System builds execution plan and selects agents/tools
-3. Collection runs in parallel (web/data/voice)
-4. Findings are normalized, scored, and attributed
-5. Intelligence and recommendations are generated
-6. Actions execute with policy/approval gates
-7. Reports and exports are produced
+Agentary's crew execution engine implements the [DeerFlow](https://github.com/bytedance/deer-flow) deep-research methodology — a systematic, multi-phase approach that replaces single-pass research with structured, multi-angle investigation.
+
+### The Problem with Single-Pass Research
+
+A naive research agent calls a search tool once, reads the results, and writes a report. This produces shallow output that misses critical angles, lacks opposing viewpoints, and often relies on whatever the first search query happened to return.
+
+### The DeerFlow Solution: 5-Phase Research Pipeline
+
+Every mission in Agentary now executes through five sequential phases, each with a distinct purpose:
+
+```
+ PHASE 1          PHASE 2              PHASE 3           PHASE 4          PHASE 5
+ ┌──────┐    ┌──────────────┐     ┌────────────┐    ┌───────────┐    ┌──────────┐
+ │SCOUT │───>│   RESEARCH   │────>│ GAP CHECK  │───>│ SYNTHESIS │───>│  REPORT  │
+ │      │    │  (parallel)  │     │            │    │           │    │          │
+ └──────┘    └──────────────┘     └────────────┘    └───────────┘    └──────────┘
+  1 expert    N experts x          1 expert          1 expert         1 expert
+  broad       M dimensions         audit pass        merge + assess   structure
+  landscape   deep dives           completeness      contradictions   delivery
+```
+
+#### Phase 1 — Scout
+
+A single expert performs broad exploration to map the research landscape before any deep investigation begins.
+
+**What it does:**
+- Surveys the topic with initial searches to understand overall context
+- Identifies key dimensions, subtopics, and angles that need deeper investigation
+- Maps stakeholders, perspectives, and data sources
+- Produces a structured list of research dimensions for Phase 2
+
+**Why it matters:** Without scouting, research experts dive into whatever angle happens to come up first. The scout ensures every important dimension gets dedicated attention.
+
+#### Phase 2 — Research (Parallel Deep Dives)
+
+Multiple expert agents execute in parallel, each assigned to different research dimensions identified by the scout. Every research task targets six information categories:
+
+| Category | What to Find | Example |
+|----------|-------------|---------|
+| **Facts & Data** | Statistics, numbers, market sizes, dates | "Series B raised $45M at $200M valuation" |
+| **Examples & Cases** | Real-world implementations, incidents | "Stripe deployed this in Q3, reducing fraud by 40%" |
+| **Expert Opinions** | Analyst perspectives, official statements | "Gartner places this in the Trough of Disillusionment" |
+| **Trends & Predictions** | Forward-looking analysis, forecasts | "Market expected to reach $12B by 2028 (CAGR 23%)" |
+| **Comparisons** | Alternatives, competitive context | "Unlike Competitor X which uses approach A, this uses B" |
+| **Challenges & Criticisms** | Risks, limitations, opposing views | "Critics argue the accuracy drops below 60% on edge cases" |
+
+Each expert runs an agentic tool-calling loop (up to 6 iterations per task) powered by Gemini, using tools like `exa_search`, `gemini_search`, `web_scraper`, and `python_executor` to gather information.
+
+#### Phase 3 — Gap Check
+
+After all research completes, a synthesizer agent audits the collected findings against the six diversity categories above.
+
+**What it does:**
+- Receives a summary of all findings gathered in Phase 2
+- Evaluates which categories are well-covered and which have gaps
+- Identifies missing perspectives, data types, or viewpoints
+- Produces findings that flag research gaps for the synthesis phase
+
+**Why it matters:** Without gap checking, research tends to over-index on whatever angle was easiest to find and under-index on contrarian viewpoints, hard data, or forward-looking analysis. The gap check enforces research quality before synthesis begins.
+
+#### Phase 4 — Synthesis
+
+The synthesizer receives all findings (including gap-check results) and produces a unified assessment.
+
+**What it does:**
+- Resolves contradictions between sources
+- Weights findings by confidence scores and source authority
+- Identifies patterns across dimensions
+- Produces an overall assessment with confidence levels
+
+#### Phase 5 — Report
+
+The report writer generates a structured output from the synthesized assessment.
+
+**What it does:**
+- Produces executive summary, detailed sections, and charts
+- Includes source citations and confidence indicators
+- Exports to Markdown, HTML, or PDF
+- Generates share tokens for external distribution
+
+### How This Differs from Standard Agent Architectures
+
+| Aspect | Standard Agent | Agentary (DeerFlow) |
+|--------|---------------|---------------------|
+| Research planning | Ad-hoc or single-pass | Scout phase maps dimensions first |
+| Parallel execution | Agents run independently | Dimension-aware parallel deep dives |
+| Quality control | None before synthesis | Gap check audits 6 diversity categories |
+| Depth per topic | 1-2 search queries | Multi-angle with 6 category coverage |
+| Self-correction | No | Gap check identifies missing angles |
+| Observability | Limited | RunStep traces every micro-action |
 
 ---
 
-## API Docs
+## Execution Pipeline
 
-- Local Swagger UI: `http://localhost:8000/docs`
+### Mission Lifecycle
+
+```
+User creates Mission
+       |
+       v
+  POST /api/missions/{id}/run
+       |
+       v
+  +-----------------------+
+  |  Celery: plan_and_    |
+  |  start_mission()      |
+  |                       |
+  |  1. Load mission      |
+  |  2. Select experts    |     Gemini selects best agents
+  |     (Gemini)          |     for the mission objective
+  |  3. Assemble crew     |
+  |  4. Plan tasks        |     Gemini decomposes into
+  |     (DeerFlow phases) |     5-phase task plan
+  |  5. Create CrewRun    |
+  +-----------+-----------+
+              |
+              v
+  +-----------------------+
+  |  Celery: execute_     |
+  |  crew_run()           |
+  |                       |
+  |  CrewRunner.          |
+  |  execute_run()        |
+  |                       |
+  |  Phase 1: Scout       |──> 1 expert, broad exploration
+  |  Phase 2: Research    |──> N experts in parallel, deep dives
+  |  Phase 3: Gap Check   |──> 1 expert, audit completeness
+  |  Phase 4: Synthesis   |──> 1 expert, merge + assess
+  |  Phase 5: Report      |──> 1 expert, structured output
+  +-----------+-----------+
+              |
+              v
+  +-----------------------+
+  |  Intelligence Layer   |
+  |                       |
+  |  Findings ──> Signals |
+  |  Signals ──> Insights |
+  |  Insights ──> Recs    |
+  |  Recs ──> Actions     |
+  +-----------+-----------+
+              |
+              v
+  +-----------------------+
+  |  WebSocket broadcast  |
+  |  to dashboard         |
+  +-----------------------+
+```
+
+### Expert Agent System
+
+Agentary ships with 10 builtin expert agents. Each expert has a specialty, system prompt, tool access, and model configuration.
+
+| Expert | Specialty | Tools | Role in Pipeline |
+|--------|-----------|-------|------------------|
+| **Web Researcher** | `web_researcher` | exa_search, gemini_search, web_scraper | Scout + Research phases |
+| **Data Extractor** | `data_extractor` | exa_search, web_scraper, python_executor | Research phase |
+| **Market Analyst** | `market_analyst` | gemini_search, exa_search, python_executor | Research phase |
+| **Financial Analyst** | `financial_analyst` | gemini_search, python_executor | Research phase |
+| **Competitive Intel** | `competitive_intel` | exa_search, gemini_search, web_scraper | Scout + Research phases |
+| **Due Diligence** | `due_diligence` | exa_search, gemini_search | Research phase |
+| **Local Business Intel** | `local_business_intel` | exa_search, web_scraper, voice_caller | Research phase |
+| **Voice Caller** | `voice_caller` | voice_caller | Research phase (phone extraction) |
+| **Synthesizer** | `synthesizer` | (none — reasoning only) | Gap Check + Synthesis phases |
+| **Report Writer** | `report_writer` | chart_generator, python_executor | Report phase |
+
+Experts are selected per-mission by Gemini based on the objective. Custom experts can be created via the API.
+
+### Agentic Tool-Calling Loop
+
+Each expert task runs a Gemini-powered agentic loop:
+
+```
+Expert receives task prompt
+       |
+       v
+  ┌─── Loop (max 6 iterations) ───┐
+  |                                |
+  |  Gemini generates response     |
+  |       |                        |
+  |  Has function_call?            |
+  |    Yes: execute tool           |
+  |         append result          |
+  |         continue loop ─────────┘
+  |    No:  parse findings
+  |         store to DB
+  |         emit events
+  |         done
+  └────────────────────────────────┘
+```
+
+Tools available during the loop:
+
+| Tool | Purpose |
+|------|---------|
+| `exa_search` | Neural web search via Exa API |
+| `gemini_search` | Google Search grounding via Gemini |
+| `web_scraper` | Full-page content extraction |
+| `python_executor` | Run Python for data analysis |
+| `chart_generator` | Generate visualizations |
+| `voice_caller` | Outbound calls via Twilio |
+
+### Observability
+
+Every micro-action during execution is recorded as a `RunStep`:
+
+| Step Type | When Recorded |
+|-----------|---------------|
+| `expert_task` | Expert begins/completes a task |
+| `tool_call` | Tool executed with input/output |
+| `searching` | Scout phase exploration |
+| `analyzing` | Gap check audit |
+| `synthesis` | Synthesis phase |
+| `writing` | Report generation |
+| `error` | Any failure during execution |
+
+RunSteps include correlation IDs, parent-child relationships, token counts, duration, and truncated input/output summaries. This enables full execution replay and debugging.
+
+### State Machine
+
+Mission runs follow a strict state machine with validated transitions:
+
+```
+created ──> queued ──> running ──> completed
+                         |
+                         +──> partially_failed ──> completed
+                         |                    +──> failed
+                         +──> retrying ──> running
+                         |
+                         +──> failed
+                         |
+                         +──> cancelled
+```
+
+Every transition is persisted with timestamp and reason. Idempotency keys prevent duplicate execution. Failure categories (`transient`, `model_error`, `rate_limited`, `timeout`, `validation`, `internal`) enable targeted retry logic.
+
+---
+
+## Data Model
+
+### Core Entities
+
+```
+Project (scoping container)
+  └── Mission (research task)
+        ├── AgentCrew (selected experts)
+        ├── MissionRun (execution instance)
+        │     ├── CrewTask (per-expert task)
+        │     │     └── RunStep (micro-action trace)
+        │     └── CrewRun (crew execution record)
+        ├── Finding (discovered data point)
+        └── Report (synthesized output)
+
+Finding
+  ├── type: fact | insight | statistic | contact_info | trend | risk | opportunity | ...
+  ├── source: web | voice_call | api | public_record | inferred
+  ├── confidence: 0.0 - 1.0
+  └── entity_refs: linked entities
+
+Intelligence Pipeline
+  Finding ──> Signal ──> Insight ──> Recommendation ──> Action
+```
+
+### Key Enums
+
+| Enum | Values |
+|------|--------|
+| **MissionType** | research, voice_extraction, monitoring, data_collection, competitive_analysis, custom |
+| **CoordinationStrategy** | parallel, sequential, hierarchical |
+| **FindingType** | fact, data_point, insight, quote, statistic, contact_info, price, trend, anomaly, opportunity, risk |
+| **RunStatus** | created, queued, running, awaiting_input, retrying, partially_failed, completed, failed, cancelled |
 
 ---
 
@@ -119,21 +417,23 @@ npm run dev
 
 Open `http://localhost:3000`.
 
+API docs at `http://localhost:8000/docs`.
+
 ---
 
 ## Environment Variables
 
 | Variable | Required | Purpose |
 |---|:---:|---|
-| `GEMINI_API_KEY` | Yes | Core LLM + tool calling |
-| `DATABASE_URL` | Yes | PostgreSQL connection |
-| `REDIS_URL` | Yes | Queue + pub/sub |
+| `GEMINI_API_KEY` | Yes | Core LLM for reasoning, tool-calling, and synthesis |
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `REDIS_URL` | Yes | Celery broker + pub/sub |
 | `QDRANT_URL` | Yes | Vector search backend |
-| `EXA_API_KEY` | Optional | Exa semantic web search |
-| `TWILIO_ACCOUNT_SID` | Optional | Voice calling |
-| `TWILIO_AUTH_TOKEN` | Optional | Voice calling |
-| `TWILIO_FROM_NUMBER` | Optional | Voice calling |
-| `RESEND_API_KEY` | Optional | Email notifications |
+| `EXA_API_KEY` | Optional | Exa neural web search and contact discovery |
+| `TWILIO_ACCOUNT_SID` | Optional | Outbound voice calling |
+| `TWILIO_AUTH_TOKEN` | Optional | Voice call authentication |
+| `TWILIO_FROM_NUMBER` | Optional | Voice caller ID |
+| `RESEND_API_KEY` | Optional | Email delivery |
 
 ---
 
@@ -143,19 +443,32 @@ Open `http://localhost:3000`.
 agentary/
 ├── backend/
 │   ├── app/
-│   │   ├── api/          # 40+ FastAPI routers
-│   │   ├── models/       # 45 SQLAlchemy models
-│   │   ├── schemas/      # Pydantic request/response schemas
-│   │   ├── services/     # Business logic (crews, intelligence, voice, reports)
-│   │   ├── tasks/        # Celery async tasks
-│   │   ├── core/         # Logging, events, permissions, WebSocket
-│   │   └── providers/    # LLM provider integrations
-│   ├── alembic/          # Database migrations
-│   └── tests/            # pytest test suite
+│   │   ├── api/              # 40+ FastAPI route modules
+│   │   ├── models/           # 50+ SQLAlchemy ORM models
+│   │   ├── schemas/          # Pydantic request/response schemas
+│   │   ├── services/
+│   │   │   ├── crews/        # DeerFlow execution engine
+│   │   │   │   ├── crew_runner.py      # 5-phase execution orchestrator
+│   │   │   │   ├── crew_service.py     # Crew assembly + expert selection
+│   │   │   │   ├── task_planner.py     # Gemini-powered task decomposition
+│   │   │   │   ├── expert_registry.py  # 10 builtin expert agents
+│   │   │   │   └── tool_registry.py    # Agentic tool dispatch
+│   │   │   ├── research/     # Deep research engine (Gemini + Exa)
+│   │   │   ├── intelligence/  # Signals, insights, recommendations
+│   │   │   ├── reports/       # Report generation + export
+│   │   │   ├── workflow/      # DAG-based workflow execution
+│   │   │   ├── voice/         # Voice call orchestration
+│   │   │   └── state_machine.py  # Run lifecycle management
+│   │   ├── tasks/            # Celery async tasks (6 queues)
+│   │   ├── core/             # Logging, events, rate limiting, WebSocket
+│   │   ├── providers/        # LLM provider integrations
+│   │   └── prompts/          # System prompts for expert agents
+│   ├── alembic/              # Database migrations
+│   └── tests/                # pytest test suite
 ├── dashboard/
-│   ├── app/              # Next.js 14 App Router (28 routes)
-│   ├── components/       # Reusable UI components
-│   └── lib/              # API client, types, hooks
+│   ├── app/                  # Next.js 14 App Router (28 routes)
+│   ├── components/           # Reusable UI components
+│   └── lib/                  # API client, types, hooks
 ├── docker-compose.yml
 └── README.md
 ```
