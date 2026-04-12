@@ -1,4 +1,12 @@
-"""CrewRunner — THE EXECUTION ENGINE for expert agent crews."""
+"""CrewRunner — THE EXECUTION ENGINE for expert agent crews.
+
+Execution follows the DeerFlow 5-phase research methodology:
+  Phase 1 (scout):     Broad exploration to map the research landscape
+  Phase 2 (research):  Parallel deep dives per dimension
+  Phase 3 (gap_check): Audit completeness, spawn follow-up research if needed
+  Phase 4 (synthesis): Combine findings, resolve contradictions
+  Phase 5 (report):    Generate structured output
+"""
 from __future__ import annotations
 
 import asyncio
@@ -140,15 +148,16 @@ class CrewRunner:
         ))
 
     async def execute_run(self, run_id: uuid.UUID) -> CrewRun:
-        """Main execution entry point.
+        """Main execution entry point — DeerFlow 5-phase methodology.
 
         1. Load run, crew, mission, experts
         2. Emit CREW_RUN_STARTED
-        3. Separate researchers from synthesizer/report_writer
-        4. PARALLEL PHASE: All researchers execute simultaneously
-        5. SYNTHESIS PHASE: Synthesizer receives all findings
-        6. REPORT PHASE: ReportWriter generates structured output
-        7. Emit CREW_RUN_COMPLETED
+        3. SCOUT PHASE: Broad exploration to map research dimensions
+        4. RESEARCH PHASE: Parallel deep dives per dimension
+        5. GAP CHECK PHASE: Audit completeness, spawn follow-up research
+        6. SYNTHESIS PHASE: Synthesizer receives all findings
+        7. REPORT PHASE: ReportWriter generates structured output
+        8. Emit CREW_RUN_COMPLETED
         """
         run = self.db.query(CrewRun).filter_by(id=run_id).first()
         if not run:
@@ -209,15 +218,43 @@ class CrewRunner:
         total_cost = 0.0
 
         try:
-            # Separate phases
+            # Separate phases (DeerFlow methodology)
+            scout_tasks = [t for t in run.tasks if t.task_type == "scout"]
             research_tasks = [
                 t for t in run.tasks
-                if t.task_type not in ("synthesis", "report_writing")
+                if t.task_type not in ("scout", "synthesis", "report_writing", "gap_check")
             ]
+            gap_check_tasks = [t for t in run.tasks if t.task_type == "gap_check"]
             synthesis_tasks = [t for t in run.tasks if t.task_type == "synthesis"]
             report_tasks = [t for t in run.tasks if t.task_type == "report_writing"]
 
-            # ── PARALLEL RESEARCH PHASE ──────────────────────────────
+            # ── SCOUT PHASE (DeerFlow Phase 1) ──────────────────────
+            if scout_tasks:
+                scout_step = self._record_step(
+                    run_id=run.id, run_type="crew",
+                    step_type=StepType.searching,
+                    step_name="DeerFlow Scout: broad exploration",
+                    status="running",
+                )
+                self.db.commit()
+                scout_start = time.time()
+
+                for task in scout_tasks:
+                    result = await self._execute_expert_task_safe(
+                        task, expert_map, mission, run, crew
+                    )
+                    if isinstance(result, tuple):
+                        findings, tokens, cost = result
+                        all_findings.extend(findings)
+                        total_tokens += tokens
+                        total_cost += cost
+
+                scout_step.status = "completed"
+                scout_step.duration_ms = int((time.time() - scout_start) * 1000)
+                scout_step.completed_at = datetime.now(timezone.utc)
+                self.db.commit()
+
+            # ── PARALLEL RESEARCH PHASE (DeerFlow Phase 2) ──────────
             if research_tasks:
                 results = await asyncio.gather(
                     *[
@@ -260,7 +297,54 @@ class CrewRunner:
                         f"All {failed_count} research tasks failed: {'; '.join(failed_errors[:3])}"
                     )
 
-            # ── SYNTHESIS PHASE ──────────────────────────────────────
+            # ── GAP CHECK PHASE (DeerFlow Phase 3) ─────────────────
+            if gap_check_tasks and all_findings:
+                gap_step = self._record_step(
+                    run_id=run.id, run_type="crew",
+                    step_type=StepType.analyzing,
+                    step_name="DeerFlow Gap Check: audit completeness",
+                    status="running",
+                )
+                self.db.commit()
+                gap_start = time.time()
+
+                for task in gap_check_tasks:
+                    expert = expert_map.get(str(task.expert_agent_id))
+                    if not expert:
+                        continue
+
+                    # Feed all findings to gap checker
+                    findings_summary = self._summarize_findings(all_findings)
+                    task.input_data = {
+                        **(task.input_data or {}),
+                        "findings_summary": findings_summary,
+                        "mission_name": mission.name,
+                        "mission_objective": mission.objective or "",
+                        "gap_check_criteria": (
+                            "Audit against 6 DeerFlow diversity categories: "
+                            "1) Facts & Data, 2) Examples & Cases, "
+                            "3) Expert Opinions, 4) Trends & Predictions, "
+                            "5) Comparisons, 6) Challenges & Criticisms. "
+                            "Report which categories are well-covered and which have gaps."
+                        ),
+                    }
+                    self.db.commit()
+
+                    result = await self._execute_expert_task_safe(
+                        task, expert_map, mission, run, crew
+                    )
+                    if isinstance(result, tuple):
+                        findings, tokens, cost = result
+                        all_findings.extend(findings)
+                        total_tokens += tokens
+                        total_cost += cost
+
+                gap_step.status = "completed"
+                gap_step.duration_ms = int((time.time() - gap_start) * 1000)
+                gap_step.completed_at = datetime.now(timezone.utc)
+                self.db.commit()
+
+            # ── SYNTHESIS PHASE (DeerFlow Phase 4) ──────────────────
             if synthesis_tasks:
                 synth_phase_step = self._record_step(
                     run_id=run.id, run_type="crew",
