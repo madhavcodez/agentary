@@ -48,6 +48,16 @@ class Settings(BaseSettings):
     # CORS
     allowed_origins: str = "http://localhost:3000"
 
+    # STORM (Stanford research methodology) — see backend/docs/STORM.md
+    agentary_storm_enabled: bool = False
+    storm_max_perspectives: int = 4
+    storm_max_questions: int = 3
+    storm_max_sections: int = 6
+    storm_max_refinement: int = 2
+    storm_evidence_threshold: float = 0.55
+    storm_max_flash_calls: int = 10
+    storm_max_pro_calls: int = 8
+
     @field_validator("jwt_secret_key")
     @classmethod
     def jwt_secret_must_be_set(cls, v: str) -> str:

@@ -429,15 +429,48 @@ async def synthesize_report(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """Synthesize a report from all mission findings using Gemini."""
-    from ..services.report_synthesis import synthesize_report_from_findings
+    """Synthesize a report from all mission findings using Gemini.
+
+    If STORM is enabled for this mission and a :class:`ResearchOutline`
+    exists, routes through :func:`synthesize_report_from_outline` which
+    produces a cited, section-level report. Otherwise falls back to the
+    legacy single-pass path.
+    """
+    from ..services.report_synthesis import (
+        synthesize_report_from_findings,
+        synthesize_report_from_outline,
+    )
+    from ..services.storm import should_run_storm
 
     mission = db.query(Mission).filter(Mission.id == mission_id, Mission.user_id == user.id).first()
     if not mission:
         raise HTTPException(status_code=404, detail="Mission not found")
 
     try:
-        report = await synthesize_report_from_findings(mission, user.id, db)
+        report = None
+        if should_run_storm(mission):
+            from ..models.research_outline import ResearchOutline
+
+            outline = (
+                db.query(ResearchOutline)
+                .filter(ResearchOutline.mission_id == mission.id)
+                .order_by(ResearchOutline.version.desc())
+                .first()
+            )
+            if outline is not None:
+                try:
+                    report = await synthesize_report_from_outline(
+                        mission, outline, user.id, db
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "STORM synthesis failed for mission %s, falling back to legacy: %s",
+                        mission_id,
+                        exc,
+                    )
+                    report = None
+        if report is None:
+            report = await synthesize_report_from_findings(mission, user.id, db)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except RuntimeError:

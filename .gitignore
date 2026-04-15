@@ -38,3 +38,6 @@ htmlcov/
 
 # Celery
 celerybeat-schedule*
+
+# Graphify output (generated, not source)
+graphify-out/

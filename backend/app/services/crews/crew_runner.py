@@ -216,6 +216,65 @@ class CrewRunner:
         all_findings: list[Finding] = []
         total_tokens = 0
         total_cost = 0.0
+        storm_outline = None
+        storm_status = "skipped"
+        storm_fallback_reason: str | None = None
+
+        # ── STORM PHASE 0 (pre-write) ───────────────────────────────
+        # Runs before Scout when AGENTARY_STORM_ENABLED=true or the
+        # mission has storm_enabled=True. Failure falls back silently to
+        # the legacy DeerFlow pipeline; telemetry is emitted either way.
+        try:
+            from ..storm import run_storm_prewrite, should_run_storm
+            from ..storm.telemetry import record_storm_run
+
+            if should_run_storm(mission):
+                storm_step = self._record_step(
+                    run_id=run.id, run_type="crew",
+                    step_type=StepType.synthesis,
+                    step_name="STORM Phase 0: outline-first pre-writing",
+                    status="running",
+                )
+                self.db.commit()
+                try:
+                    storm_outline = await run_storm_prewrite(mission, self.db)
+                    if storm_outline is None:
+                        storm_status = "fallback"
+                        storm_fallback_reason = "pre_write_returned_none"
+                        storm_step.status = "completed"
+                    else:
+                        storm_status = "completed"
+                        storm_step.status = "completed"
+                except Exception as exc:
+                    storm_status = "error"
+                    storm_fallback_reason = f"{type(exc).__name__}: {exc}"[:200]
+                    logger.warning(
+                        "STORM pre-write failed for mission %s: %s", mission.id, exc
+                    )
+                    storm_step.status = "failed"
+                    storm_step.error_message = storm_fallback_reason
+                storm_step.completed_at = datetime.now(timezone.utc)
+                self.db.commit()
+
+                # Telemetry — best effort, never raises
+                try:
+                    record_storm_run(
+                        db=self.db,
+                        mission_id=mission.id,
+                        crew_run_id=run.id,
+                        outline=storm_outline,
+                        report=None,
+                        status=storm_status,
+                        fallback_reason=storm_fallback_reason,
+                        budget=None,
+                        duration_ms=int((time.time() - start_time) * 1000),
+                        extra_meta={"phase": "pre_write"},
+                    )
+                except Exception as exc:
+                    logger.debug("record_storm_run failed (non-fatal): %s", exc)
+        except ImportError:
+            # STORM package missing — proceed with legacy flow silently
+            pass
 
         try:
             # Separate phases (DeerFlow methodology)

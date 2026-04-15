@@ -13,7 +13,7 @@
 
 **Define an objective. Agentary scouts the landscape, deep-dives every angle in parallel, audits its own gaps, and delivers structured intelligence — all autonomously.**
 
-[Architecture](#architecture) · [Research Methodology](#deerflow-research-methodology) · [Execution Pipeline](#execution-pipeline) · [Quick Start](#quick-start) · [Project Structure](#project-structure)
+[Architecture](#architecture) · [DeerFlow](#deerflow-research-methodology) · [STORM](#stanford-storm-methodology) · [Execution Pipeline](#execution-pipeline) · [Quick Start](#quick-start) · [Project Structure](#project-structure)
 
 </div>
 
@@ -200,6 +200,119 @@ The report writer generates a structured output from the synthesized assessment.
 | Depth per topic | 1-2 search queries | Multi-angle with 6 category coverage |
 | Self-correction | No | Gap check identifies missing angles |
 | Observability | Limited | RunStep traces every micro-action |
+
+---
+
+## Stanford STORM Methodology
+
+DeerFlow tells Agentary *how* to spread research across five phases. Stanford's [STORM](https://github.com/stanford-oval/storm) (Shao et al., NAACL 2024) tells it *how to pre-write before research* — and that pre-writing discipline is where report quality actually gets locked in.
+
+STORM is opt-in and stacks on top of the DeerFlow pipeline. When `AGENTARY_STORM_ENABLED=true` (or per-mission `storm_enabled=true`), a Phase 0 runs *before* Scout and produces a persisted `ResearchOutline` that steers the rest of the run.
+
+### The Problem STORM Solves
+
+DeerFlow's 5 phases prevent *breadth* failure — scout + gap check ensure every dimension gets investigated. But they don't prevent *structure* failure: the report gets organized *after* findings arrive, so the outline reflects what research happened to return rather than what the topic actually requires. And citations end up at report level (one big `sources: [...]` array) rather than bound to the claim each source supports.
+
+STORM's insight is that pre-writing quality correlates with final-report quality. If you plan the outline *before* retrieval — and commit to specific perspectives, specific questions, and specific section scopes — the synthesizer is grounding claims against a targeted evidence set rather than picking whatever findings look adjacent.
+
+### The STORM Pre-Writing Stage (Phase 0)
+
+```
+ PERSPECTIVE        QUESTION            OUTLINE              SECTION             REFINEMENT
+ ┌──────────┐    ┌────────────┐     ┌────────────┐     ┌───────────────┐    ┌────────────┐
+ │  MINER   │───>│ GENERATOR  │────>│  PLANNER   │────>│  SYNTHESIZER  │───>│  (bounded) │
+ │ (Flash)  │    │  (Flash)   │     │  (Flash)   │     │    (Pro)      │    │            │
+ └──────────┘    └────────────┘     └────────────┘     └───────────────┘    └────────────┘
+  1 call          N calls            1 call             N calls              ≤2 calls
+```
+
+**Step 1 — Perspective Mining** (`backend/app/services/storm/perspective_miner.py`)
+Discovers ≤4 distinct stakeholder viewpoints on the mission topic (e.g. *skeptical regulator*, *beneficiary*, *insider*, *outsider*). Diversity is enforced structurally — if two perspectives' focus-sentence embeddings cosine-similar above 0.85, the batch is rejected and retried once with a contrast-emphasis prompt.
+
+**Step 2 — Question Generation** (`backend/app/services/storm/question_generator.py`)
+One Gemini Flash call per perspective returns up to 3 research questions that perspective would most want answered — tagged with priority and evidence type (`fact`, `trend`, `comparison`, `expert_opinion`, `example`, `challenge`). N perspectives produce at most N calls, not N×M.
+
+**Step 3 — Outline Planning** (`backend/app/services/storm/outline_planner.py`)
+One Flash call consumes the perspective × question matrix and plans up to 6 sections, each with a `scope` sentence, `source_question_ids` (≤3), and `expected_evidence_types`. This outline is persisted in `research_outlines` — the whole pre-write is auditable per-mission.
+
+**Step 4 — Evidence Binding** (`backend/app/services/storm/evidence_binder.py`)
+After Phase 2 research produces findings, each section's `scope` is embedded and the top-K findings (≥0.55 cosine similarity) are bound to it. Pure function, no LLM call. Sections with zero bound findings are flagged for refinement or skipped rather than filled with hallucination.
+
+**Step 5 — Section Synthesis** (`backend/app/services/storm/section_synthesizer.py`)
+One Gemini 2.5 Pro call per section. The prompt supplies only that section's bound findings and requires a `citations` array whose `finding_id` values match the bound set exactly. Hallucinated ids are rejected post-parse; a single retry with a stricter prompt precedes any fallback to `partial_evidence=true`.
+
+**Step 6 — Bounded Refinement** (`backend/app/services/storm/refinement.py`)
+A structural quality gate (citation density, evidence coverage, minimum length) scores each section. Weakest sections get a rewrite pass using the refinement prompt. Global cap of 2 additional Pro calls per report — no LLM-as-judge (that would double Pro spend for no defensible gain).
+
+### Section-Level Citation Grounding
+
+STORM-generated reports persist per-section citations as structural rows, not prompt-promise markup. The `section_citations` table stores `(report_id, section_index, finding_id, quote_span, confidence)` so "show me the evidence for section 3 of report X" is a `SELECT`:
+
+```sql
+SELECT s.section_index, f.source_url, s.quote_span, s.confidence
+FROM section_citations s
+JOIN findings f ON s.finding_id = f.id
+WHERE s.report_id = :report_id
+ORDER BY s.section_index, s.confidence DESC;
+```
+
+### Gemini Budget Discipline
+
+STORM's canonical fan-out (perspectives × questions × sections) can easily hit 40+ calls per mission. Agentary caps the total at **14 calls per report** through a Redis-backed counter (`backend/app/services/storm/budget.py`):
+
+| Stage | Model | Max calls |
+|---|---|---|
+| Perspective mining | Flash | 1 |
+| Question generation | Flash | N (≤4) |
+| Outline planning | Flash | 1 |
+| Section synthesis | Pro | M (≤6) |
+| Refinement | Pro | ≤2 |
+| **Total** | | **6 Flash + 8 Pro = 14** |
+
+Budget breach raises `StormBudgetExceeded` and the runner falls back to the legacy DeerFlow synthesis path silently — STORM never brings the mission down.
+
+### STORM vs. DeerFlow in Agentary
+
+| Aspect | DeerFlow only | STORM + DeerFlow |
+|---|---|---|
+| Phase structure | 5 phases (Scout → Report) | 6 phases (Pre-write → Report) |
+| Report outline | Derived from findings | Planned before retrieval |
+| Perspective coverage | Expert specialties | Mined stakeholder viewpoints |
+| Citation binding | Global `sources[]` array | Per-section `SectionCitation` rows |
+| Quality gate | None post-synthesis | Structural metrics + bounded refinement |
+| Citation validation | Prompt convention | Post-parse `finding_id` check |
+| Gemini calls | 1 per mission | 6 Flash + ≤8 Pro per mission |
+
+### Feature Flag & Fallback
+
+```bash
+# Global switch (disabled by default)
+export AGENTARY_STORM_ENABLED=true
+
+# Optional caps (defaults shown)
+export STORM_MAX_PERSPECTIVES=4
+export STORM_MAX_QUESTIONS=3
+export STORM_MAX_SECTIONS=6
+export STORM_MAX_REFINEMENT=2
+export STORM_EVIDENCE_THRESHOLD=0.55
+```
+
+Per-mission override: set `missions.storm_enabled=true` to opt in a specific mission regardless of the global flag. Any failure in the STORM pipeline (budget exceeded, outline empty, Gemini 503) falls back to the legacy single-pass synthesizer with the fallback reason recorded in the `storm_runs` telemetry table.
+
+### Why This Integration Is Defensible
+
+Every phrase in the STORM resume bullet maps to a file and a queryable row:
+
+| Claim | Code | Evidence |
+|---|---|---|
+| "Stanford STORM-inspired" | `backend/app/services/storm/` package | Named after the paper; maps pre-writing → writing split directly |
+| "perspective-guided question generation" | `perspective_miner.py` + `question_generator.py` | `SELECT perspectives, question_matrix FROM research_outlines WHERE mission_id=X` |
+| "outline-first planning" | `outline_planner.py` | Outline row persists before Scout phase runs |
+| "section-level citation grounding" | `section_citation.py` + `evidence_binder.py` + `section_synthesizer.py` | Post-validated `finding_id` FK per section, not prompt-promise markup |
+| "tiered model routing" | `section_synthesizer.SECTION_MODEL = "gemini-2.5-pro"`; everything else is Flash | `budget.py` caps Flash and Pro independently |
+| "bounded refinement" | `refinement.py` | Hard global cap of 2 Pro refinement calls per report |
+
+For deeper interview prep (expected questions, code pointers, known limitations), see [`backend/docs/STORM.md`](backend/docs/STORM.md).
 
 ---
 

@@ -31,14 +31,23 @@ async def embed_text(text: str, task_type: str = "RETRIEVAL_DOCUMENT") -> list[f
 
 
 @gemini_breaker
-async def generate_structured(prompt: str, schema_hint: str = "") -> dict[str, Any]:
+async def generate_structured(
+    prompt: str,
+    schema_hint: str = "",
+    model: str = "gemini-2.5-flash",
+) -> dict[str, Any]:
+    """Call Gemini and return a parsed JSON dict.
+
+    ``model`` defaults to Flash for latency/cost; callers that need the
+    Pro variant (e.g., STORM section synthesis) pass ``model="gemini-2.5-pro"``.
+    """
     client = get_client()
     system_instruction = "You are an expert data extraction assistant. Return valid JSON only."
     if schema_hint:
         system_instruction += f"\n\nExpected output schema:\n{schema_hint}"
 
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model=model,
         contents=prompt,
         config=types.GenerateContentConfig(
             system_instruction=system_instruction,

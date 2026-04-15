@@ -39,6 +39,9 @@ from .action_request import ActionRequest, ActionType, ActionRequestStatus
 from .action_policy import ActionPolicy
 from .action_execution import ActionExecution, ExecutorType, ExecutionStatus
 from .action_outcome import ActionOutcome, OutcomeType
+from .research_outline import ResearchOutline
+from .section_citation import SectionCitation
+from .storm_run import StormRun
 
 __all__ = [
     "User", "Contact", "Policy",
@@ -78,4 +81,7 @@ __all__ = [
     "ActionPolicy",
     "ActionExecution", "ExecutorType", "ExecutionStatus",
     "ActionOutcome", "OutcomeType",
+    "ResearchOutline",
+    "SectionCitation",
+    "StormRun",
 ]

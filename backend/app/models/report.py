@@ -35,6 +35,7 @@ class Report(Base):
     structured_data = Column(JSON, nullable=True)
     metadata_ = Column("metadata", JSON, nullable=True)
     format_config = Column(JSON, nullable=True)
+    storm_generated = Column(Boolean, default=False, nullable=False)
     share_token = Column(String(255), nullable=True, unique=True, index=True)
     share_enabled = Column(Boolean, default=False)
     pdf_url = Column(Text, nullable=True)

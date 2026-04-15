@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 import uuid
 
-from sqlalchemy import Column, DateTime, Enum as SAEnum, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, Column, DateTime, Enum as SAEnum, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
@@ -48,6 +48,8 @@ class Mission(Base):
     summary = Column(Text)
     findings_count = Column(Integer, default=0)
     confidence_score = Column(Float)
+    # Per-mission STORM override. NULL = follow global AGENTARY_STORM_ENABLED.
+    storm_enabled = Column(Boolean, nullable=True)
     started_at = Column(DateTime(timezone=True))
     completed_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
