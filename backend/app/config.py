@@ -27,6 +27,14 @@ class Settings(BaseSettings):
     zillow_api_key: str = ""
     yelp_api_key: str = ""
     crunchbase_api_key: str = ""
+    attom_api_key: str = ""
+    regrid_api_key: str = ""
+    mapbox_token: str = ""
+
+    # Pool Concierge vertical
+    pool_concierge_enabled: bool = False
+    pool_concierge_max_budget_usd: int = 1_200_000
+    pool_concierge_min_budget_usd: int = 500_000
     google_client_id: str = ""
     google_client_secret: str = ""
     app_env: str = "dev"
@@ -58,6 +66,16 @@ class Settings(BaseSettings):
     storm_max_flash_calls: int = 10
     storm_max_pro_calls: int = 8
 
+    # Pool Concierge — Stream D (contracts + permits).
+    # DocuSign is gated: empty integration_key => mock envelopes + warning log.
+    # Contracts never auto-send without force=true AND live creds.
+    docusign_integration_key: str = ""
+    docusign_user_id: str = ""
+    docusign_account_id: str = ""
+    docusign_rsa_private_key_b64: str = ""
+    docusign_environment: str = "demo"
+    pool_concierge_default_state: str = "TX"
+
     @field_validator("jwt_secret_key")
     @classmethod
     def jwt_secret_must_be_set(cls, v: str) -> str:
@@ -74,6 +92,51 @@ class Settings(BaseSettings):
         if not v or v == "dev-secret-key-change-in-production" or len(v) < 32:
             raise ValueError(
                 "SECRET_KEY must be set and at least 32 characters."
+            )
+        return v
+
+    @field_validator("database_url")
+    @classmethod
+    def database_url_must_be_non_default_outside_dev(
+        cls, v: str, info
+    ) -> str:
+        """Audit fix (security #13): reject the hardcoded default in non-dev.
+
+        The default ``postgresql://agentary:agentary@localhost:5432/agentary``
+        embeds credentials and would be catastrophic if ever used in
+        staging or production. When ``app_env`` is anything other than
+        ``dev``, force the operator to supply a real value.
+        """
+        env = (info.data.get("app_env") or "dev").lower()
+        if env == "dev":
+            return v
+        if not v:
+            raise ValueError("DATABASE_URL must be set outside app_env=dev")
+        if v == "postgresql://agentary:agentary@localhost:5432/agentary":
+            raise ValueError(
+                "DATABASE_URL still uses the default placeholder "
+                "outside app_env=dev"
+            )
+        return v
+
+    @field_validator("redis_url")
+    @classmethod
+    def redis_url_must_have_auth_outside_dev(cls, v: str, info) -> str:
+        """Audit fix (security #14): require auth on Redis outside dev.
+
+        A bare ``redis://host:port/0`` with no ``user:password@`` is
+        safe on localhost-only dev boxes but dangerous in any shared
+        environment. We reject that shape outside ``app_env=dev``.
+        """
+        env = (info.data.get("app_env") or "dev").lower()
+        if env == "dev":
+            return v
+        if not v:
+            raise ValueError("REDIS_URL must be set outside app_env=dev")
+        # Look for ``user:pass@`` (supports rediss:// as well).
+        if "@" not in v:
+            raise ValueError(
+                "REDIS_URL must include credentials outside app_env=dev"
             )
         return v
 

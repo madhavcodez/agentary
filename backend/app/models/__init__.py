@@ -42,6 +42,10 @@ from .action_outcome import ActionOutcome, OutcomeType
 from .research_outline import ResearchOutline
 from .section_citation import SectionCitation
 from .storm_run import StormRun
+from .pool_listing import PoolListing
+from .contractor_report import ContractorReport, ContractorReportStatus
+from .pool_pipeline_run import PoolPipelineRun, PoolPipelineRunStatus
+from .pool_saved_search import PoolSavedSearch
 
 __all__ = [
     "User", "Contact", "Policy",
@@ -84,4 +88,8 @@ __all__ = [
     "ResearchOutline",
     "SectionCitation",
     "StormRun",
+    "PoolListing",
+    "ContractorReport", "ContractorReportStatus",
+    "PoolPipelineRun", "PoolPipelineRunStatus",
+    "PoolSavedSearch",
 ]

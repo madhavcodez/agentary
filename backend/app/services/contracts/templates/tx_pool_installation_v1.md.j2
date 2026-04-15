@@ -1,0 +1,207 @@
+<!-- ATTORNEY REVIEW REQUIRED BEFORE SHIPPING TO REAL USER. THIS IS A DEMO TEMPLATE. -->
+<!--
+  Template: tx_pool_installation_v1
+  Jurisdiction: State of Texas (drafted with Collin County / City of Plano residential use in mind)
+  Status: PENDING-LEGAL review
+  Do not treat this document as legal advice. It omits notarisation,
+  mechanic's lien addenda language specific to Texas Property Code
+  Chapter 53, and RRC / TDLR disclosures that a Texas attorney must add.
+-->
+
+# Residential Swimming Pool Installation Agreement
+
+**State of Texas — Home Improvement Contract**
+
+This Residential Swimming Pool Installation Agreement ("Agreement") is
+entered into as of {{ effective_date }} ("Effective Date") by and
+between:
+
+**Owner ("Buyer")**
+- Name: {{ buyer.full_name }}
+- Billing Address: {{ buyer.billing_address }}
+- Installation Address: {{ buyer.installation_address }}
+- Email: {{ buyer.email }}
+- Phone: {{ buyer.phone }}
+
+**Contractor**
+- Company: {{ contractor.company_name }}
+- Texas License / Registration No.: {{ contractor.license_number }}
+- Contact: {{ contractor.contact_name }}
+- Business Address: {{ contractor.business_address }}
+- Email: {{ contractor.email }}
+- Phone: {{ contractor.phone }}
+
+Collectively, the "Parties".
+
+---
+
+## 1. Scope of Work
+
+Contractor shall furnish all labor, materials, tools, equipment, and
+supervision necessary to design and install an in-ground swimming pool
+at the Installation Address, in accordance with plans and specifications
+referenced as Quote **{{ quote.quote_id }}** and summarized below.
+
+### 1.1 Pool Specifications
+
+| Item | Value |
+|------|-------|
+| Shape | {{ quote.pool_shape }} |
+| Length | {{ quote.pool_length_ft }} ft |
+| Width | {{ quote.pool_width_ft }} ft |
+| Shallow End Depth | {{ quote.shallow_end_depth_ft }} ft |
+| Deep End Depth | {{ quote.deep_end_depth_ft }} ft |
+
+### 1.2 Included Equipment
+
+{% for item in quote.included_equipment -%}
+- {{ item }}
+{% endfor %}
+
+### 1.3 Exclusions
+
+Unless expressly listed above, the following are excluded: landscaping
+outside the pool deck, outdoor kitchens, automatic pool covers, solar
+heating, fence construction (see Section 8), HOA approval fees, and
+permit fees payable to the City of {{ jurisdiction_city }} / {{ jurisdiction_county }}.
+
+---
+
+## 2. Price and Payment Schedule
+
+The total price for the Work is **US${{ '%.2f'|format(quote.total_price_usd) }}**
+("Contract Price"), payable as follows:
+
+| Milestone | Description | % | Amount (USD) |
+|-----------|-------------|---|--------------|
+{% for m in quote.payment_schedule -%}
+| {{ m.name }} | {{ m.description }} | {{ '%.1f'|format(m.percent) }}% | {{ '%.2f'|format(m.amount_usd) }} |
+{% endfor %}
+
+All payments shall be tendered to Contractor in U.S. dollars by ACH,
+wire transfer, or cashier's check unless otherwise agreed in writing.
+Texas Property Code Chapter 53 lien notices and releases shall be
+exchanged at each milestone payment.
+
+---
+
+## 3. Schedule
+
+- **Start Date:** {{ quote.start_date }}
+- **Substantial Completion (Target):** {{ quote.substantial_completion_date }}
+
+Contractor shall make commercially reasonable efforts to meet the
+target completion date. Delays caused by weather, utility locate
+services, permit issuance, or force-majeure events shall extend the
+schedule day-for-day.
+
+---
+
+## 4. Change Orders
+
+No change to the Scope of Work or the Contract Price shall be binding
+unless documented in a written Change Order signed by both Parties.
+Change Orders shall describe the change, the resulting price delta,
+and any schedule impact.
+
+---
+
+## 5. Permits and Inspections
+
+Contractor shall obtain, at Contractor's cost unless itemized as a
+reimbursable above, the following permits from the City of
+{{ jurisdiction_city }}: building permit, electrical permit, plumbing
+permit, and pool barrier permit. Buyer shall cooperate with required
+inspections and provide site access.
+
+---
+
+## 6. Liens and Lien Waivers
+
+Upon each milestone payment, Contractor shall deliver a conditional
+lien waiver for the amount paid, in a form compliant with Texas
+Property Code §53.281 et seq. A final, unconditional lien waiver shall
+be delivered upon final payment. Contractor represents that all
+subcontractors and suppliers shall be paid from funds received.
+
+---
+
+## 7. Warranty
+
+Contractor warrants the Work against defects in materials and
+workmanship for **{{ quote.warranty_years }} year(s)** from the date of
+Substantial Completion. Manufacturer warranties for equipment pass
+through to Buyer. This warranty excludes damage caused by misuse,
+freezing without proper winterization, ground movement not caused by
+Contractor's workmanship, and third-party alterations.
+
+---
+
+## 8. Pool Barrier / Safety Compliance
+
+Buyer acknowledges that Texas Health & Safety Code §757 and the City of
+{{ jurisdiction_city }} pool barrier ordinances require a compliant
+enclosure, self-closing and self-latching gates, and (where applicable)
+an alarm on doors leading from the residence to the pool area. Unless
+expressly included in Section 1.2, fence and barrier construction is
+the responsibility of Buyer and must be inspected and approved prior to
+filling the pool.
+
+---
+
+## 9. Insurance
+
+Contractor shall maintain commercial general liability insurance with
+minimum limits of $1,000,000 per occurrence / $2,000,000 aggregate and
+shall provide a certificate of insurance naming Buyer as additional
+insured upon request. Contractor shall also maintain workers'
+compensation insurance as required by Texas law.
+
+---
+
+## 10. Dispute Resolution
+
+The Parties shall first attempt in good faith to resolve any dispute
+arising out of this Agreement through direct negotiation. If
+unresolved within thirty (30) days, the dispute shall be submitted to
+non-binding mediation in Collin County, Texas, before a mediator
+mutually agreed by the Parties. Any unresolved dispute thereafter
+shall be brought exclusively in the state or federal courts located in
+Collin County, Texas. Texas law governs this Agreement.
+
+---
+
+## 11. Required Disclosures
+
+- **Right to Cancel (Home Solicitation):** If this Agreement was
+  solicited at Buyer's residence, Buyer has three (3) business days to
+  cancel pursuant to the Texas Business & Commerce Code.
+- **Licensure:** Contractor represents that it holds the state and
+  local licenses identified above and that such licenses are in good
+  standing as of the Effective Date.
+- **Attorney Review:** Buyer is encouraged to have this Agreement
+  reviewed by independent counsel before signing.
+
+---
+
+## 12. Miscellaneous
+
+This Agreement constitutes the entire agreement between the Parties
+and supersedes prior understandings. Amendments must be in writing and
+signed by both Parties. If any provision is held unenforceable, the
+remainder shall remain in effect. Neither Party waives any right by a
+delay or failure to enforce it.
+
+---
+
+## Signatures
+
+| Buyer | Contractor |
+|-------|------------|
+| Signature: ____________________ | Signature: ____________________ |
+| Printed Name: {{ buyer.full_name }} | Printed Name: {{ contractor.contact_name }} |
+| Date: ____________________ | Date: ____________________ |
+
+---
+
+<!-- END OF DEMO TEMPLATE — ATTORNEY REVIEW REQUIRED -->
