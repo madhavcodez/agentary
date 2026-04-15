@@ -299,21 +299,6 @@ export STORM_EVIDENCE_THRESHOLD=0.55
 
 Per-mission override: set `missions.storm_enabled=true` to opt in a specific mission regardless of the global flag. Any failure in the STORM pipeline (budget exceeded, outline empty, Gemini 503) falls back to the legacy single-pass synthesizer with the fallback reason recorded in the `storm_runs` telemetry table.
 
-### Why This Integration Is Defensible
-
-Every phrase in the STORM resume bullet maps to a file and a queryable row:
-
-| Claim | Code | Evidence |
-|---|---|---|
-| "Stanford STORM-inspired" | `backend/app/services/storm/` package | Named after the paper; maps pre-writing → writing split directly |
-| "perspective-guided question generation" | `perspective_miner.py` + `question_generator.py` | `SELECT perspectives, question_matrix FROM research_outlines WHERE mission_id=X` |
-| "outline-first planning" | `outline_planner.py` | Outline row persists before Scout phase runs |
-| "section-level citation grounding" | `section_citation.py` + `evidence_binder.py` + `section_synthesizer.py` | Post-validated `finding_id` FK per section, not prompt-promise markup |
-| "tiered model routing" | `section_synthesizer.SECTION_MODEL = "gemini-2.5-pro"`; everything else is Flash | `budget.py` caps Flash and Pro independently |
-| "bounded refinement" | `refinement.py` | Hard global cap of 2 Pro refinement calls per report |
-
-For deeper interview prep (expected questions, code pointers, known limitations), see [`backend/docs/STORM.md`](backend/docs/STORM.md).
-
 ---
 
 ## Execution Pipeline
