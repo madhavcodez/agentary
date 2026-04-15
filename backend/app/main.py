@@ -172,9 +172,6 @@ from .api.entity_aliases import router as entity_aliases_router
 from .api.entity_relationships import router as entity_relationships_router
 from .api.admin import router as admin_router
 from .api.actions import router as actions_router
-from .api.verticals.pool_contracts import router as pool_contracts_router
-from .api.verticals.pool_contractors import router as pool_contractors_router
-from .api.verticals.pool_orchestrator import router as pool_orchestrator_router
 
 app.include_router(auth_router)
 app.include_router(health_router)
@@ -217,6 +214,3 @@ app.include_router(entity_aliases_router)
 app.include_router(entity_relationships_router)
 app.include_router(admin_router)
 app.include_router(actions_router)
-app.include_router(pool_contracts_router)
-app.include_router(pool_contractors_router)
-app.include_router(pool_orchestrator_router)
