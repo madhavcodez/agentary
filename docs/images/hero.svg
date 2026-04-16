@@ -1,0 +1,180 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 640" width="1400" height="640" role="img" aria-label="Agentary — Autonomous Research and Intelligence Platform">
+  <defs>
+    <linearGradient id="a-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d1017"/>
+      <stop offset="1" stop-color="#131820"/>
+    </linearGradient>
+    <radialGradient id="a-glow1" cx="0.2" cy="0.3" r="0.5">
+      <stop offset="0" stop-color="#A78BFA" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#A78BFA" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="a-glow2" cx="0.85" cy="0.7" r="0.5">
+      <stop offset="0" stop-color="#06B6D4" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#06B6D4" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="a-beam" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#A78BFA" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#A78BFA" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#06B6D4" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="a-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+    <filter id="a-soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1.5"/>
+    </filter>
+  </defs>
+
+  <rect width="1400" height="640" fill="url(#a-bg)"/>
+  <rect width="1400" height="640" fill="url(#a-glow1)"/>
+  <rect width="1400" height="640" fill="url(#a-glow2)"/>
+
+  <!-- Grid dots background -->
+  <g fill="#FFFFFF" opacity="0.04">
+    <g id="dotcol">
+      <circle cx="0" cy="40" r="1"/><circle cx="0" cy="80" r="1"/><circle cx="0" cy="120" r="1"/><circle cx="0" cy="160" r="1"/><circle cx="0" cy="200" r="1"/><circle cx="0" cy="240" r="1"/><circle cx="0" cy="280" r="1"/><circle cx="0" cy="320" r="1"/><circle cx="0" cy="360" r="1"/><circle cx="0" cy="400" r="1"/><circle cx="0" cy="440" r="1"/><circle cx="0" cy="480" r="1"/><circle cx="0" cy="520" r="1"/><circle cx="0" cy="560" r="1"/><circle cx="0" cy="600" r="1"/>
+    </g>
+    <use href="#dotcol" x="40"/><use href="#dotcol" x="80"/><use href="#dotcol" x="120"/><use href="#dotcol" x="160"/><use href="#dotcol" x="200"/><use href="#dotcol" x="240"/><use href="#dotcol" x="280"/><use href="#dotcol" x="320"/><use href="#dotcol" x="360"/><use href="#dotcol" x="400"/><use href="#dotcol" x="440"/><use href="#dotcol" x="480"/><use href="#dotcol" x="520"/><use href="#dotcol" x="560"/><use href="#dotcol" x="600"/><use href="#dotcol" x="640"/><use href="#dotcol" x="680"/><use href="#dotcol" x="720"/><use href="#dotcol" x="760"/><use href="#dotcol" x="800"/><use href="#dotcol" x="840"/><use href="#dotcol" x="880"/><use href="#dotcol" x="920"/><use href="#dotcol" x="960"/><use href="#dotcol" x="1000"/><use href="#dotcol" x="1040"/><use href="#dotcol" x="1080"/><use href="#dotcol" x="1120"/><use href="#dotcol" x="1160"/><use href="#dotcol" x="1200"/><use href="#dotcol" x="1240"/><use href="#dotcol" x="1280"/><use href="#dotcol" x="1320"/><use href="#dotcol" x="1360"/>
+  </g>
+
+  <!-- LEFT: title + stats -->
+  <g transform="translate(80, 100)">
+    <g font-family="'Lora', Georgia, serif">
+      <text x="0" y="0" font-weight="600" font-style="italic" font-size="18" fill="#A78BFA" letter-spacing="4">AUTONOMOUS · RESEARCH · INTELLIGENCE</text>
+    </g>
+    <text x="0" y="76" font-family="'Inter', system-ui, sans-serif" font-weight="800" font-size="96" fill="#FFFFFF" letter-spacing="-4">AGENTARY</text>
+    <text x="0" y="130" font-family="'Lora', Georgia, serif" font-style="italic" font-size="26" fill="#C7CAD1">Give it an objective.</text>
+    <text x="0" y="164" font-family="'Lora', Georgia, serif" font-style="italic" font-size="26" fill="#C7CAD1">It returns a cited report.</text>
+
+    <!-- Description chip -->
+    <g transform="translate(0, 200)">
+      <rect width="560" height="60" rx="10" fill="#131820" stroke="rgba(255,255,255,0.08)"/>
+      <text x="20" y="26" font-family="'Inter', system-ui, sans-serif" font-size="13" font-weight="600" fill="#06B6D4" letter-spacing="1.6">HOW IT WORKS</text>
+      <text x="20" y="46" font-family="'Inter', system-ui, sans-serif" font-size="14" fill="#E5E7EB">Scouts · deep-dives in parallel · audits gaps · synthesises</text>
+    </g>
+
+    <!-- Stat pills -->
+    <g transform="translate(0, 295)" font-family="'Inter', system-ui, sans-serif">
+      <g>
+        <rect width="176" height="96" rx="14" fill="#131820" stroke="rgba(167,139,250,0.25)" filter="url(#a-shadow)"/>
+        <text x="20" y="34" font-family="'JetBrains Mono', monospace" font-size="30" font-weight="700" fill="#FFFFFF">6</text>
+        <text x="20" y="58" font-size="11" font-weight="700" fill="#A78BFA" letter-spacing="1.2">PHASES</text>
+        <text x="20" y="78" font-size="11" fill="#8A93A4">scout → research → synthesis</text>
+      </g>
+      <g transform="translate(192, 0)">
+        <rect width="176" height="96" rx="14" fill="#131820" stroke="rgba(6,182,212,0.25)" filter="url(#a-shadow)"/>
+        <text x="20" y="34" font-family="'JetBrains Mono', monospace" font-size="30" font-weight="700" fill="#FFFFFF">10</text>
+        <text x="20" y="58" font-size="11" font-weight="700" fill="#06B6D4" letter-spacing="1.2">EXPERT AGENTS</text>
+        <text x="20" y="78" font-size="11" fill="#8A93A4">each with own toolset</text>
+      </g>
+      <g transform="translate(384, 0)">
+        <rect width="176" height="96" rx="14" fill="#131820" stroke="rgba(245,158,11,0.25)" filter="url(#a-shadow)"/>
+        <text x="20" y="34" font-family="'JetBrains Mono', monospace" font-size="30" font-weight="700" fill="#FFFFFF">50+</text>
+        <text x="20" y="58" font-size="11" font-weight="700" fill="#F59E0B" letter-spacing="1.2">SQL TABLES</text>
+        <text x="20" y="78" font-size="11" fill="#8A93A4">full execution trace</text>
+      </g>
+    </g>
+
+    <!-- Tech chips row -->
+    <g transform="translate(0, 420)" font-family="'Inter', system-ui, sans-serif" font-size="12" font-weight="500">
+      <g>
+        <rect width="96" height="28" rx="14" fill="#009688"/>
+        <text x="48" y="19" fill="#FFFFFF" text-anchor="middle">FastAPI</text>
+      </g>
+      <g transform="translate(106, 0)">
+        <rect width="92" height="28" rx="14" fill="#000000" stroke="rgba(255,255,255,0.2)"/>
+        <text x="46" y="19" fill="#FFFFFF" text-anchor="middle">Next.js 14</text>
+      </g>
+      <g transform="translate(208, 0)">
+        <rect width="84" height="28" rx="14" fill="#A78BFA"/>
+        <text x="42" y="19" fill="#0d1017" text-anchor="middle" font-weight="700">Gemini</text>
+      </g>
+      <g transform="translate(302, 0)">
+        <rect width="84" height="28" rx="14" fill="#37814A"/>
+        <text x="42" y="19" fill="#FFFFFF" text-anchor="middle">Celery</text>
+      </g>
+      <g transform="translate(396, 0)">
+        <rect width="76" height="28" rx="14" fill="#DC244C"/>
+        <text x="38" y="19" fill="#FFFFFF" text-anchor="middle">Qdrant</text>
+      </g>
+      <g transform="translate(482, 0)">
+        <rect width="60" height="28" rx="14" fill="#DC382D"/>
+        <text x="30" y="19" fill="#FFFFFF" text-anchor="middle">Redis</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- RIGHT: crew network visual -->
+  <g transform="translate(870, 100)" filter="url(#a-shadow)">
+    <rect width="440" height="440" rx="22" fill="#0d1017" stroke="rgba(255,255,255,0.08)"/>
+  </g>
+  <g transform="translate(870, 100)" font-family="'Inter', system-ui, sans-serif">
+    <!-- Header -->
+    <text x="24" y="36" font-size="11" font-weight="700" fill="#A78BFA" letter-spacing="1.8">CREW · LIVE MISSION</text>
+    <text x="24" y="58" font-size="17" font-weight="600" fill="#FFFFFF">Market landscape: EV charging</text>
+    <text x="24" y="76" font-size="12" fill="#8A93A4">mission_4f8a · running · Phase 2 / 5</text>
+
+    <!-- Central orchestrator node -->
+    <g transform="translate(220, 230)">
+      <!-- orbit rings -->
+      <circle r="160" fill="none" stroke="rgba(167,139,250,0.1)" stroke-dasharray="4 6"/>
+      <circle r="110" fill="none" stroke="rgba(6,182,212,0.12)" stroke-dasharray="3 5"/>
+
+      <!-- Connection lines to experts -->
+      <g stroke="url(#a-beam)" stroke-width="1.5" opacity="0.85">
+        <line x1="0" y1="0" x2="0" y2="-110"/>
+        <line x1="0" y1="0" x2="95" y2="-55"/>
+        <line x1="0" y1="0" x2="95" y2="55"/>
+        <line x1="0" y1="0" x2="0" y2="110"/>
+        <line x1="0" y1="0" x2="-95" y2="55"/>
+        <line x1="0" y1="0" x2="-95" y2="-55"/>
+      </g>
+
+      <!-- Core orchestrator -->
+      <circle r="44" fill="#A78BFA"/>
+      <circle r="44" fill="url(#a-glow1)"/>
+      <text y="-2" font-size="10" font-weight="700" fill="#0d1017" text-anchor="middle" letter-spacing="1.5">CREW</text>
+      <text y="14" font-size="10" font-weight="700" fill="#0d1017" text-anchor="middle" letter-spacing="1.5">RUNNER</text>
+
+      <!-- Expert nodes -->
+      <g font-size="10" font-weight="700" text-anchor="middle">
+        <g transform="translate(0, -110)">
+          <circle r="28" fill="#131820" stroke="#06B6D4" stroke-width="2"/>
+          <text y="3" fill="#06B6D4">SCOUT</text>
+        </g>
+        <g transform="translate(95, -55)">
+          <circle r="28" fill="#131820" stroke="#F59E0B" stroke-width="2"/>
+          <text y="-2" fill="#F59E0B">MARKET</text>
+          <text y="10" fill="#F59E0B">ANALYST</text>
+        </g>
+        <g transform="translate(95, 55)">
+          <circle r="28" fill="#131820" stroke="#F59E0B" stroke-width="2"/>
+          <text y="-2" fill="#F59E0B">DATA</text>
+          <text y="10" fill="#F59E0B">EXTRACTOR</text>
+        </g>
+        <g transform="translate(0, 110)">
+          <circle r="28" fill="#131820" stroke="#F59E0B" stroke-width="2"/>
+          <text y="-2" fill="#F59E0B">COMP</text>
+          <text y="10" fill="#F59E0B">INTEL</text>
+        </g>
+        <g transform="translate(-95, 55)">
+          <circle r="28" fill="#131820" stroke="#34D399" stroke-width="2"/>
+          <text y="-2" fill="#34D399">SYN-</text>
+          <text y="10" fill="#34D399">THESIS</text>
+        </g>
+        <g transform="translate(-95, -55)">
+          <circle r="28" fill="#131820" stroke="#34D399" stroke-width="2"/>
+          <text y="-2" fill="#34D399">REPORT</text>
+          <text y="10" fill="#34D399">WRITER</text>
+        </g>
+      </g>
+    </g>
+
+    <!-- Footer status strip -->
+    <g transform="translate(24, 400)">
+      <rect width="392" height="26" rx="8" fill="#131820" stroke="rgba(255,255,255,0.06)"/>
+      <circle cx="14" cy="13" r="4" fill="#34D399"/>
+      <text x="26" y="17" font-size="11" fill="#C7CAD1">142 findings · 6 tools called · 3 sections bound · 0 errors</text>
+    </g>
+  </g>
+</svg>

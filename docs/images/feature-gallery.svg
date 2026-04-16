@@ -1,0 +1,359 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800" role="img" aria-label="Agentary capabilities — scout, parallel research, gap check, STORM outline, expert crew, cited report">
+  <defs>
+    <filter id="fg-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+    <linearGradient id="fg-beam" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#A78BFA" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#A78BFA" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#06B6D4" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="800" fill="#0d1017"/>
+
+  <!-- ══════════ PANEL 1: SCOUT (landscape map) ══════════ -->
+  <g transform="translate(20, 20)" filter="url(#fg-shadow)">
+    <rect width="380" height="370" rx="16" fill="#131820" stroke="rgba(255,255,255,0.06)"/>
+  </g>
+  <g transform="translate(40, 48)" font-family="'Inter', system-ui, sans-serif">
+    <text font-size="11" font-weight="700" fill="#06B6D4" letter-spacing="1.8">PHASE 1 · SCOUT</text>
+    <text y="22" font-size="18" font-weight="700" fill="#FFFFFF">Map the landscape first</text>
+    <text y="42" font-size="12" fill="#8A93A4">Surface dimensions before diving deep</text>
+  </g>
+  <!-- Radial dimension map -->
+  <g transform="translate(210, 240)" font-family="'Inter', system-ui, sans-serif">
+    <circle r="120" fill="none" stroke="rgba(6,182,212,0.12)" stroke-dasharray="3 4"/>
+    <circle r="80" fill="none" stroke="rgba(6,182,212,0.18)" stroke-dasharray="2 3"/>
+    <!-- Dimension nodes arranged radially -->
+    <g font-size="10" font-weight="600" fill="#C7CAD1" text-anchor="middle">
+      <g transform="translate(0, -110)">
+        <rect x="-44" y="-12" width="88" height="24" rx="12" fill="#0d1017" stroke="#06B6D4"/>
+        <text y="4">Competitors</text>
+      </g>
+      <g transform="translate(95, -55)">
+        <rect x="-36" y="-12" width="72" height="24" rx="12" fill="#0d1017" stroke="#06B6D4"/>
+        <text y="4">Pricing</text>
+      </g>
+      <g transform="translate(95, 55)">
+        <rect x="-44" y="-12" width="88" height="24" rx="12" fill="#0d1017" stroke="#06B6D4"/>
+        <text y="4">Regulation</text>
+      </g>
+      <g transform="translate(0, 110)">
+        <rect x="-44" y="-12" width="88" height="24" rx="12" fill="#0d1017" stroke="#06B6D4"/>
+        <text y="4">Customers</text>
+      </g>
+      <g transform="translate(-95, 55)">
+        <rect x="-36" y="-12" width="72" height="24" rx="12" fill="#0d1017" stroke="#06B6D4"/>
+        <text y="4">Trends</text>
+      </g>
+      <g transform="translate(-95, -55)">
+        <rect x="-36" y="-12" width="72" height="24" rx="12" fill="#0d1017" stroke="#06B6D4"/>
+        <text y="4">Tech</text>
+      </g>
+    </g>
+    <!-- Core -->
+    <circle r="28" fill="#06B6D4"/>
+    <text y="4" font-size="10" font-weight="700" fill="#0d1017" text-anchor="middle">SCOUT</text>
+  </g>
+
+  <!-- ══════════ PANEL 2: PARALLEL RESEARCH ══════════ -->
+  <g transform="translate(420, 20)" filter="url(#fg-shadow)">
+    <rect width="380" height="370" rx="16" fill="#131820" stroke="rgba(255,255,255,0.06)"/>
+  </g>
+  <g transform="translate(440, 48)" font-family="'Inter', system-ui, sans-serif">
+    <text font-size="11" font-weight="700" fill="#F59E0B" letter-spacing="1.8">PHASE 2 · RESEARCH</text>
+    <text y="22" font-size="18" font-weight="700" fill="#FFFFFF">N experts, deep dives in parallel</text>
+    <text y="42" font-size="12" fill="#8A93A4">6-iteration tool-calling loops each</text>
+  </g>
+  <!-- Four parallel agent lanes -->
+  <g transform="translate(440, 110)" font-family="'JetBrains Mono', monospace" font-size="10">
+    <g>
+      <rect width="340" height="44" rx="8" fill="#0d1017" stroke="rgba(245,158,11,0.35)"/>
+      <circle cx="18" cy="22" r="6" fill="#F59E0B"/>
+      <text x="34" y="19" fill="#FFFFFF">market_analyst</text>
+      <text x="34" y="32" fill="#8A93A4">exa_search · gemini_search · python</text>
+      <rect x="180" y="14" width="148" height="6" rx="3" fill="#131820"/>
+      <rect x="180" y="14" width="132" height="6" rx="3" fill="#F59E0B"/>
+      <text x="332" y="36" text-anchor="end" fill="#F59E0B" font-weight="700">89%</text>
+    </g>
+    <g transform="translate(0, 54)">
+      <rect width="340" height="44" rx="8" fill="#0d1017" stroke="rgba(245,158,11,0.35)"/>
+      <circle cx="18" cy="22" r="6" fill="#F59E0B"/>
+      <text x="34" y="19" fill="#FFFFFF">competitive_intel</text>
+      <text x="34" y="32" fill="#8A93A4">exa_search · gemini_search · web_scraper</text>
+      <rect x="180" y="14" width="148" height="6" rx="3" fill="#131820"/>
+      <rect x="180" y="14" width="108" height="6" rx="3" fill="#F59E0B"/>
+      <text x="332" y="36" text-anchor="end" fill="#F59E0B" font-weight="700">73%</text>
+    </g>
+    <g transform="translate(0, 108)">
+      <rect width="340" height="44" rx="8" fill="#0d1017" stroke="rgba(245,158,11,0.35)"/>
+      <circle cx="18" cy="22" r="6" fill="#F59E0B"/>
+      <text x="34" y="19" fill="#FFFFFF">data_extractor</text>
+      <text x="34" y="32" fill="#8A93A4">exa_search · web_scraper · python</text>
+      <rect x="180" y="14" width="148" height="6" rx="3" fill="#131820"/>
+      <rect x="180" y="14" width="148" height="6" rx="3" fill="#34D399"/>
+      <text x="332" y="36" text-anchor="end" fill="#34D399" font-weight="700">done</text>
+    </g>
+    <g transform="translate(0, 162)">
+      <rect width="340" height="44" rx="8" fill="#0d1017" stroke="rgba(245,158,11,0.35)"/>
+      <circle cx="18" cy="22" r="6" fill="#F59E0B"/>
+      <text x="34" y="19" fill="#FFFFFF">voice_caller</text>
+      <text x="34" y="32" fill="#8A93A4">twilio · transcript_capture</text>
+      <rect x="180" y="14" width="148" height="6" rx="3" fill="#131820"/>
+      <rect x="180" y="14" width="62" height="6" rx="3" fill="#F59E0B"/>
+      <text x="332" y="36" text-anchor="end" fill="#F59E0B" font-weight="700">42%</text>
+    </g>
+  </g>
+  <!-- Findings count -->
+  <g transform="translate(440, 330)" font-family="'Inter', system-ui, sans-serif">
+    <text font-size="10" font-weight="700" fill="#8A93A4" letter-spacing="1.2">FINDINGS SO FAR</text>
+    <text x="120" font-family="'JetBrains Mono', monospace" font-size="18" font-weight="700" fill="#F59E0B">142</text>
+    <text x="200" font-size="12" fill="#C7CAD1">facts · quotes · stats · cases</text>
+  </g>
+
+  <!-- ══════════ PANEL 3: GAP CHECK ══════════ -->
+  <g transform="translate(820, 20)" filter="url(#fg-shadow)">
+    <rect width="360" height="370" rx="16" fill="#131820" stroke="rgba(255,255,255,0.06)"/>
+  </g>
+  <g transform="translate(840, 48)" font-family="'Inter', system-ui, sans-serif">
+    <text font-size="11" font-weight="700" fill="#34D399" letter-spacing="1.8">PHASE 3 · GAP CHECK</text>
+    <text y="22" font-size="18" font-weight="700" fill="#FFFFFF">Self-audit coverage</text>
+    <text y="42" font-size="12" fill="#8A93A4">Catch under-covered dimensions</text>
+  </g>
+  <!-- 6 category rows with checkmarks and warnings -->
+  <g transform="translate(840, 110)" font-family="'Inter', system-ui, sans-serif" font-size="12">
+    <g>
+      <rect width="320" height="34" rx="6" fill="#0d1017" stroke="rgba(52,211,153,0.3)"/>
+      <circle cx="16" cy="17" r="7" fill="#34D399"/>
+      <path d="M 13 17 L 15.5 19.5 L 20 14" stroke="#0d1017" stroke-width="2" fill="none"/>
+      <text x="34" y="21" fill="#FFFFFF">Facts &amp; Data</text>
+      <text x="310" y="21" text-anchor="end" fill="#34D399" font-weight="700">42</text>
+    </g>
+    <g transform="translate(0, 42)">
+      <rect width="320" height="34" rx="6" fill="#0d1017" stroke="rgba(52,211,153,0.3)"/>
+      <circle cx="16" cy="17" r="7" fill="#34D399"/>
+      <path d="M 13 17 L 15.5 19.5 L 20 14" stroke="#0d1017" stroke-width="2" fill="none"/>
+      <text x="34" y="21" fill="#FFFFFF">Examples &amp; Cases</text>
+      <text x="310" y="21" text-anchor="end" fill="#34D399" font-weight="700">28</text>
+    </g>
+    <g transform="translate(0, 84)">
+      <rect width="320" height="34" rx="6" fill="#0d1017" stroke="rgba(52,211,153,0.3)"/>
+      <circle cx="16" cy="17" r="7" fill="#34D399"/>
+      <path d="M 13 17 L 15.5 19.5 L 20 14" stroke="#0d1017" stroke-width="2" fill="none"/>
+      <text x="34" y="21" fill="#FFFFFF">Expert Opinions</text>
+      <text x="310" y="21" text-anchor="end" fill="#34D399" font-weight="700">19</text>
+    </g>
+    <g transform="translate(0, 126)">
+      <rect width="320" height="34" rx="6" fill="#0d1017" stroke="rgba(52,211,153,0.3)"/>
+      <circle cx="16" cy="17" r="7" fill="#34D399"/>
+      <path d="M 13 17 L 15.5 19.5 L 20 14" stroke="#0d1017" stroke-width="2" fill="none"/>
+      <text x="34" y="21" fill="#FFFFFF">Trends &amp; Predictions</text>
+      <text x="310" y="21" text-anchor="end" fill="#34D399" font-weight="700">23</text>
+    </g>
+    <!-- Gap flagged -->
+    <g transform="translate(0, 168)">
+      <rect width="320" height="34" rx="6" fill="#0d1017" stroke="rgba(245,158,11,0.55)"/>
+      <circle cx="16" cy="17" r="7" fill="#F59E0B"/>
+      <text x="16" y="21" text-anchor="middle" font-weight="700" fill="#0d1017">!</text>
+      <text x="34" y="21" fill="#FFFFFF">Comparisons</text>
+      <text x="220" y="21" fill="#F59E0B" font-size="10">needs 3+ more</text>
+      <text x="310" y="21" text-anchor="end" fill="#F59E0B" font-weight="700">8</text>
+    </g>
+    <g transform="translate(0, 210)">
+      <rect width="320" height="34" rx="6" fill="#0d1017" stroke="rgba(245,158,11,0.55)"/>
+      <circle cx="16" cy="17" r="7" fill="#F59E0B"/>
+      <text x="16" y="21" text-anchor="middle" font-weight="700" fill="#0d1017">!</text>
+      <text x="34" y="21" fill="#FFFFFF">Challenges &amp; Criticisms</text>
+      <text x="220" y="21" fill="#F59E0B" font-size="10">retry needed</text>
+      <text x="310" y="21" text-anchor="end" fill="#F59E0B" font-weight="700">4</text>
+    </g>
+  </g>
+
+  <!-- ══════════ PANEL 4: STORM OUTLINE ══════════ -->
+  <g transform="translate(20, 410)" filter="url(#fg-shadow)">
+    <rect width="380" height="370" rx="16" fill="#131820" stroke="rgba(255,255,255,0.06)"/>
+  </g>
+  <g transform="translate(40, 438)" font-family="'Inter', system-ui, sans-serif">
+    <text font-size="11" font-weight="700" fill="#A78BFA" letter-spacing="1.8">PHASE 0 · STORM PRE-WRITE</text>
+    <text y="22" font-size="18" font-weight="700" fill="#FFFFFF">Outline before retrieval</text>
+    <text y="42" font-size="12" fill="#8A93A4">Plan report structure first · Stanford STORM</text>
+  </g>
+  <!-- Perspective miners → outline pipeline visual -->
+  <g transform="translate(40, 508)" font-family="'Inter', system-ui, sans-serif">
+    <!-- 4 perspective chips -->
+    <g font-size="10" font-weight="600">
+      <g>
+        <rect width="80" height="24" rx="12" fill="#0d1017" stroke="#A78BFA"/>
+        <text x="40" y="16" text-anchor="middle" fill="#A78BFA">Regulator</text>
+      </g>
+      <g transform="translate(86, 0)">
+        <rect width="88" height="24" rx="12" fill="#0d1017" stroke="#A78BFA"/>
+        <text x="44" y="16" text-anchor="middle" fill="#A78BFA">Beneficiary</text>
+      </g>
+      <g transform="translate(180, 0)">
+        <rect width="66" height="24" rx="12" fill="#0d1017" stroke="#A78BFA"/>
+        <text x="33" y="16" text-anchor="middle" fill="#A78BFA">Insider</text>
+      </g>
+      <g transform="translate(252, 0)">
+        <rect width="78" height="24" rx="12" fill="#0d1017" stroke="#A78BFA"/>
+        <text x="39" y="16" text-anchor="middle" fill="#A78BFA">Skeptic</text>
+      </g>
+    </g>
+    <!-- Arrow -->
+    <g transform="translate(168, 34)">
+      <line x1="0" y1="0" x2="0" y2="18" stroke="#A78BFA" stroke-width="1.5"/>
+      <polygon points="0,20 -4,14 4,14" fill="#A78BFA"/>
+    </g>
+    <!-- Outline sections -->
+    <g transform="translate(0, 60)" font-size="11">
+      <g>
+        <rect width="340" height="30" rx="6" fill="#0d1017" stroke="rgba(167,139,250,0.3)"/>
+        <rect width="4" height="30" rx="2" fill="#A78BFA"/>
+        <text x="16" y="14" font-size="10" font-weight="700" fill="#A78BFA">§1</text>
+        <text x="40" y="14" fill="#FFFFFF" font-weight="500">Market Dynamics</text>
+        <text x="40" y="26" fill="#8A93A4" font-size="9">scope · 3 questions · 4 evidence types</text>
+        <text x="330" y="20" text-anchor="end" fill="#34D399" font-size="10" font-weight="700">✓ 8</text>
+      </g>
+      <g transform="translate(0, 38)">
+        <rect width="340" height="30" rx="6" fill="#0d1017" stroke="rgba(167,139,250,0.3)"/>
+        <rect width="4" height="30" rx="2" fill="#A78BFA"/>
+        <text x="16" y="14" font-size="10" font-weight="700" fill="#A78BFA">§2</text>
+        <text x="40" y="14" fill="#FFFFFF" font-weight="500">Competitive Landscape</text>
+        <text x="40" y="26" fill="#8A93A4" font-size="9">scope · 2 questions · 3 evidence types</text>
+        <text x="330" y="20" text-anchor="end" fill="#34D399" font-size="10" font-weight="700">✓ 6</text>
+      </g>
+      <g transform="translate(0, 76)">
+        <rect width="340" height="30" rx="6" fill="#0d1017" stroke="rgba(167,139,250,0.3)"/>
+        <rect width="4" height="30" rx="2" fill="#A78BFA"/>
+        <text x="16" y="14" font-size="10" font-weight="700" fill="#A78BFA">§3</text>
+        <text x="40" y="14" fill="#FFFFFF" font-weight="500">Regulatory Outlook</text>
+        <text x="40" y="26" fill="#8A93A4" font-size="9">scope · 2 questions · 2 evidence types</text>
+        <text x="330" y="20" text-anchor="end" fill="#F59E0B" font-size="10" font-weight="700">⚠ 2</text>
+      </g>
+      <g transform="translate(0, 114)">
+        <rect width="340" height="30" rx="6" fill="#0d1017" stroke="rgba(167,139,250,0.3)"/>
+        <rect width="4" height="30" rx="2" fill="#A78BFA"/>
+        <text x="16" y="14" font-size="10" font-weight="700" fill="#A78BFA">§4</text>
+        <text x="40" y="14" fill="#FFFFFF" font-weight="500">Risks &amp; Mitigations</text>
+        <text x="40" y="26" fill="#8A93A4" font-size="9">scope · 3 questions · 3 evidence types</text>
+        <text x="330" y="20" text-anchor="end" fill="#34D399" font-size="10" font-weight="700">✓ 5</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- ══════════ PANEL 5: EXPERT CREW ══════════ -->
+  <g transform="translate(420, 410)" filter="url(#fg-shadow)">
+    <rect width="380" height="370" rx="16" fill="#131820" stroke="rgba(255,255,255,0.06)"/>
+  </g>
+  <g transform="translate(440, 438)" font-family="'Inter', system-ui, sans-serif">
+    <text font-size="11" font-weight="700" fill="#06B6D4" letter-spacing="1.8">CREW</text>
+    <text y="22" font-size="18" font-weight="700" fill="#FFFFFF">10 expert agents · pick the right crew</text>
+    <text y="42" font-size="12" fill="#8A93A4">Gemini selects per-mission specialists</text>
+  </g>
+  <g transform="translate(440, 500)" font-family="'Inter', system-ui, sans-serif" font-size="11">
+    <!-- Grid 2x5 of experts -->
+    <g>
+      <rect width="166" height="44" rx="8" fill="#0d1017" stroke="rgba(6,182,212,0.3)"/>
+      <circle cx="20" cy="22" r="10" fill="rgba(6,182,212,0.2)"/>
+      <text x="20" y="26" font-size="11" text-anchor="middle">🔍</text>
+      <text x="40" y="20" fill="#FFFFFF" font-weight="600">Web Researcher</text>
+      <text x="40" y="34" fill="#8A93A4" font-size="9">exa · gemini · scrape</text>
+    </g>
+    <g transform="translate(174, 0)">
+      <rect width="166" height="44" rx="8" fill="#0d1017" stroke="rgba(245,158,11,0.3)"/>
+      <circle cx="20" cy="22" r="10" fill="rgba(245,158,11,0.2)"/>
+      <text x="20" y="26" font-size="11" text-anchor="middle">📊</text>
+      <text x="40" y="20" fill="#FFFFFF" font-weight="600">Market Analyst</text>
+      <text x="40" y="34" fill="#8A93A4" font-size="9">gemini · exa · python</text>
+    </g>
+    <g transform="translate(0, 54)">
+      <rect width="166" height="44" rx="8" fill="#0d1017" stroke="rgba(245,158,11,0.3)"/>
+      <circle cx="20" cy="22" r="10" fill="rgba(245,158,11,0.2)"/>
+      <text x="20" y="26" font-size="11" text-anchor="middle">💰</text>
+      <text x="40" y="20" fill="#FFFFFF" font-weight="600">Financial Analyst</text>
+      <text x="40" y="34" fill="#8A93A4" font-size="9">gemini · python</text>
+    </g>
+    <g transform="translate(174, 54)">
+      <rect width="166" height="44" rx="8" fill="#0d1017" stroke="rgba(245,158,11,0.3)"/>
+      <circle cx="20" cy="22" r="10" fill="rgba(245,158,11,0.2)"/>
+      <text x="20" y="26" font-size="11" text-anchor="middle">🎯</text>
+      <text x="40" y="20" fill="#FFFFFF" font-weight="600">Competitive Intel</text>
+      <text x="40" y="34" fill="#8A93A4" font-size="9">exa · gemini · scrape</text>
+    </g>
+    <g transform="translate(0, 108)">
+      <rect width="166" height="44" rx="8" fill="#0d1017" stroke="rgba(245,158,11,0.3)"/>
+      <circle cx="20" cy="22" r="10" fill="rgba(245,158,11,0.2)"/>
+      <text x="20" y="26" font-size="11" text-anchor="middle">🔬</text>
+      <text x="40" y="20" fill="#FFFFFF" font-weight="600">Due Diligence</text>
+      <text x="40" y="34" fill="#8A93A4" font-size="9">exa · gemini</text>
+    </g>
+    <g transform="translate(174, 108)">
+      <rect width="166" height="44" rx="8" fill="#0d1017" stroke="rgba(245,158,11,0.3)"/>
+      <circle cx="20" cy="22" r="10" fill="rgba(245,158,11,0.2)"/>
+      <text x="20" y="26" font-size="11" text-anchor="middle">📞</text>
+      <text x="40" y="20" fill="#FFFFFF" font-weight="600">Voice Caller</text>
+      <text x="40" y="34" fill="#8A93A4" font-size="9">twilio</text>
+    </g>
+    <g transform="translate(0, 162)">
+      <rect width="166" height="44" rx="8" fill="#0d1017" stroke="rgba(52,211,153,0.3)"/>
+      <circle cx="20" cy="22" r="10" fill="rgba(52,211,153,0.2)"/>
+      <text x="20" y="26" font-size="11" text-anchor="middle">🧩</text>
+      <text x="40" y="20" fill="#FFFFFF" font-weight="600">Synthesizer</text>
+      <text x="40" y="34" fill="#8A93A4" font-size="9">reasoning only</text>
+    </g>
+    <g transform="translate(174, 162)">
+      <rect width="166" height="44" rx="8" fill="#0d1017" stroke="rgba(52,211,153,0.3)"/>
+      <circle cx="20" cy="22" r="10" fill="rgba(52,211,153,0.2)"/>
+      <text x="20" y="26" font-size="11" text-anchor="middle">✍️</text>
+      <text x="40" y="20" fill="#FFFFFF" font-weight="600">Report Writer</text>
+      <text x="40" y="34" fill="#8A93A4" font-size="9">chart · python</text>
+    </g>
+  </g>
+
+  <!-- ══════════ PANEL 6: CITED REPORT ══════════ -->
+  <g transform="translate(820, 410)" filter="url(#fg-shadow)">
+    <rect width="360" height="370" rx="16" fill="#131820" stroke="rgba(255,255,255,0.06)"/>
+  </g>
+  <g transform="translate(840, 438)" font-family="'Inter', system-ui, sans-serif">
+    <text font-size="11" font-weight="700" fill="#34D399" letter-spacing="1.8">PHASE 5 · REPORT</text>
+    <text y="22" font-size="18" font-weight="700" fill="#FFFFFF">Structured · cited · exportable</text>
+    <text y="42" font-size="12" fill="#8A93A4">MD · HTML · PDF · per-section citations</text>
+  </g>
+  <!-- Mock report page -->
+  <g transform="translate(840, 500)" font-family="'Inter', system-ui, sans-serif">
+    <rect width="320" height="260" rx="10" fill="#FFFFFF"/>
+    <g transform="translate(16, 20)">
+      <text font-family="'Lora', Georgia, serif" font-size="14" font-weight="700" fill="#131820">Market Dynamics</text>
+      <text y="18" font-size="9" fill="#6B7280">§1 · 8 findings bound · confidence 0.82</text>
+    </g>
+    <!-- Paragraph lines -->
+    <g transform="translate(16, 58)" fill="#374151">
+      <rect width="280" height="4" rx="2"/>
+      <rect y="10" width="260" height="4" rx="2"/>
+      <rect y="20" width="270" height="4" rx="2"/>
+      <rect y="30" width="150" height="4" rx="2"/>
+    </g>
+    <!-- Inline citations -->
+    <g transform="translate(16, 110)" font-family="'Inter', system-ui, sans-serif">
+      <rect width="80" height="20" rx="10" fill="#F3F4F6"/>
+      <text x="40" y="14" font-size="10" fill="#A78BFA" text-anchor="middle" font-weight="700">[1] McKinsey</text>
+      <g transform="translate(86, 0)">
+        <rect width="68" height="20" rx="10" fill="#F3F4F6"/>
+        <text x="34" y="14" font-size="10" fill="#A78BFA" text-anchor="middle" font-weight="700">[2] SEC</text>
+      </g>
+      <g transform="translate(160, 0)">
+        <rect width="92" height="20" rx="10" fill="#F3F4F6"/>
+        <text x="46" y="14" font-size="10" fill="#A78BFA" text-anchor="middle" font-weight="700">[3] Gartner</text>
+      </g>
+    </g>
+    <!-- Inline chart -->
+    <g transform="translate(16, 150)">
+      <rect width="288" height="80" rx="6" fill="#FAFAFA" stroke="#E5E7EB"/>
+      <text x="12" y="16" font-size="9" fill="#6B7280">Market size forecast · $B</text>
+      <path d="M 20 66 L 60 60 L 100 54 L 140 42 L 180 30 L 220 22 L 260 14" stroke="#A78BFA" stroke-width="2" fill="none"/>
+      <path d="M 20 66 L 60 60 L 100 54 L 140 42 L 180 30 L 220 22 L 260 14 L 260 70 L 20 70 Z" fill="#A78BFA" opacity="0.15"/>
+      <text x="20" y="75" font-size="8" fill="#9CA3AF">2024</text>
+      <text x="252" y="75" font-size="8" fill="#9CA3AF">2030</text>
+    </g>
+  </g>
+</svg>

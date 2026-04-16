@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 380" width="1400" height="380" role="img" aria-label="Research pipeline — STORM pre-write, scout, research, gap check, synthesis, report">
+  <defs>
+    <filter id="p-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+    <marker id="p-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="10" markerHeight="10" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8A93A4"/>
+    </marker>
+  </defs>
+  <rect width="1400" height="380" fill="#0d1017"/>
+
+  <!-- Title -->
+  <g font-family="'Inter', system-ui, sans-serif" transform="translate(60, 40)">
+    <text font-size="12" font-weight="700" fill="#A78BFA" letter-spacing="2">RESEARCH PIPELINE · 6 PHASES</text>
+    <text y="28" font-size="22" font-weight="700" fill="#FFFFFF">Objective → cited report</text>
+    <text y="48" font-size="13" fill="#8A93A4">DeerFlow-inspired execution · STORM pre-writing · single-source Gemini budget</text>
+  </g>
+
+  <!-- Pipeline stages -->
+  <g transform="translate(60, 150)" font-family="'Inter', system-ui, sans-serif">
+
+    <!-- Phase 0 · STORM -->
+    <g filter="url(#p-shadow)">
+      <rect width="200" height="160" rx="14" fill="#131820" stroke="#A78BFA" stroke-width="1.5"/>
+      <rect y="0" width="200" height="32" rx="14" fill="#A78BFA"/>
+      <rect y="20" width="200" height="12" fill="#A78BFA"/>
+      <text x="100" y="21" font-size="11" font-weight="800" fill="#0d1017" text-anchor="middle" letter-spacing="2">PHASE 0 · STORM</text>
+      <text x="100" y="66" font-size="28" text-anchor="middle">🪴</text>
+      <text x="100" y="94" font-size="13" font-weight="700" fill="#FFFFFF" text-anchor="middle">Pre-Write</text>
+      <text x="100" y="112" font-size="10" fill="#C7CAD1" text-anchor="middle">perspectives · questions</text>
+      <text x="100" y="126" font-size="10" fill="#C7CAD1" text-anchor="middle">outline · evidence bind</text>
+      <text x="100" y="148" font-size="10" fill="#A78BFA" text-anchor="middle" font-weight="700">opt-in · 6 Flash + 8 Pro</text>
+    </g>
+    <line x1="206" y1="80" x2="246" y2="80" stroke="#8A93A4" stroke-width="1.5" marker-end="url(#p-arrow)"/>
+
+    <!-- Phase 1 · Scout -->
+    <g transform="translate(250, 0)" filter="url(#p-shadow)">
+      <rect width="170" height="160" rx="14" fill="#131820" stroke="rgba(6,182,212,0.4)"/>
+      <rect y="0" width="170" height="28" rx="14" fill="#06B6D4"/>
+      <rect y="16" width="170" height="12" fill="#06B6D4"/>
+      <text x="85" y="19" font-size="10" font-weight="800" fill="#0d1017" text-anchor="middle" letter-spacing="1.6">PHASE 1 · SCOUT</text>
+      <text x="85" y="62" font-size="24" text-anchor="middle">🔭</text>
+      <text x="85" y="88" font-size="13" font-weight="700" fill="#FFFFFF" text-anchor="middle">Map landscape</text>
+      <text x="85" y="108" font-size="10" fill="#C7CAD1" text-anchor="middle">broad exploration</text>
+      <text x="85" y="122" font-size="10" fill="#C7CAD1" text-anchor="middle">surface dimensions</text>
+      <text x="85" y="144" font-size="10" fill="#06B6D4" text-anchor="middle" font-weight="700">1 expert</text>
+    </g>
+    <line x1="426" y1="80" x2="466" y2="80" stroke="#8A93A4" stroke-width="1.5" marker-end="url(#p-arrow)"/>
+
+    <!-- Phase 2 · Research -->
+    <g transform="translate(470, 0)" filter="url(#p-shadow)">
+      <rect width="210" height="160" rx="14" fill="#131820" stroke="rgba(245,158,11,0.4)"/>
+      <rect y="0" width="210" height="28" rx="14" fill="#F59E0B"/>
+      <rect y="16" width="210" height="12" fill="#F59E0B"/>
+      <text x="105" y="19" font-size="10" font-weight="800" fill="#0d1017" text-anchor="middle" letter-spacing="1.6">PHASE 2 · RESEARCH</text>
+      <text x="105" y="62" font-size="24" text-anchor="middle">⚡</text>
+      <text x="105" y="88" font-size="13" font-weight="700" fill="#FFFFFF" text-anchor="middle">Parallel deep dives</text>
+      <text x="105" y="108" font-size="10" fill="#C7CAD1" text-anchor="middle">6 information categories</text>
+      <text x="105" y="122" font-size="10" fill="#C7CAD1" text-anchor="middle">tool-calling × 6 iters</text>
+      <text x="105" y="144" font-size="10" fill="#F59E0B" text-anchor="middle" font-weight="700">N experts · M dims</text>
+    </g>
+    <line x1="686" y1="80" x2="726" y2="80" stroke="#8A93A4" stroke-width="1.5" marker-end="url(#p-arrow)"/>
+
+    <!-- Phase 3 · Gap check -->
+    <g transform="translate(730, 0)" filter="url(#p-shadow)">
+      <rect width="180" height="160" rx="14" fill="#131820" stroke="rgba(52,211,153,0.4)"/>
+      <rect y="0" width="180" height="28" rx="14" fill="#34D399"/>
+      <rect y="16" width="180" height="12" fill="#34D399"/>
+      <text x="90" y="19" font-size="10" font-weight="800" fill="#0d1017" text-anchor="middle" letter-spacing="1.4">PHASE 3 · GAP CHECK</text>
+      <text x="90" y="62" font-size="24" text-anchor="middle">🔍</text>
+      <text x="90" y="88" font-size="13" font-weight="700" fill="#FFFFFF" text-anchor="middle">Audit coverage</text>
+      <text x="90" y="108" font-size="10" fill="#C7CAD1" text-anchor="middle">diversity check</text>
+      <text x="90" y="122" font-size="10" fill="#C7CAD1" text-anchor="middle">flag weak dimensions</text>
+      <text x="90" y="144" font-size="10" fill="#34D399" text-anchor="middle" font-weight="700">1 synthesizer</text>
+    </g>
+    <line x1="916" y1="80" x2="956" y2="80" stroke="#8A93A4" stroke-width="1.5" marker-end="url(#p-arrow)"/>
+
+    <!-- Phase 4 · Synthesis -->
+    <g transform="translate(960, 0)" filter="url(#p-shadow)">
+      <rect width="170" height="160" rx="14" fill="#131820" stroke="rgba(52,211,153,0.4)"/>
+      <rect y="0" width="170" height="28" rx="14" fill="#34D399"/>
+      <rect y="16" width="170" height="12" fill="#34D399"/>
+      <text x="85" y="19" font-size="10" font-weight="800" fill="#0d1017" text-anchor="middle" letter-spacing="1.4">PHASE 4 · SYNTH</text>
+      <text x="85" y="62" font-size="24" text-anchor="middle">🧠</text>
+      <text x="85" y="88" font-size="13" font-weight="700" fill="#FFFFFF" text-anchor="middle">Merge · resolve</text>
+      <text x="85" y="108" font-size="10" fill="#C7CAD1" text-anchor="middle">weight by confidence</text>
+      <text x="85" y="122" font-size="10" fill="#C7CAD1" text-anchor="middle">cross-dim patterns</text>
+      <text x="85" y="144" font-size="10" fill="#34D399" text-anchor="middle" font-weight="700">1 expert</text>
+    </g>
+    <line x1="1136" y1="80" x2="1176" y2="80" stroke="#8A93A4" stroke-width="1.5" marker-end="url(#p-arrow)"/>
+
+    <!-- Phase 5 · Report -->
+    <g transform="translate(1180, 0)" filter="url(#p-shadow)">
+      <rect width="160" height="160" rx="14" fill="#131820" stroke="rgba(167,139,250,0.4)"/>
+      <rect y="0" width="160" height="28" rx="14" fill="#A78BFA"/>
+      <rect y="16" width="160" height="12" fill="#A78BFA"/>
+      <text x="80" y="19" font-size="10" font-weight="800" fill="#0d1017" text-anchor="middle" letter-spacing="1.4">PHASE 5 · REPORT</text>
+      <text x="80" y="62" font-size="24" text-anchor="middle">📄</text>
+      <text x="80" y="88" font-size="13" font-weight="700" fill="#FFFFFF" text-anchor="middle">Structured output</text>
+      <text x="80" y="108" font-size="10" fill="#C7CAD1" text-anchor="middle">sections · charts</text>
+      <text x="80" y="122" font-size="10" fill="#C7CAD1" text-anchor="middle">cited · exportable</text>
+      <text x="80" y="144" font-size="10" fill="#A78BFA" text-anchor="middle" font-weight="700">1 report writer</text>
+    </g>
+  </g>
+</svg>
