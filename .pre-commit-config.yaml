@@ -1,0 +1,57 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: "\\.svg$"
+      - id: end-of-file-fixer
+        exclude: "\\.svg$"
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  # ── Python (backend) ──────────────────────────────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        files: ^backend/
+      - id: ruff-format
+        files: ^backend/
+
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        files: ^backend/
+        args: [--config=backend/pyproject.toml]
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        files: ^backend/
+        args: [--settings-path=backend/pyproject.toml]
+
+  # ── Frontend (dashboard) ──────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: eslint
+        name: ESLint (dashboard)
+        entry: bash -c 'cd dashboard && npx eslint --fix'
+        language: system
+        files: ^dashboard/.*\.(ts|tsx|js|jsx)$
+        pass_filenames: true
+
+  # ── Secret scanning ───────────────────────────────────────────────
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
