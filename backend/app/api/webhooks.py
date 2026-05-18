@@ -1,19 +1,24 @@
 """Resend webhook handler for email event tracking.
 
-Receives webhook events from Resend (delivered, opened, clicked,
-bounced, complained) and stores them for analytics. Automatically
-manages the suppression list for bounces and complaints.
+Receives webhook events from Resend (delivered, opened, clicked, bounced,
+complained) and stores them for analytics. Manages the suppression list for
+bounces and complaints.
 
-No auth required -- Resend calls this endpoint directly.
+Inbound requests are authenticated via Svix-style HMAC-SHA256 over
+``{webhook_id}.{timestamp}.{body}`` — see ``core.webhook_security``. Without
+this, anyone could fabricate suppression events for legitimate addresses or
+forge ``EmailEvent`` rows.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
+from ..core.webhook_security import verify_resend_signature
 from ..deps import get_db
 from ..models.call_campaign import CallCampaign
 from ..models.email_event import EmailEvent
@@ -29,14 +34,24 @@ async def resend_webhook(
     request: Request,
     db: Session = Depends(get_db),
 ) -> dict:
-    """Handle Resend webhook events. No auth required -- Resend calls this."""
-    body = await request.json()
+    """Handle Resend webhook events. Authenticated via Svix HMAC."""
+    # Read the raw body *before* parsing JSON — signature is over the raw bytes.
+    body_bytes = await request.body()
+    verify_resend_signature(body_bytes, dict(request.headers))
+
+    try:
+        body = json.loads(body_bytes)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Malformed JSON body",
+        ) from exc
+
     event_type = body.get("type", "")
     data = body.get("data", {})
-
     resend_email_id = data.get("email_id", "")
 
-    # Try to link to campaign via resend_email_id to get user_id
+    # Link to campaign to derive user_id for tenant-scoped storage.
     campaign = None
     if resend_email_id:
         campaign = (
@@ -45,7 +60,6 @@ async def resend_webhook(
             .first()
         )
 
-    # Store event (only if we can determine the user_id from the campaign)
     if campaign:
         event = EmailEvent(
             user_id=campaign.user_id,
@@ -56,7 +70,6 @@ async def resend_webhook(
         )
         db.add(event)
 
-    # Handle side effects for bounces and complaints
     if event_type == "email.bounced":
         email_addr = data.get("to", [None])[0]
         if email_addr:
@@ -71,7 +84,8 @@ async def resend_webhook(
 
     logger.info(
         "Processed Resend webhook: type=%s email_id=%s",
-        event_type, resend_email_id,
+        event_type,
+        resend_email_id,
     )
     return {"status": "ok"}
 

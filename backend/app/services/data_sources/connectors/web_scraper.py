@@ -18,6 +18,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from ....config import settings
+from ....core.url_guard import UnsafeURLError, safe_http_get
 from ..base_connector import SourceResult
 
 logger = logging.getLogger(__name__)
@@ -207,22 +208,23 @@ class WebScraperConnector:
     )
 
     async def _fetch_page(self, url: str) -> tuple[str, int]:
-        """Fetch a web page and return (html_content, status_code).
+        """Fetch a web page through the SSRF-safe client.
 
-        Returns ("", status_code) on failure.
+        Returns ("", status_code) on failure. Raises ``UnsafeURLError`` if
+        the URL targets a blocked address.
         """
         async with httpx.AsyncClient(
             timeout=_TIMEOUT,
-            follow_redirects=True,
+            follow_redirects=False,  # url_guard handles redirects manually
             headers=_default_headers(),
         ) as client:
-            # Respect robots.txt
+            # robots.txt fetch is also gated — same blocklist applies
             allowed = await _check_robots_txt(url, client)
             if not allowed:
                 logger.warning("Blocked by robots.txt: %s", url)
                 return "", 403
 
-            resp = await client.get(url)
+            resp = await safe_http_get(url, client=client)
             return resp.text, resp.status_code
 
     async def get(self, identifier: str, **kwargs: Any) -> SourceResult:
@@ -317,6 +319,16 @@ class WebScraperConnector:
 
             return extracted
 
+        except UnsafeURLError as exc:
+            logger.warning("Rejected URL %s: %s", url, exc)
+            return SourceResult(
+                data=[],
+                raw_response=None,
+                total_results=0,
+                source_name=self.name,
+                source_url=url,
+                metadata={"error": f"URL rejected: {exc}", "status_code": 400},
+            )
         except httpx.TimeoutException:
             logger.error("Timeout scraping %s", url)
             return SourceResult(

@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from ..auth import create_access_token, hash_password, verify_password
+from ..core.rate_limiter import limiter
 from ..deps import get_current_user, get_db
 from ..models.user import User
 from ..schemas.auth import (
@@ -21,6 +22,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
+@limiter.limit("3/minute")
 def register(body: RegisterRequest, request: Request, db: Session = Depends(get_db)):
     """Register a new user account.
 
@@ -62,6 +64,7 @@ def register(body: RegisterRequest, request: Request, db: Session = Depends(get_
 
 
 @router.post("/login", response_model=TokenResponse)
+@limiter.limit("5/minute")
 def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
     """Authenticate a user and return a JWT.
 
