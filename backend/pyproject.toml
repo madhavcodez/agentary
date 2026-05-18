@@ -1,9 +1,130 @@
 [project]
 name = "agentary"
-version = "0.1.0"
-description = "AI research platform — opportunity scout, research engine, and voice assistant"
-requires-python = ">=3.10"
+version = "0.2.0"
+description = "Autonomous AI research & intelligence platform"
+requires-python = ">=3.13"
+license = { text = "MIT" }
+readme = "../README.md"
 
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+# ── Pytest ────────────────────────────────────────────────────────────
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+markers = [
+    "unit: pure-function/unit tests, no I/O",
+    "integration: hits a DB, Redis, or other infra",
+    "slow: long-running tests, excluded from default selection",
+    "e2e: full-stack scenarios",
+]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning:passlib.*",
+    "ignore::DeprecationWarning:google.*",
+    "ignore::PendingDeprecationWarning",
+]
+
+# ── Coverage ──────────────────────────────────────────────────────────
+[tool.coverage.run]
+source = ["app"]
+branch = true
+omit = [
+    "app/tests/*",
+    "tests/*",
+    "alembic/*",
+    "**/__init__.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
+show_missing = true
+skip_empty = true
+precision = 1
+
+# ── Ruff ──────────────────────────────────────────────────────────────
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+extend-exclude = ["alembic/versions"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # bugbear
+    "C4",   # comprehensions
+    "UP",   # pyupgrade
+    "SIM",  # simplify
+    "RUF",  # ruff-specific
+    "ASYNC",# async correctness
+    "S",    # bandit (security)
+    "T20",  # print/pprint detection
+    "PIE",  # misc lints
+    "RET",  # return statements
+    "TCH",  # type-checking import sorting
+]
+ignore = [
+    "E501",   # line too long — black handles this
+    "B008",   # function call in default arg — common FastAPI Depends pattern
+    "S101",   # asserts allowed in tests
+    "S104",   # hardcoded bind to 0.0.0.0 in dev
+    "S105",   # hardcoded password fixture in tests
+    "RET504", # unnecessary assignment before return — sometimes clearer
+    "UP007",  # X | Y syntax — keep Optional[X] supported for now
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "T20", "B"]
+"app/tests/**" = ["S", "T20", "B"]
+"scripts/**" = ["T20"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+combine-as-imports = true
+
+# ── Black ─────────────────────────────────────────────────────────────
+[tool.black]
+line-length = 100
+target-version = ["py313"]
+extend-exclude = "alembic/versions"
+
+# ── isort ─────────────────────────────────────────────────────────────
+[tool.isort]
+profile = "black"
+line_length = 100
+known_first_party = ["app"]
+skip = ["alembic/versions"]
+
+# ── Mypy ──────────────────────────────────────────────────────────────
+[tool.mypy]
+python_version = "3.13"
+strict_optional = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = false
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+ignore_missing_imports = true
+plugins = ["pydantic.mypy"]
+exclude = ["alembic/versions/.*"]
+
+[[tool.mypy.overrides]]
+module = ["tests.*", "app.tests.*"]
+disallow_untyped_defs = false
+
+# ── Bandit (security SAST) ────────────────────────────────────────────
+[tool.bandit]
+exclude_dirs = ["tests", "app/tests", "alembic"]
+skips = ["B101"]  # assert is fine in tests

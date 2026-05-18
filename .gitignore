@@ -4,40 +4,77 @@ __pycache__/
 *$py.class
 *.so
 backend/.venv/
+.venv/
+venv/
 *.egg-info/
 dist/
 build/
+.mypy_cache/
+.ruff_cache/
 
 # Environment (NEVER commit secrets)
 .env
-.env.local
+.env.*
 !.env.example
+*.pem
+*.key
+*.p12
+
+# Archives (often dropped in by accident)
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*.swn
 
 # Node
 node_modules/
 dashboard/.next/
 dashboard/out/
+.npm/
 
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Test / Coverage
 htmlcov/
 .coverage
+.coverage.*
+coverage.xml
 .pytest_cache/
+.tox/
 
 # Alembic
 *.db
+*.sqlite
+*.sqlite3
 
 # Celery
 celerybeat-schedule*
+celerybeat.pid
 
 # Graphify output (generated, not source)
 graphify-out/
+
+# Editor/system
+*.orig
+*.rej
+*.bak
+.directory
+
+# Local agent / Claude state
+.claude/
+CLAUDE.local.md
+
+# Pre-commit
+.pre-commit-cache/

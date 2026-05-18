@@ -1,0 +1,52 @@
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+    open-pull-requests-limit: 5
+    labels: [dependencies, python]
+    groups:
+      python-prod:
+        patterns: ["*"]
+        exclude-patterns: ["pytest*", "ruff", "black", "mypy", "isort"]
+      python-dev:
+        patterns: ["pytest*", "ruff", "black", "mypy", "isort"]
+
+  - package-ecosystem: npm
+    directory: /dashboard
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+    open-pull-requests-limit: 5
+    labels: [dependencies, javascript]
+    groups:
+      next-react:
+        patterns: ["next", "react", "react-dom", "@types/react*"]
+      tooling:
+        patterns: ["typescript", "eslint*", "vitest", "@vitejs/*", "@testing-library/*"]
+      runtime:
+        patterns: ["*"]
+        exclude-patterns: ["next", "react*", "@types/react*", "typescript", "eslint*", "vitest", "@vitejs/*", "@testing-library/*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies, ci]
+
+  - package-ecosystem: docker
+    directory: /backend
+    schedule:
+      interval: weekly
+    labels: [dependencies, docker]
+
+  - package-ecosystem: docker
+    directory: /dashboard
+    schedule:
+      interval: weekly
+    labels: [dependencies, docker]

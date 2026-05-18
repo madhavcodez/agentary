@@ -1,0 +1,8 @@
+# Default owner for everything
+*                                       @madhavcodez
+
+# Domain-specific
+/backend/app/voice/                     @madhavcodez
+/backend/app/services/voice/            @madhavcodez
+/backend/alembic/versions/              @madhavcodez
+/.github/                               @madhavcodez
