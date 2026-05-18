@@ -3,12 +3,20 @@
 Makes phone calls to businesses/people as part of research missions.
 Creates a VoiceExtraction + CallRecord, executes the call (real via
 Twilio or simulated via Gemini), runs extraction, and returns results.
+
+Every number supplied by the LLM is validated through
+``core.phone_guard.validate_outbound_number`` before any Twilio request is
+issued, blocking premium-rate prefixes, disallowed regions, and emergency
+short codes that a prompt-injected research target could otherwise smuggle
+in.
 """
 from __future__ import annotations
 
 import logging
 import uuid
 from typing import Any
+
+from ....core.phone_guard import PhoneNumberRejected, validate_outbound_number
 
 logger = logging.getLogger(__name__)
 
@@ -81,8 +89,24 @@ async def execute(
         Dict with extracted_data, transcript_summary, confidence, status.
     """
     from ....database import SessionLocal
-    from ...voice import voice_service, voice_pipeline_adapter
+    from ...voice import voice_pipeline_adapter, voice_service
     from ...voice.transcript_processor import summarize_call
+
+    # Validate the LLM-supplied phone number before any Twilio call is issued.
+    try:
+        phone_number = validate_outbound_number(phone_number)
+    except PhoneNumberRejected as exc:
+        logger.info("voice_caller rejected number for %s: %s", business_name, exc)
+        return {
+            "tool": "voice_caller",
+            "status": "error",
+            "phone_number": phone_number,
+            "business_name": business_name,
+            "error": f"Phone number rejected: {exc}",
+            "extracted_data": {},
+            "transcript_summary": "",
+            "confidence": 0.0,
+        }
 
     # Normalize questions format — accept both list[str] and list[dict]
     normalized_questions: list[dict[str, Any]] = []

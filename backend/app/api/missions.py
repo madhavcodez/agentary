@@ -124,7 +124,25 @@ def list_mission_runs(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return db.query(MissionRun).filter(MissionRun.mission_id == mission_id).order_by(MissionRun.created_at.desc()).all()
+    """List runs for a mission. Verifies caller owns the mission first.
+
+    Previously this filtered only on ``mission_id``, letting any authenticated
+    user enumerate runs across the whole platform by guessing UUIDs. See
+    SECURITY review IDOR #7.
+    """
+    mission = (
+        db.query(Mission)
+        .filter(Mission.id == mission_id, Mission.user_id == user.id)
+        .first()
+    )
+    if not mission:
+        raise HTTPException(status_code=404, detail="Mission not found")
+    return (
+        db.query(MissionRun)
+        .filter(MissionRun.mission_id == mission_id)
+        .order_by(MissionRun.created_at.desc())
+        .all()
+    )
 
 
 # ── Research Engine Endpoints ─────────────────────────────────────────

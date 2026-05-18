@@ -26,11 +26,17 @@ from app.voice.policy.engine import PolicyEngine
 logger = logging.getLogger(__name__)
 
 voice_app = FastAPI(title="Agentary Voice Agent")
+# CORS: use the same allowlist as the main API. ``allow_origins=["*"]`` with a
+# credentialed/WebSocket surface allows cross-site hijacking from any origin.
+_voice_allowed_origins = [
+    o.strip() for o in settings.allowed_origins.split(",") if o.strip()
+]
 voice_app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_voice_allowed_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 SYSTEM_PROMPT = """You are Agentary, an AI research assistant for Madhav S Chauhan.
