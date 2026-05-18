@@ -10,7 +10,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from .core.logging_config import setup_logging
-from .database import init_db
+from .database import SessionLocal, init_db
 
 # Activate structured JSON logging before anything else logs
 setup_logging()
@@ -18,62 +18,117 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
+class SubsystemReadiness:
+    """Track which startup subsystems came up. Exposed at /health/ready.
+
+    Required subsystems failing propagate the exception and abort startup;
+    optional subsystems degrade but surface their state so operators can
+    see the partial outage instead of believing the boot was clean.
+    """
+
+    def __init__(self) -> None:
+        self.state: dict[str, str] = {}
+
+    def mark(self, name: str, status: str) -> None:
+        self.state[name] = status
+        logger.info("subsystem %s: %s", name, status)
+
+    def required(self, name: str) -> "_SubsystemContext":
+        return _SubsystemContext(self, name, required=True)
+
+    def optional(self, name: str) -> "_SubsystemContext":
+        return _SubsystemContext(self, name, required=False)
+
+
+class _SubsystemContext:
+    def __init__(self, readiness: SubsystemReadiness, name: str, *, required: bool) -> None:
+        self._readiness = readiness
+        self._name = name
+        self._required = required
+
+    def __enter__(self) -> "_SubsystemContext":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> bool:
+        if exc is None:
+            self._readiness.mark(self._name, "ok")
+            return False
+        if self._required:
+            self._readiness.mark(self._name, f"failed: {exc}")
+            logger.critical("required subsystem %s failed: %s", self._name, exc)
+            return False  # re-raise; startup aborts
+        self._readiness.mark(self._name, f"degraded: {exc}")
+        logger.warning("optional subsystem %s degraded: %s", self._name, exc)
+        return True  # swallow; app keeps booting
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_db()
+    readiness = SubsystemReadiness()
+    app.state.readiness = readiness
 
-    # Seed built-in expert agents
-    try:
+    # Required: if the DB isn't reachable, we can't serve anything useful.
+    with readiness.required("database"):
+        init_db()
+
+    # Optional: expert seeding. Uses a context-managed session so we never
+    # leak a connection on early-exit paths.
+    with readiness.optional("expert_seeding"):
         from .services.crews.expert_registry import seed_builtin_experts
-        from .database import get_session
-        db = next(get_session())
-        try:
+
+        with SessionLocal() as db:
             seed_builtin_experts(db)
-            logger.info("Expert agents seeded")
-        except Exception as exc:
-            logger.warning("Expert agent seeding failed: %s", exc)
-        finally:
-            db.close()
-    except Exception as exc:
-        logger.warning("Expert registry not available: %s", exc)
 
-    # Initialize SourceRegistry
-    try:
+    # Optional: source registry. If init fails, ``request.app.state`` will
+    # not have ``source_registry``; data-source routes already handle that.
+    with readiness.optional("source_registry"):
         from .services.data_sources.source_registry import create_source_registry
+
         app.state.source_registry = create_source_registry(settings)
-        logger.info("SourceRegistry initialized")
-    except Exception as exc:
-        logger.warning("SourceRegistry init failed: %s", exc)
 
-    # Start scheduler
-    try:
-        from .services.scheduler import start_scheduler, stop_scheduler
+    # Optional: scheduler. We capture the stop handle in a closure so the
+    # shutdown branch can always call something — without the explicit None
+    # binding we'd hit UnboundLocalError on the failure path.
+    stop_scheduler = lambda: None  # noqa: E731
+    with readiness.optional("scheduler"):
+        from .services.scheduler import start_scheduler
+        from .services.scheduler import stop_scheduler as _stop_scheduler
+
         start_scheduler()
-    except Exception as exc:
-        logger.warning("Scheduler start failed: %s", exc)
-        stop_scheduler = lambda: None
+        stop_scheduler = _stop_scheduler
 
-    # Start Redis → WebSocket bridge
-    redis_task = None
-    try:
-        from .core.redis_bridge import subscribe_and_forward, close_redis
+    # Optional: Redis → WebSocket bridge. Failure means dashboard event
+    # streaming degrades to polling, but the rest of the API works.
+    redis_task: asyncio.Task | None = None
+    close_redis = None
+    with readiness.optional("redis_bridge"):
+        from .core.redis_bridge import close_redis as _close_redis
+        from .core.redis_bridge import subscribe_and_forward
         from .core.websocket_manager import ws_manager
-        redis_task = asyncio.create_task(subscribe_and_forward(ws_manager))
-    except Exception as exc:
-        logger.warning("Redis bridge not started: %s", exc)
+
+        redis_task = asyncio.create_task(
+            subscribe_and_forward(ws_manager), name="redis-ws-bridge"
+        )
+        close_redis = _close_redis
 
     yield
 
-    if redis_task:
+    # ── Shutdown ──────────────────────────────────────────────────────
+    if redis_task is not None:
         redis_task.cancel()
+        try:
+            await redis_task
+        except (asyncio.CancelledError, Exception):
+            pass
+    if close_redis is not None:
         try:
             await close_redis()
         except Exception:
-            pass
+            logger.warning("close_redis raised during shutdown", exc_info=True)
     try:
         stop_scheduler()
     except Exception:
-        pass
+        logger.warning("stop_scheduler raised during shutdown", exc_info=True)
 
 
 from .core.rate_limiter import limiter

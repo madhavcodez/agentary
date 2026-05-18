@@ -4,7 +4,7 @@ import logging
 import threading
 import time as _time
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -123,3 +123,24 @@ def health(db: Session = Depends(get_db)) -> dict:
     )
     result["status"] = "ok" if all_ok else "degraded"
     return result
+
+
+@router.get("/health/ready")
+def readiness(request: Request) -> dict:
+    """Per-subsystem startup readiness.
+
+    Populated by the lifespan handler in ``main.py``. Exposes whether each
+    optional subsystem (expert seeding, source registry, scheduler, Redis
+    bridge) came up cleanly. Returns ``status: degraded`` if any optional
+    subsystem failed; ``status: ok`` only when everything came up.
+    """
+    readiness = getattr(request.app.state, "readiness", None)
+    if readiness is None:
+        return {"status": "starting", "subsystems": {}}
+
+    state = dict(readiness.state)
+    all_ok = all(v == "ok" for v in state.values())
+    return {
+        "status": "ok" if all_ok else "degraded",
+        "subsystems": state,
+    }

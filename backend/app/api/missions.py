@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
+from ..core.background_tasks import spawn_background_task as _spawn_background_task
 from ..deps import get_db, get_current_user
 
 logger = logging.getLogger(__name__)
@@ -189,7 +190,10 @@ async def start_mission(
                 finally:
                     inline_db.close()
 
-            asyncio.ensure_future(_run_inline())
+            # create_task supersedes ensure_future in 3.10+; the named task
+            # is held in a module-level set so the GC can't reclaim it mid-
+            # flight (a known ensure_future foot-gun).
+            _spawn_background_task(_run_inline(), "mission-inline-run")
     except Exception as e:
         db.rollback()
         mission.status = MissionStatus.failed
@@ -405,7 +409,10 @@ async def rerun_mission(
                 finally:
                     inline_db.close()
 
-            asyncio.ensure_future(_run_inline())
+            # create_task supersedes ensure_future in 3.10+; the named task
+            # is held in a module-level set so the GC can't reclaim it mid-
+            # flight (a known ensure_future foot-gun).
+            _spawn_background_task(_run_inline(), "mission-inline-run")
     except Exception as e:
         db.rollback()
         mission.status = MissionStatus.failed
