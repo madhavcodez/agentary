@@ -1,15 +1,25 @@
-"""Exa search tool for expert agents."""
+"""Exa search tool for expert agents.
+
+Delegates to the unified ``platform.infrastructure.providers.exa`` adapter.
+SDK details (retry policy, error handling, response shape) live there;
+this module owns the tool-schema definition the LLM sees and translates
+typed results into the tool-result dict.
+"""
 from __future__ import annotations
 
 from typing import Any
 
-import httpx
+from ....platform.infrastructure.providers import exa_provider
+from ....platform.infrastructure.providers.exa import ExaUnavailable
 
-from ....config import settings
+TOOL_NAME = "exa_search"
 
 TOOL_SCHEMA: dict[str, Any] = {
-    "name": "exa_search",
-    "description": "Search the web using Exa's neural search API. Returns relevant URLs with content snippets.",
+    "name": TOOL_NAME,
+    "description": (
+        "Search the web using Exa's neural search API. Returns relevant URLs "
+        "with content snippets."
+    ),
     "parameters": {
         "type": "object",
         "properties": {
@@ -24,8 +34,8 @@ TOOL_SCHEMA: dict[str, Any] = {
             },
             "type": {
                 "type": "string",
-                "description": "Search type: keyword or neural",
-                "enum": ["keyword", "neural"],
+                "description": "Search type: keyword, neural, or auto",
+                "enum": ["keyword", "neural", "auto"],
                 "default": "neural",
             },
         },
@@ -35,55 +45,47 @@ TOOL_SCHEMA: dict[str, Any] = {
 
 
 async def execute(
-    query: str, num_results: int = 5, type: str = "neural", **kwargs: Any
+    query: str,
+    num_results: int = 5,
+    type: str = "neural",  # noqa: A002 - matches schema field name
+    **kwargs: Any,
 ) -> dict[str, Any]:
-    """Execute an Exa search."""
-    if not settings.exa_api_key:
-        return {
-            "tool": "exa_search",
-            "query": query,
-            "error": "EXA_API_KEY not configured",
-            "status": "error",
-        }
-
+    """Execute an Exa search via the provider adapter."""
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            response = await client.post(
-                "https://api.exa.ai/search",
-                headers={
-                    "x-api-key": settings.exa_api_key,
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "query": query,
-                    "numResults": min(num_results, 10),
-                    "type": type,
-                    "contents": {"text": {"maxCharacters": 1000}},
-                },
-            )
-            response.raise_for_status()
-            data = response.json()
-
-            results = []
-            for r in data.get("results", []):
-                results.append({
-                    "title": r.get("title", ""),
-                    "url": r.get("url", ""),
-                    "snippet": r.get("text", "")[:500],
-                    "score": r.get("score", 0),
-                })
-
-            return {
-                "tool": "exa_search",
-                "query": query,
-                "results": results,
-                "count": len(results),
-                "status": "success",
-            }
-    except Exception as e:
+        results = await exa_provider.search(
+            query,
+            num_results=num_results,
+            search_type=type,
+            include_text=True,
+            max_text_chars=500,
+        )
+    except ExaUnavailable as exc:
         return {
-            "tool": "exa_search",
+            "tool": TOOL_NAME,
             "query": query,
-            "error": str(e),
+            "error": str(exc),
             "status": "error",
         }
+    except Exception as exc:
+        return {
+            "tool": TOOL_NAME,
+            "query": query,
+            "error": str(exc),
+            "status": "error",
+        }
+
+    return {
+        "tool": TOOL_NAME,
+        "query": query,
+        "results": [
+            {
+                "title": r.title,
+                "url": r.url,
+                "snippet": r.snippet,
+                "score": r.score,
+            }
+            for r in results
+        ],
+        "count": len(results),
+        "status": "success",
+    }

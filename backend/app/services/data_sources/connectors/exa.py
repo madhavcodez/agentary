@@ -1,29 +1,23 @@
-"""Exa connector — wraps the existing exa_search research module.
+"""Exa data-source connector — wraps the unified Exa provider.
 
-Uses the Exa semantic search engine to find relevant web pages
-via neural or keyword search, implementing the SourceConnector protocol.
+Previously this module duplicated the SDK access seen in two other places.
+Now it implements the ``SourceConnector`` protocol on top of the canonical
+``ExaProvider`` so business code goes through one Exa surface only.
 """
-
 from __future__ import annotations
 
 import logging
-import time
 from typing import Any
 
-from exa_py import Exa
-
-from ....config import settings
+from ....platform.infrastructure.providers import exa_provider
+from ....platform.infrastructure.providers.exa import ExaUnavailable
 from ..base_connector import SourceResult
 
 logger = logging.getLogger(__name__)
 
 
-def _get_exa_client() -> Exa:
-    return Exa(api_key=settings.exa_api_key)
-
-
 class ExaConnector:
-    """Data source connector for the Exa semantic search engine."""
+    """Data-source connector for the Exa semantic search engine."""
 
     name: str = "exa_search"
     provider: str = "exa"
@@ -32,173 +26,114 @@ class ExaConnector:
     )
 
     async def search(self, query: str, **kwargs: Any) -> SourceResult:
-        """Search using Exa's neural/keyword/auto search.
-
-        Args:
-            query: Search query string.
-            **kwargs: Optional ``num_results`` (int, default 10),
-                      ``type`` (str, default "auto").
-
-        Returns:
-            SourceResult with matching pages.
-        """
+        """Search via Exa, returning a ``SourceResult`` envelope."""
         num_results = kwargs.get("num_results", 10)
         search_type = kwargs.get("type", "auto")
 
-        if not settings.exa_api_key:
-            logger.warning("Exa API key not configured; returning empty results")
-            return SourceResult(
-                data=[],
-                raw_response=None,
-                total_results=0,
-                source_name=self.name,
-                metadata={"error": "API key not configured"},
-            )
-
-        exa = _get_exa_client()
-
         try:
-            response = exa.search(
+            results = await exa_provider.search(
                 query,
                 num_results=num_results,
-                type=search_type,
+                search_type=search_type,
+                include_text=True,
             )
-
-            results: list[dict[str, Any]] = []
-            for r in response.results:
-                results.append({
-                    "url": r.url,
-                    "title": r.title or "",
-                    "snippet": (r.text[:500] if r.text else ""),
-                    "score": getattr(r, "score", None),
-                    "published_date": getattr(r, "published_date", None),
-                    "source": "exa",
-                })
-
-            return SourceResult(
-                data=results,
-                raw_response=response,
-                total_results=len(results),
-                source_name=self.name,
-                metadata={
-                    "query": query,
-                    "num_results": num_results,
-                    "type": search_type,
-                },
-            )
-
-        except Exception as e:
-            logger.error("Exa search failed for query '%s': %s", query, e)
+        except ExaUnavailable as exc:
+            logger.warning("Exa unavailable: %s", exc)
             return SourceResult(
                 data=[],
                 raw_response=None,
                 total_results=0,
                 source_name=self.name,
-                metadata={"error": str(e), "query": query},
+                metadata={"error": str(exc)},
             )
+        except Exception as exc:
+            logger.error("Exa search failed for '%s': %s", query, exc)
+            return SourceResult(
+                data=[],
+                raw_response=None,
+                total_results=0,
+                source_name=self.name,
+                metadata={"error": str(exc), "query": query},
+            )
+
+        data = [
+            {
+                "url": r.url,
+                "title": r.title,
+                "snippet": r.snippet,
+                "score": r.score,
+                "published_date": r.published_date,
+                "source": "exa",
+            }
+            for r in results
+        ]
+        return SourceResult(
+            data=data,
+            raw_response=[r.raw for r in results],
+            total_results=len(data),
+            source_name=self.name,
+            metadata={
+                "query": query,
+                "num_results": num_results,
+                "type": search_type,
+            },
+        )
 
     async def get(self, identifier: str, **kwargs: Any) -> SourceResult:
-        """Fetch content for a specific URL using Exa.
-
-        Args:
-            identifier: URL to retrieve content for.
-            **kwargs: Additional parameters (unused).
-
-        Returns:
-            SourceResult with the page content.
-        """
-        if not settings.exa_api_key:
-            logger.warning("Exa API key not configured; returning empty results")
-            return SourceResult(
-                data=[],
-                raw_response=None,
-                total_results=0,
-                source_name=self.name,
-                metadata={"error": "API key not configured"},
-            )
-
-        exa = _get_exa_client()
-
+        """Fetch content for a specific URL via Exa."""
         try:
-            response = exa.get_contents([identifier])
-
-            results: list[dict[str, Any]] = []
-            for r in response.results:
-                results.append({
-                    "url": r.url,
-                    "title": r.title or "",
-                    "text": r.text or "",
-                    "source": "exa",
-                })
-
-            return SourceResult(
-                data=results,
-                raw_response=response,
-                total_results=len(results),
-                source_name=self.name,
-                source_url=identifier,
-                metadata={"url": identifier},
-            )
-
-        except Exception as e:
-            logger.error("Exa get_contents failed for '%s': %s", identifier, e)
+            results = await exa_provider.get_contents([identifier])
+        except ExaUnavailable as exc:
+            logger.warning("Exa unavailable: %s", exc)
             return SourceResult(
                 data=[],
                 raw_response=None,
                 total_results=0,
                 source_name=self.name,
-                metadata={"error": str(e), "url": identifier},
+                metadata={"error": str(exc)},
             )
+        except Exception as exc:
+            logger.error("Exa get_contents failed for '%s': %s", identifier, exc)
+            return SourceResult(
+                data=[],
+                raw_response=None,
+                total_results=0,
+                source_name=self.name,
+                metadata={"error": str(exc), "url": identifier},
+            )
+
+        data = [
+            {
+                "url": r.url,
+                "title": r.title,
+                "text": r.snippet,
+                "source": "exa",
+            }
+            for r in results
+        ]
+        return SourceResult(
+            data=data,
+            raw_response=[r.raw for r in results],
+            total_results=len(data),
+            source_name=self.name,
+            source_url=identifier,
+            metadata={"url": identifier},
+        )
 
     async def health_check(self) -> dict[str, Any]:
-        """Perform a minimal Exa search to verify connectivity.
-
-        Returns:
-            Dict with ``status``, ``latency_ms``, and ``message``.
-        """
-        if not settings.exa_api_key:
-            return {
-                "status": "down",
-                "latency_ms": 0,
-                "message": "Exa API key not configured",
-            }
-
-        exa = _get_exa_client()
-        start = time.time()
-        try:
-            response = exa.search("test", num_results=1, type="keyword")
-            latency = round((time.time() - start) * 1000, 1)
-            return {
-                "status": "healthy",
-                "latency_ms": latency,
-                "message": "Exa API responding",
-            }
-        except Exception as e:
-            latency = round((time.time() - start) * 1000, 1)
-            return {
-                "status": "down",
-                "latency_ms": latency,
-                "message": f"Exa API error: {e}",
-            }
+        return await exa_provider.health_check()
 
     def get_tool_definition(self) -> dict[str, Any]:
-        """Return Gemini function-calling compatible tool definition."""
         return {
             "name": "exa_search",
             "description": (
-                "Semantic search engine. Find relevant web pages "
-                "using neural search."
+                "Semantic search engine. Find relevant web pages using neural search."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "query": {
-                        "type": "string",
-                    },
-                    "num_results": {
-                        "type": "integer",
-                        "default": 10,
-                    },
+                    "query": {"type": "string"},
+                    "num_results": {"type": "integer", "default": 10},
                     "type": {
                         "type": "string",
                         "enum": ["keyword", "neural", "auto"],
