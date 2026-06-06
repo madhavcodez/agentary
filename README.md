@@ -23,6 +23,11 @@ research, and local business data collection.
 Each mission runs through a multi-phase pipeline (inspired by
 [DeerFlow](https://github.com/bytedance/deer-flow)):
 
+```mermaid
+flowchart LR
+  ST[STORM pre-write<br/>optional] --> SC[Scout] --> PR[Parallel research] --> GC[Gap check] --> SY[Synthesis] --> RP[Report]
+```
+
 1. **Scout** — one agent surveys the topic and maps the dimensions worth
    investigating.
 2. **Parallel research** — multiple expert agents investigate those dimensions at
@@ -37,6 +42,69 @@ An optional pre-writing stage based on Stanford's
 [STORM](https://github.com/stanford-oval/storm) plans the report outline up front
 and binds each section to the evidence that supports it. It's off by default
 (`AGENTARY_STORM_ENABLED`).
+
+## Architecture
+
+A Next.js dashboard talks to a FastAPI app, which dispatches work to Celery
+workers backed by PostgreSQL, Redis, and Qdrant. Every finding, run step, and
+report is persisted, so any mission can be replayed from the database.
+
+```mermaid
+flowchart TB
+  UI[Next.js dashboard<br/>App Router + WebSocket]
+
+  subgraph "API and orchestration"
+    FA[FastAPI]
+    SM[Run state machine]
+  end
+
+  subgraph "Async execution"
+    CW[Celery workers]
+    BEAT[Beat scheduler]
+  end
+
+  subgraph "Data plane"
+    PG[(PostgreSQL)]
+    RD[(Redis)]
+    QD[(Qdrant)]
+  end
+
+  subgraph "AI and external"
+    GM[Gemini 2.5]
+    EX[Exa search]
+    TW[Twilio voice]
+  end
+
+  UI <--> FA
+  FA --> SM
+  FA --> CW
+  CW --> PG & RD & QD
+  CW --> GM & EX & TW
+  BEAT --> CW
+  RD -. live updates .-> UI
+```
+
+## Data model
+
+A project holds missions. Each mission run records every agent task and
+micro-action, and produces findings that feed the intelligence pipeline.
+
+```mermaid
+flowchart TB
+  P[Project] --> M[Mission]
+  M --> RUN[Mission run]
+  RUN --> CT[Crew task]
+  CT --> RS[Run step]
+  M --> FD[Finding]
+  M --> REP[Report]
+```
+
+Findings are progressively refined into higher-level intelligence:
+
+```mermaid
+flowchart LR
+  FD[Finding] --> SG[Signal] --> IN[Insight] --> RC[Recommendation] --> AC[Action]
+```
 
 ## Tech stack
 
