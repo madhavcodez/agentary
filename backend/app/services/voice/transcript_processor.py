@@ -341,15 +341,14 @@ def _extract_key_moments(transcript: str) -> list[dict]:
             })
 
         # Check for objections
-        if _OBJECTION_INDICATORS.search(content):
-            # Avoid false positives: require minimum length for objection detection
-            if len(content.split()) >= 4:
-                moments.append({
-                    "type": "objection",
-                    "speaker": speaker,
-                    "text": content,
-                    "line_number": line_num,
-                })
+        # Avoid false positives: require minimum length for objection detection
+        if _OBJECTION_INDICATORS.search(content) and len(content.split()) >= 4:
+            moments.append({
+                "type": "objection",
+                "speaker": speaker,
+                "text": content,
+                "line_number": line_num,
+            })
 
         # Check for agreements
         if _AGREEMENT_INDICATORS.search(content):

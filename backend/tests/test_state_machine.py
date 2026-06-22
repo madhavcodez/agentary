@@ -201,5 +201,5 @@ class TestInvalidTransitionError:
         assert exc_info.value.target == RunStatus.running
 
     def test_exception_message_contains_states(self) -> None:
-        with pytest.raises(InvalidTransition, match="completed.*running"):
+        with pytest.raises(InvalidTransition, match=r"completed.*running"):
             transition(RunStatus.completed, RunStatus.running)

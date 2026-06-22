@@ -2,6 +2,7 @@ import base64
 import io
 import logging
 from datetime import datetime
+from typing import ClassVar
 
 import markdown2
 import matplotlib
@@ -271,7 +272,7 @@ class PDFExporter:
     """
 
     # Colors used for matplotlib chart rendering
-    _CHART_COLORS = [
+    _CHART_COLORS: ClassVar[list[str]] = [
         "#6c63ff", "#ff6584", "#43aa8b", "#f9c74f",
         "#90be6d", "#577590", "#f3722c", "#4cc9f0",
         "#7209b7", "#3a0ca3",
@@ -825,9 +826,8 @@ class PDFExporter:
                     # Single key-value pairs rendered as a simple table
                     tables.setdefault("_overview", [])
                     tables["_overview"].append({"Field": key, "Value": str(value)})
-        elif isinstance(structured_data, list) and structured_data:
-            if isinstance(structured_data[0], dict):
-                tables["Data"] = structured_data
+        elif isinstance(structured_data, list) and structured_data and isinstance(structured_data[0], dict):
+            tables["Data"] = structured_data
 
         for table_name, rows in tables.items():
             if not rows:
@@ -889,9 +889,8 @@ class PDFExporter:
                 else:
                     tables.setdefault("_overview", [])
                     tables["_overview"].append({"Field": key, "Value": str(value)})
-        elif isinstance(structured_data, list) and structured_data:
-            if isinstance(structured_data[0], dict):
-                tables["Data"] = structured_data
+        elif isinstance(structured_data, list) and structured_data and isinstance(structured_data[0], dict):
+            tables["Data"] = structured_data
 
         for table_name, rows in tables.items():
             if not rows:

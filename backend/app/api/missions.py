@@ -10,7 +10,10 @@ from sqlalchemy.orm import Session
 from ..core.background_tasks import spawn_background_task as _spawn_background_task
 from ..core.correlation import get_correlation_id
 from ..deps import get_current_user, get_db
+from ..models.agent_crew import AgentActivity, AgentCrew
+from ..models.crew_run import CrewRun
 from ..models.enums import RunStatus
+from ..models.finding import Finding
 from ..models.mission import Mission
 from ..models.mission_run import MissionRun
 from ..models.user import User
@@ -151,10 +154,6 @@ def list_mission_runs(
 
 # ── Research Engine Endpoints ─────────────────────────────────────────
 
-from ..models.agent_crew import AgentActivity, AgentCrew
-from ..models.crew_run import CrewRun
-from ..models.finding import Finding
-
 
 @router.post("/{mission_id}/start")
 async def start_mission(
@@ -214,11 +213,11 @@ async def start_mission(
             # is held in a module-level set so the GC can't reclaim it mid-
             # flight (a known ensure_future foot-gun).
             _spawn_background_task(_run_inline(), "mission-inline-run")
-    except Exception:
+    except Exception as exc:
         db.rollback()
         mission.status = MissionStatus.failed
         db.commit()
-        raise HTTPException(status_code=500, detail="Failed to start mission. Please try again.")
+        raise HTTPException(status_code=500, detail="Failed to start mission. Please try again.") from exc
 
     return {
         "mission_id": str(mission.id),
@@ -432,11 +431,11 @@ async def rerun_mission(
             # is held in a module-level set so the GC can't reclaim it mid-
             # flight (a known ensure_future foot-gun).
             _spawn_background_task(_run_inline(), "mission-inline-run")
-    except Exception:
+    except Exception as exc:
         db.rollback()
         mission.status = MissionStatus.failed
         db.commit()
-        raise HTTPException(status_code=500, detail="Failed to rerun mission. Please try again.")
+        raise HTTPException(status_code=500, detail="Failed to rerun mission. Please try again.") from exc
 
     return {
         "mission_id": str(mission.id),
@@ -498,13 +497,13 @@ async def synthesize_report(
         if report is None:
             report = await synthesize_report_from_findings(mission, user.id, db)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    except RuntimeError:
-        raise HTTPException(status_code=502, detail="AI report synthesis failed. Please try again.")
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail="AI report synthesis failed. Please try again.") from exc
     except Exception as exc:
         db.rollback()
         logger.error("Failed to save synthesized report for mission %s: %s", mission_id, exc)
-        raise HTTPException(status_code=500, detail="Failed to save report. Please try again.")
+        raise HTTPException(status_code=500, detail="Failed to save report. Please try again.") from exc
 
     return {
         "report": {

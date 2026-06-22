@@ -59,7 +59,7 @@ async def bind_findings_to_sections(
 
     Embeds each section scope once and each finding once, then computes
     pairwise cosine similarity in-memory. For the typical Agentary mission
-    (≤50 findings × ≤6 sections) this is 300 cosine ops — trivial.
+    (<=50 findings x <=6 sections) this is 300 cosine ops -- trivial.
     """
     findings_list = list(findings)
     if not sections or not findings_list:

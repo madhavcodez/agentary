@@ -3,7 +3,7 @@
 Agentary has already been burned once by uncapped LLM fan-out (DeerFlow was
 pulled out of the politics briefing after a single run consumed >6 Gemini
 calls and triggered free-tier quota failures). STORM multiplies calls by
-perspectives × sections × refinement passes, so every call must pass through
+perspectives x sections x refinement passes, so every call must pass through
 a hard cap.
 
 The counter lives in Redis so concurrent workers synthesizing different

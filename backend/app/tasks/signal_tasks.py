@@ -96,6 +96,6 @@ def process_signal(self, signal_id: str):
     except Exception as e:
         db.rollback()
         logger.error("Failed to process signal %s: %s", signal_id, e)
-        raise self.retry(exc=e, countdown=30)
+        raise self.retry(exc=e, countdown=30) from e
     finally:
         db.close()

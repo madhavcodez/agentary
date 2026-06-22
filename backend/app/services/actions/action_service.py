@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from datetime import UTC, datetime
 from uuid import UUID
@@ -12,6 +13,10 @@ from ...core.events import Event, EventType, event_bus
 from ...models.action_request import ActionRequest, ActionRequestStatus, ActionType
 
 logger = logging.getLogger(__name__)
+
+# Strong references to fire-and-forget broadcast tasks so they are not
+# garbage-collected mid-flight (see RUF006).
+_background_tasks: set[asyncio.Task] = set()
 
 
 class ActionService:
@@ -175,11 +180,11 @@ class ActionService:
                 project_id=action.project_id,
                 user_id=action.user_id,
             )
-            try:
+            with contextlib.suppress(RuntimeError):
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
-                    loop.create_task(event_bus.broadcast(event))
-            except RuntimeError:
-                pass
+                    task = loop.create_task(event_bus.broadcast(event))
+                    _background_tasks.add(task)
+                    task.add_done_callback(_background_tasks.discard)
         except Exception:
-            pass
+            logger.debug("Failed to emit event %s for action %s", event_type_str, action.id)

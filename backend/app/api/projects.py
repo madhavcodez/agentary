@@ -209,7 +209,9 @@ async def configure_and_start(
     except Exception as exc:
         db.rollback()
         logger.error("Failed to start mission %s: %s", mission.id, exc)
-        raise HTTPException(status_code=500, detail="Failed to start mission. Please try again.")
+        raise HTTPException(
+            status_code=500, detail="Failed to start mission. Please try again."
+        ) from exc
 
     db.refresh(project)
     db.refresh(mission)

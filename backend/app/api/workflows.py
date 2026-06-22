@@ -137,7 +137,7 @@ def activate_workflow(
     try:
         workflow = wf_service.activate_workflow(db, workflow)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     return workflow
 
 
@@ -241,7 +241,7 @@ def create_from_template(
             project_id=body.project_id, name=body.name,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     return workflow
 
 
@@ -257,12 +257,12 @@ async def create_from_description(
         workflow = await wf_service.create_from_natural_language(
             db, user.id, body.description, project_id=body.project_id,
         )
-    except Exception:
+    except Exception as exc:
         logger.exception("NL workflow generation failed")
         raise HTTPException(
             status_code=500,
             detail="Workflow generation failed; see server logs (correlation id)",
-        )
+        ) from exc
     return workflow
 
 

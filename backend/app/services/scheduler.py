@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from datetime import datetime
 from uuid import UUID
@@ -151,12 +152,10 @@ def add_autopilot_job(user_id: str | UUID, cron_expr: str, timezone: str) -> Non
 def remove_autopilot_job(user_id: str | UUID) -> None:
     """Remove a user's autopilot job if it exists."""
     job_id = _autopilot_job_id(user_id)
-    try:
+    # Job may not exist; that's fine
+    with contextlib.suppress(Exception):
         scheduler.remove_job(job_id)
         logger.info("Autopilot job removed for user %s", user_id)
-    except Exception:
-        # Job may not exist; that's fine
-        pass
 
 
 def load_all_autopilot_jobs() -> None:
@@ -252,11 +251,9 @@ def add_monitor_job(
 def remove_monitor_job(monitor_id: str | UUID) -> None:
     """Remove a monitor's scheduled job."""
     job_id = _monitor_job_id(monitor_id)
-    try:
+    with contextlib.suppress(Exception):
         scheduler.remove_job(job_id)
         logger.info("Monitor job removed: %s", monitor_id)
-    except Exception:
-        pass
 
 
 def load_all_monitor_jobs() -> None:
@@ -345,11 +342,9 @@ def add_workflow_schedule(
 def remove_workflow_schedule(workflow_id: str | UUID) -> None:
     """Remove a workflow's scheduled job."""
     job_id = _workflow_job_id(workflow_id)
-    try:
+    with contextlib.suppress(Exception):
         scheduler.remove_job(job_id)
         logger.info("Workflow job removed: %s", workflow_id)
-    except Exception:
-        pass
 
 
 def load_all_workflow_schedules() -> None:

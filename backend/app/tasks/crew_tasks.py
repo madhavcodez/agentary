@@ -67,7 +67,7 @@ def execute_crew_run(self, run_id: str, correlation_id: str | None = None) -> di
     except Exception as exc:
         db.rollback()
         if self.request.retries < self.max_retries:
-            raise self.retry(exc=exc, countdown=30)
+            raise self.retry(exc=exc, countdown=30) from exc
         raise
     finally:
         db.close()
@@ -142,7 +142,7 @@ def plan_and_start_mission(self, mission_id: str, run_id: str | None = None, cor
             mission.status = MissionStatus.failed
             db.commit()
         if self.request.retries < self.max_retries:
-            raise self.retry(exc=exc, countdown=30)
+            raise self.retry(exc=exc, countdown=30) from exc
         raise
     finally:
         db.close()

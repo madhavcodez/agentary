@@ -604,7 +604,7 @@ class TestScenario3_ReportGeneration:
         """
         from app.services.reports.report_generator import ReportGenerator
 
-        _project_id, _mission_id, user_id, findings = self._setup_findings()
+        _project_id, _mission_id, _user_id, findings = self._setup_findings()
         # The report generator reads `.category` from each finding --
         # set it to the finding_type value so the formatter works.
         for f in findings:
@@ -672,7 +672,7 @@ class TestScenario4_WorkflowExecution:
         return user_id, project_id, workflow
 
     def test_workflow_model_creation(self):
-        user_id, project_id, workflow = self._build_workflow()
+        _user_id, project_id, workflow = self._build_workflow()
 
         assert workflow.name == "Gas Price Research Pipeline"
         assert workflow.status == "active"

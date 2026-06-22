@@ -92,7 +92,7 @@ class PythonExecutorConnector:
         self,
         code: str,
         input_data: dict[str, Any] | None = None,
-        timeout: int = 30,
+        timeout: int = 30,  # noqa: ASYNC109 - public connector API contract; subprocess wall-clock limit
     ) -> SourceResult:
         """Run *code* in a subprocess and return the captured ``result``."""
         # Static code validation
@@ -250,7 +250,7 @@ class PythonExecutorConnector:
         *,
         code: str | None = None,
         input_data: dict[str, Any] | None = None,
-        timeout: int = 30,
+        timeout: int = 30,  # noqa: ASYNC109 - public connector API contract; forwarded to execute()
         **kwargs: Any,
     ) -> SourceResult:
         return await self.execute(

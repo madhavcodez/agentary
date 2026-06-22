@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any
+from typing import Any, ClassVar
 
 from google import genai
 
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class ChartGenerator:
     """Generates Chart.js configuration objects from data."""
 
-    COLORS = [
+    COLORS: ClassVar[list[str]] = [
         "#4F46E5",
         "#7C3AED",
         "#2563EB",
@@ -27,7 +27,7 @@ class ChartGenerator:
         "#DC2626",
         "#EC4899",
     ]
-    BG_COLORS_ALPHA = [
+    BG_COLORS_ALPHA: ClassVar[list[str]] = [
         "rgba(79,70,229,0.6)",
         "rgba(124,58,237,0.6)",
         "rgba(37,99,235,0.6)",

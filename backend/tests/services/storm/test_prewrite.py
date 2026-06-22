@@ -54,15 +54,20 @@ async def test_perspective_miner_returns_normalised_shape(fake_mission, budget):
             },
         ]
     }
-    with patch("app.services.gemini.generate_structured", new=AsyncMock(return_value=fake_response)):
-        # Also patch the diversity-check embedding path so the test doesn't hit real Gemini.
-        with patch(
+    # Also patch the diversity-check embedding path so the test doesn't hit real Gemini.
+    with (
+        patch(
+            "app.services.gemini.generate_structured",
+            new=AsyncMock(return_value=fake_response),
+        ),
+        patch(
             "app.services.storm.perspective_miner._has_collapsed_perspectives",
             new=AsyncMock(return_value=False),
-        ):
-            result = await mine_perspectives(
-                mission=fake_mission, budget=budget, max_perspectives=4
-            )
+        ),
+    ):
+        result = await mine_perspectives(
+            mission=fake_mission, budget=budget, max_perspectives=4
+        )
 
     assert len(result) == 2
     assert result[0]["role"] == "skeptical homeowner"

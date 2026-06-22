@@ -35,7 +35,7 @@ def execute_mission(self, mission_id: str, run_id: str) -> dict:
     except Exception as exc:
         db.rollback()
         if self.request.retries < self.max_retries:
-            raise self.retry(exc=exc, countdown=30)
+            raise self.retry(exc=exc, countdown=30) from exc
         raise
     finally:
         db.close()

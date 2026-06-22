@@ -95,7 +95,7 @@ def approve_action(
         db.commit()
         return _serialize(action)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.put("/{action_id}/reject")
@@ -111,7 +111,7 @@ def reject_action(
         db.commit()
         return _serialize(action)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.put("/{action_id}/cancel")
@@ -126,7 +126,7 @@ def cancel_action(
         db.commit()
         return _serialize(action)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 def _serialize(a) -> dict:

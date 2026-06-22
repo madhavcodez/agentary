@@ -150,7 +150,7 @@ def dispatch_action(self, action_request_id: str) -> dict:
     except Exception as e:
         db.rollback()
         logger.error("dispatch_action failed: %s", e)
-        raise self.retry(exc=e, countdown=30)
+        raise self.retry(exc=e, countdown=30) from e
     finally:
         db.close()
 

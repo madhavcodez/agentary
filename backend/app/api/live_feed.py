@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
+import types
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
@@ -41,9 +43,6 @@ async def _broadcast_with_buffer(self, event: Event) -> None:
     _buffer_event(event)
     await _original_broadcast(self, event)
 
-
-import contextlib
-import types
 
 event_bus.broadcast = types.MethodType(_broadcast_with_buffer, event_bus)
 

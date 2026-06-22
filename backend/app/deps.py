@@ -29,7 +29,7 @@ def _get_or_create_dev_user(db: Session):
         id=uuid.uuid4(),
         email=dev_email,
         name="Dev User",
-        password_hash="dev-no-login",
+        password_hash="dev-no-login",  # noqa: S106 - sentinel for local dev user, not a real credential
         is_active=True,
     )
     db.add(user)

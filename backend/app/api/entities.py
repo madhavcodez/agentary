@@ -86,7 +86,7 @@ async def merge_entities_enhanced(
         db.commit()
         return result
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.post("/merge/{merge_id}/undo", response_model=UndoMergeResponse)
@@ -101,7 +101,7 @@ async def undo_merge(
         db.commit()
         return result
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/search", response_model=list[EntityResponse])

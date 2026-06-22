@@ -47,7 +47,7 @@ def execute_voice_call(self, call_record_id: str) -> dict:
         return result
     except Exception as exc:
         logger.exception("Voice call failed: call_record=%s", call_record_id)
-        raise self.retry(exc=exc, countdown=30)
+        raise self.retry(exc=exc, countdown=30) from exc
     finally:
         db.close()
 
@@ -87,7 +87,7 @@ def process_completed_call(self, call_record_id: str) -> dict:
         logger.exception(
             "Post-processing failed: call_record=%s", call_record_id
         )
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from exc
     finally:
         db.close()
 

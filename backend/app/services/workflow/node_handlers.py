@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import csv
 import io
 import json
@@ -170,12 +171,10 @@ async def handle_transform(config: dict, input_data: Any, context: dict) -> Any:
                 if op["from"] in transformed:
                     transformed[op["to"]] = transformed.pop(op["from"])
             elif op_type == "calculate" and "field" in op and "expression" in op:
-                try:
+                with contextlib.suppress(Exception):
                     transformed[op["field"]] = eval(  # noqa: S307
                         op["expression"], {"__builtins__": {}}, transformed
                     )
-                except Exception:
-                    pass
             elif op_type == "format" and "field" in op and "template" in op:
                 transformed[op["field"]] = _render_template(op["template"], transformed)
         result.append(transformed)

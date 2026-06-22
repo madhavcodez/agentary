@@ -182,12 +182,12 @@ async def test_data_source(
             cached=result.cached,
             metadata=result.metadata,
         )
-    except Exception:
+    except Exception as exc:
         logger.exception("Data source test failed (id=%s)", source_id)
         raise HTTPException(
             status_code=502,
             detail="Data source test failed; see server logs (correlation id)",
-        )
+        ) from exc
 
 
 @router.get("/{source_id}/health", response_model=DataSourceHealthResponse)
@@ -268,10 +268,10 @@ async def query_data_source(
             metadata=result.metadata,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as exc:
         logger.exception("Data source query failed (id=%s)", source_id)
         raise HTTPException(
             status_code=502,
             detail="Data source query failed; see server logs (correlation id)",
-        )
+        ) from exc

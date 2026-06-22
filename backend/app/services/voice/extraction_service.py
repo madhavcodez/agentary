@@ -104,16 +104,19 @@ async def extract_from_transcript(
 
         goal_spec = _find_goal_spec(field_name, goals)
 
-        if goal_spec is not None and value is not None:
-            if not _validate_extraction(goal_spec, value):
-                logger.info(
-                    "Extracted value for '%s' failed validation; "
-                    "discarding (value=%r)",
-                    field_name,
-                    value,
-                )
-                confidence = min(confidence, 0.2)
-                value = None
+        if (
+            goal_spec is not None
+            and value is not None
+            and not _validate_extraction(goal_spec, value)
+        ):
+            logger.info(
+                "Extracted value for '%s' failed validation; "
+                "discarding (value=%r)",
+                field_name,
+                value,
+            )
+            confidence = min(confidence, 0.2)
+            value = None
 
         validated_fields.append(
             {

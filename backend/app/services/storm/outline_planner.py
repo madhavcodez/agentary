@@ -1,6 +1,6 @@
 """Outline planner — STORM pre-writing step 3.
 
-Consumes the perspective × question matrix and produces the report
+Consumes the perspective x question matrix and produces the report
 outline BEFORE any retrieval happens. This is STORM's load-bearing
 contribution: pre-writing quality correlates with final-report quality
 because the outline fixes what evidence the synthesizer is looking for.
