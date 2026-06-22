@@ -64,7 +64,7 @@ class Settings(BaseSettings):
         if not v or len(v) < 32:
             raise ValueError(
                 "JWT_SECRET_KEY must be set and at least 32 characters. "
-                "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+                'Generate one with: python -c "import secrets; print(secrets.token_hex(32))"'
             )
         return v
 
@@ -72,9 +72,7 @@ class Settings(BaseSettings):
     @classmethod
     def secret_key_must_be_set(cls, v: str) -> str:
         if not v or v == "dev-secret-key-change-in-production" or len(v) < 32:
-            raise ValueError(
-                "SECRET_KEY must be set and at least 32 characters."
-            )
+            raise ValueError("SECRET_KEY must be set and at least 32 characters.")
         return v
 
 

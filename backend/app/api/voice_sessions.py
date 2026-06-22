@@ -1,4 +1,5 @@
 """API routes for voice extraction sessions and call records."""
+
 from __future__ import annotations
 
 import logging
@@ -18,7 +19,7 @@ from ..schemas.voice import (
     VoiceExtractionList,
     VoiceExtractionResponse,
 )
-from ..services.voice import voice_service, extraction_service, templates
+from ..services.voice import templates, voice_service
 
 logger = logging.getLogger(__name__)
 
@@ -72,12 +73,9 @@ def list_sessions(
     user: User = Depends(get_current_user),
 ):
     """List voice extraction sessions with optional filters."""
-    query = (
-        db.query(VoiceExtraction)
-        .join(
-            # Filter by projects the user has access to
-            # For now, just filter by project ownership
-        )
+    query = db.query(VoiceExtraction).join(
+        # Filter by projects the user has access to
+        # For now, just filter by project ownership
     )
 
     if project_id:
@@ -104,11 +102,7 @@ def get_session(
     user: User = Depends(get_current_user),
 ):
     """Get a voice extraction session by ID."""
-    ve = (
-        db.query(VoiceExtraction)
-        .filter(VoiceExtraction.id == session_id)
-        .first()
-    )
+    ve = db.query(VoiceExtraction).filter(VoiceExtraction.id == session_id).first()
     if not ve:
         raise HTTPException(status_code=404, detail="Voice extraction not found")
     return ve

@@ -1,4 +1,5 @@
 """Seed default action policies for a user."""
+
 from __future__ import annotations
 
 import logging
@@ -31,13 +32,15 @@ def seed_default_policies(db: Session, user_id: UUID) -> int:
             user_id=user_id,
             name=f"Default: {action_type}",
             description=f"Default policy for {action_type} actions",
-            rules=[{
-                "condition": condition,
-                "result": {
-                    "auto_approve": auto,
-                    "require_approval": not auto,
-                },
-            }],
+            rules=[
+                {
+                    "condition": condition,
+                    "result": {
+                        "auto_approve": auto,
+                        "require_approval": not auto,
+                    },
+                }
+            ],
             is_active=True,
             priority=0,
         )

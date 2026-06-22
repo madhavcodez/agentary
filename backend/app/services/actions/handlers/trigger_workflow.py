@@ -1,4 +1,5 @@
 """Trigger a workflow run."""
+
 from __future__ import annotations
 
 import logging
@@ -41,7 +42,5 @@ class TriggerWorkflowHandler:
 
         return {
             "result": {"workflow_id": str(workflow.id), "run_id": str(run.id)},
-            "side_effects": [
-                {"type": "workflow_run_created", "run_id": str(run.id)}
-            ],
+            "side_effects": [{"type": "workflow_run_created", "run_id": str(run.id)}],
         }

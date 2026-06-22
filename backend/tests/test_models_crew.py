@@ -1,16 +1,15 @@
 """Tests for all research engine models."""
+
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-import pytest
-
-from app.models.project import Project, ProjectStatus
-from app.models.expert_agent import ExpertAgent, AgentSpecialty
-from app.models.mission import Mission, MissionStatus, MissionType
-from app.models.agent_crew import AgentCrew, CoordinationStrategy, AgentActivity, ActivityType
-from app.models.mission_run import MissionRun, MissionTask, RunStatus, TriggerType
+from app.models.agent_crew import ActivityType, AgentActivity, AgentCrew, CoordinationStrategy
 from app.models.crew_task import CrewTask, CrewTaskStatus
+from app.models.expert_agent import AgentSpecialty, ExpertAgent
 from app.models.finding import Finding
+from app.models.mission import Mission, MissionStatus, MissionType
+from app.models.mission_run import MissionRun, RunStatus, TriggerType
+from app.models.project import Project, ProjectStatus
 from app.models.report import Report
 
 
@@ -49,9 +48,15 @@ class TestExpertAgentModel:
 
     def test_all_specialties_exist(self):
         expected = {
-            "web_researcher", "data_extractor", "voice_caller",
-            "market_analyst", "financial_analyst", "real_estate_expert",
-            "competitive_intel", "due_diligence", "synthesizer",
+            "web_researcher",
+            "data_extractor",
+            "voice_caller",
+            "market_analyst",
+            "financial_analyst",
+            "real_estate_expert",
+            "competitive_intel",
+            "due_diligence",
+            "synthesizer",
             "local_business_intel",
         }
         actual = {s.value for s in AgentSpecialty}
@@ -127,7 +132,7 @@ class TestCrewTaskModel:
 
     def test_thinking_log_structure(self):
         log_entry = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "thought": "Searching for pricing data",
             "action": "searching",
             "tool": "gemini_search",
@@ -147,7 +152,9 @@ class TestCrewTaskModel:
 
 class TestFindingModel:
     def test_create_finding(self):
-        from app.models.finding import FindingType, SourceType as FSourceType
+        from app.models.finding import FindingType
+        from app.models.finding import SourceType as FSourceType
+
         finding = Finding(
             id=uuid.uuid4(),
             project_id=uuid.uuid4(),

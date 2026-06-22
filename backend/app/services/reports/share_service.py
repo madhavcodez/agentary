@@ -68,9 +68,7 @@ class ShareService:
         # generating a new one, to keep URLs stable.
         if report.share_enabled and report.share_token:
             token = report.share_token
-            logger.info(
-                "Returning existing share link for report %s", report_id
-            )
+            logger.info("Returning existing share link for report %s", report_id)
             return {
                 "url": f"{settings.base_url}/shared/reports/{token}",
                 "token": token,
@@ -83,9 +81,7 @@ class ShareService:
         db.commit()
         db.refresh(report)
 
-        logger.info(
-            "Created share link for report %s (user %s)", report_id, user_id
-        )
+        logger.info("Created share link for report %s (user %s)", report_id, user_id)
 
         return {
             "url": f"{settings.base_url}/shared/reports/{token}",
@@ -120,9 +116,7 @@ class ShareService:
         )
 
         if report is None:
-            logger.debug(
-                "Shared report lookup failed for token %.8s...", share_token
-            )
+            logger.debug("Shared report lookup failed for token %.8s...", share_token)
             return None
 
         logger.info(
@@ -172,6 +166,4 @@ class ShareService:
 
         db.commit()
 
-        logger.info(
-            "Revoked share link for report %s (user %s)", report_id, user_id
-        )
+        logger.info("Revoked share link for report %s (user %s)", report_id, user_id)

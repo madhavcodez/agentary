@@ -21,7 +21,7 @@ def get_run_steps(
 ) -> list[dict]:
     """Return RunSteps for a run, ordered by start time.
 
-    A DeerFlow run with 6 iterations × 6 experts generates ~36 tool-call
+    A DeerFlow run with 6 iterations x 6 experts generates ~36 tool-call
     steps + phase steps; bounded at 1000 per page so a long-running mission
     doesn't return a multi-MB JSON blob.
     """

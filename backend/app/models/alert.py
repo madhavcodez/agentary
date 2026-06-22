@@ -5,8 +5,10 @@ from __future__ import annotations
 import enum
 import uuid
 
-from sqlalchemy import Boolean, Column, DateTime, Enum as SAEnum, ForeignKey, String, Text, func
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Boolean, Column, DateTime
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import ForeignKey, String, Text, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
 from ..database import Base
@@ -30,7 +32,9 @@ class AlertRecord(Base):
     __tablename__ = "alert_records"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    monitor_id = Column(UUID(as_uuid=True), ForeignKey("monitors.id", ondelete="CASCADE"), nullable=True, index=True)
+    monitor_id = Column(
+        UUID(as_uuid=True), ForeignKey("monitors.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=True, index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
 
@@ -48,7 +52,9 @@ class AlertRecord(Base):
     notification_channels = Column(JSONB, default=list)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
 
     # Relationships
     monitor = relationship("Monitor")

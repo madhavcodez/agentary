@@ -5,6 +5,7 @@ in a single structured response. The N*M explosion (perspectives * questions)
 is deliberately collapsed to N calls via batched output — the model receives
 ``max_questions`` and returns up to that many in one shot.
 """
+
 from __future__ import annotations
 
 import logging
@@ -69,11 +70,13 @@ async def generate_questions(
         evidence_type = (item.get("evidence_type") or "fact").strip().lower()
         if evidence_type not in _VALID_EVIDENCE_TYPES:
             evidence_type = "fact"
-        out.append({
-            "text": text[:500],
-            "priority": priority,
-            "evidence_type": evidence_type,
-        })
+        out.append(
+            {
+                "text": text[:500],
+                "priority": priority,
+                "evidence_type": evidence_type,
+            }
+        )
     return out
 
 

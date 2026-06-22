@@ -73,7 +73,7 @@ def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
     # Normalize email to lowercase
     normalized_email = body.email.lower()
 
-    user = db.query(User).filter(User.email == normalized_email, User.is_active == True).first()
+    user = db.query(User).filter(User.email == normalized_email, User.is_active.is_(True)).first()
 
     # Always run bcrypt to prevent timing-based user enumeration
     _DUMMY_HASH = "$2b$12$KIXq3oH9Y8eZnmC.qJsMleOlCPWP5P9hBzfFMD8r8Hq3fY9dqMWGu"

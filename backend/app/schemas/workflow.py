@@ -6,8 +6,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # ── Node & Edge schemas ──────────────────────────────────────────────
+
 
 class EdgeSchema(BaseModel):
     source_node_id: str
@@ -26,6 +26,7 @@ class NodeSchema(BaseModel):
 
 # ── Variable schema ──────────────────────────────────────────────────
 
+
 class VariableSchema(BaseModel):
     name: str
     type: str = "string"
@@ -36,6 +37,7 @@ class VariableSchema(BaseModel):
 
 
 # ── Workflow CRUD ────────────────────────────────────────────────────
+
 
 class WorkflowCreate(BaseModel):
     name: str = Field(max_length=255)
@@ -94,6 +96,7 @@ class WorkflowList(BaseModel):
 
 # ── Workflow Run ─────────────────────────────────────────────────────
 
+
 class WorkflowRunResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -120,6 +123,7 @@ class WorkflowRunList(BaseModel):
 
 
 # ── Workflow Template ────────────────────────────────────────────────
+
 
 class WorkflowTemplateResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -151,6 +155,7 @@ class WorkflowTemplateCreate(BaseModel):
 
 
 # ── From Template / NL ───────────────────────────────────────────────
+
 
 class WorkflowFromTemplate(BaseModel):
     template_id: UUID

@@ -5,8 +5,20 @@ from __future__ import annotations
 import enum
 import uuid
 
-from sqlalchemy import Boolean, Column, DateTime, Enum as SAEnum, ForeignKey, Integer, String, Text, func
-from sqlalchemy.dialects.postgresql import ARRAY, UUID, JSONB
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+)
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import (
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    func,
+)
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import relationship
 
 from ..database import Base
@@ -61,7 +73,9 @@ class Monitor(Base):
     last_error_at = Column(DateTime(timezone=True), nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
 
     # Relationships
     project = relationship("Project", back_populates="monitors")
@@ -73,7 +87,12 @@ class Alert(Base):
     __tablename__ = "alerts"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    monitor_id = Column(UUID(as_uuid=True), ForeignKey("monitors.id", ondelete="CASCADE"), nullable=False, index=True)
+    monitor_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("monitors.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=True, index=True)
 
     alert_type = Column(String(50), nullable=False)

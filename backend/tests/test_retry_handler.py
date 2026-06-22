@@ -42,9 +42,7 @@ class TestRetryBehavior:
             nonlocal call_count
             call_count += 1
             if call_count < 3:
-                raise RetryableError(
-                    "transient", FailureCategory.transient_connector
-                )
+                raise RetryableError("transient", FailureCategory.transient_connector)
             return "success"
 
         result = await with_retry(func, max_retries=3, base_delay=0.01)
@@ -74,9 +72,7 @@ class TestRetryBehavior:
             nonlocal call_count
             call_count += 1
             if call_count < 2:
-                raise RetryableError(
-                    "rate limited", FailureCategory.rate_limited, retry_after=0.01
-                )
+                raise RetryableError("rate limited", FailureCategory.rate_limited, retry_after=0.01)
             return "ok"
 
         result = await with_retry(func, max_retries=2, base_delay=0.01)
@@ -107,9 +103,7 @@ class TestPermanentErrors:
     @pytest.mark.asyncio
     async def test_max_retries_exceeded(self) -> None:
         async def func():
-            raise RetryableError(
-                "always fails", FailureCategory.transient_connector
-            )
+            raise RetryableError("always fails", FailureCategory.transient_connector)
 
         with pytest.raises(PermanentError):
             await with_retry(func, max_retries=2, base_delay=0.01)
@@ -117,9 +111,7 @@ class TestPermanentErrors:
     @pytest.mark.asyncio
     async def test_max_retries_exceeded_preserves_category(self) -> None:
         async def func():
-            raise RetryableError(
-                "always fails", FailureCategory.transient_connector
-            )
+            raise RetryableError("always fails", FailureCategory.transient_connector)
 
         with pytest.raises(PermanentError) as exc_info:
             await with_retry(func, max_retries=2, base_delay=0.01)
@@ -173,9 +165,7 @@ class TestRetryableErrorAttributes:
         assert err.category == FailureCategory.transient_connector
 
     def test_retryable_error_has_retry_after(self) -> None:
-        err = RetryableError(
-            "test", FailureCategory.rate_limited, retry_after=5.0
-        )
+        err = RetryableError("test", FailureCategory.rate_limited, retry_after=5.0)
         assert err.retry_after == 5.0
 
     def test_retryable_error_default_retry_after(self) -> None:

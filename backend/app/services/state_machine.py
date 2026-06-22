@@ -6,7 +6,7 @@ workflows, voice, monitors, reports).
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from ..models.enums import RunStatus
@@ -15,7 +15,9 @@ from ..models.enums import RunStatus
 class InvalidTransition(Exception):
     """Raised when an attempted state transition is not allowed."""
 
-    def __init__(self, current: RunStatus | str, target: RunStatus | str, reason: str | None = None) -> None:
+    def __init__(
+        self, current: RunStatus | str, target: RunStatus | str, reason: str | None = None
+    ) -> None:
         self.current = current
         self.target = target
         current_val = current.value if hasattr(current, "value") else str(current)
@@ -30,14 +32,16 @@ class InvalidTransition(Exception):
 VALID_TRANSITIONS: dict[RunStatus, frozenset[RunStatus]] = {
     RunStatus.created: frozenset({RunStatus.queued, RunStatus.cancelled}),
     RunStatus.queued: frozenset({RunStatus.running, RunStatus.cancelled}),
-    RunStatus.running: frozenset({
-        RunStatus.completed,
-        RunStatus.partially_failed,
-        RunStatus.failed,
-        RunStatus.cancelled,
-        RunStatus.awaiting_input,
-        RunStatus.retrying,
-    }),
+    RunStatus.running: frozenset(
+        {
+            RunStatus.completed,
+            RunStatus.partially_failed,
+            RunStatus.failed,
+            RunStatus.cancelled,
+            RunStatus.awaiting_input,
+            RunStatus.retrying,
+        }
+    ),
     RunStatus.retrying: frozenset({RunStatus.running, RunStatus.failed, RunStatus.cancelled}),
     RunStatus.awaiting_input: frozenset({RunStatus.running, RunStatus.cancelled}),
     RunStatus.partially_failed: frozenset({RunStatus.completed, RunStatus.failed}),
@@ -47,11 +51,13 @@ VALID_TRANSITIONS: dict[RunStatus, frozenset[RunStatus]] = {
     RunStatus.cancelled: frozenset(),
 }
 
-_TERMINAL_STATES: frozenset[RunStatus] = frozenset({
-    RunStatus.completed,
-    RunStatus.failed,
-    RunStatus.cancelled,
-})
+_TERMINAL_STATES: frozenset[RunStatus] = frozenset(
+    {
+        RunStatus.completed,
+        RunStatus.failed,
+        RunStatus.cancelled,
+    }
+)
 
 
 # ── Call-specific state transitions ──────────────────────────────────
@@ -61,7 +67,7 @@ CALL_VALID_TRANSITIONS: dict[str, list[str]] = {
     "ringing": ["connected", "no_answer", "voicemail", "failed"],
     "connected": ["completed", "failed"],
     "completed": [],  # terminal
-    "failed": [],     # terminal
+    "failed": [],  # terminal
     "no_answer": [],  # terminal
     "voicemail": [],  # terminal
     "cancelled": [],  # terminal
@@ -90,7 +96,7 @@ def call_transition(current: str, target: str, reason: str | None = None) -> dic
     return {
         "from": current_val,
         "to": target_val,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "reason": reason,
     }
 
@@ -131,6 +137,6 @@ def transition(
     return {
         "from": current_state.value,
         "to": target_state.value,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "reason": reason,
     }

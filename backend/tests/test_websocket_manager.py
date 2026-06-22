@@ -1,9 +1,8 @@
 """Tests for the WebSocket connection manager."""
 
-import asyncio
+from unittest.mock import AsyncMock
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock
 
 from app.core.websocket_manager import WebSocketManager
 
@@ -21,7 +20,7 @@ async def test_connect_and_disconnect():
     mgr = WebSocketManager()
     ws = make_mock_ws()
 
-    client = await mgr.connect(ws, "user-1")
+    await mgr.connect(ws, "user-1")
     assert mgr.connection_count == 1
     assert "user-1" in mgr.active_users()
 

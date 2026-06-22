@@ -1,12 +1,13 @@
 """Schemas for project onboarding and question generation endpoints."""
+
 from __future__ import annotations
 
 from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 
-
 # ── Request schemas ──────────────────────────────────────────────────
+
 
 class GenerateQuestionsRequest(BaseModel):
     title: str = Field(min_length=1, max_length=500)
@@ -18,7 +19,7 @@ class ConfigureAndStartRequest(BaseModel):
     project_title: str = Field(min_length=1, max_length=500)
 
     @model_validator(mode="after")
-    def _validate_answers(self) -> "ConfigureAndStartRequest":
+    def _validate_answers(self) -> ConfigureAndStartRequest:
         if len(self.answers) > 20:
             raise ValueError("Too many answers (max 20)")
         for key, value in self.answers.items():
@@ -34,6 +35,7 @@ class ConfigureAndStartRequest(BaseModel):
 
 
 # ── Response schemas ─────────────────────────────────────────────────
+
 
 class OnboardingQuestion(BaseModel):
     id: str

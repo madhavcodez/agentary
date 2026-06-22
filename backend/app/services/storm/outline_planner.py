@@ -1,6 +1,6 @@
 """Outline planner — STORM pre-writing step 3.
 
-Consumes the perspective × question matrix and produces the report
+Consumes the perspective x question matrix and produces the report
 outline BEFORE any retrieval happens. This is STORM's load-bearing
 contribution: pre-writing quality correlates with final-report quality
 because the outline fixes what evidence the synthesizer is looking for.
@@ -9,10 +9,12 @@ The output is a list of sections with ``scope`` (what this section must
 answer), ``source_question_ids`` (which questions feed it), and
 ``expected_evidence_types`` (used by the refinement loop to judge quality).
 """
+
 from __future__ import annotations
 
 import logging
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from ...prompts.storm import OUTLINE_SCHEMA_HINT, build_outline_prompt
 from .budget import StormBudget
@@ -107,11 +109,13 @@ def _normalise_sections(
                 if t_str in _VALID_EVIDENCE_TYPES:
                     types_.append(t_str)
 
-        out.append({
-            "index": idx,
-            "title": title[:300],
-            "scope": scope[:800],
-            "source_question_ids": qids,
-            "expected_evidence_types": types_ or ["fact"],
-        })
+        out.append(
+            {
+                "index": idx,
+                "title": title[:300],
+                "scope": scope[:800],
+                "source_question_ids": qids,
+                "expected_evidence_types": types_ or ["fact"],
+            }
+        )
     return out

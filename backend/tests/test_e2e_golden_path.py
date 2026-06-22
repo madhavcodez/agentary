@@ -1,7 +1,6 @@
 """E2E golden path test: create mission -> assemble crew -> execute -> verify findings."""
-import uuid
 
-import pytest
+import uuid
 
 from app.models.agent_crew import AgentCrew, CoordinationStrategy
 from app.models.crew_task import CrewTask, CrewTaskStatus
@@ -59,8 +58,18 @@ class TestGoldenPath:
             id=uuid.uuid4(),
             mission_id=uuid.uuid4(),
             agents=[
-                {"agent_id": str(expert_1.id), "slug": "web-researcher", "name": "Web Researcher", "role": "web_researcher"},
-                {"agent_id": str(expert_2.id), "slug": "synthesizer", "name": "Synthesizer", "role": "synthesizer"},
+                {
+                    "agent_id": str(expert_1.id),
+                    "slug": "web-researcher",
+                    "name": "Web Researcher",
+                    "role": "web_researcher",
+                },
+                {
+                    "agent_id": str(expert_2.id),
+                    "slug": "synthesizer",
+                    "name": "Synthesizer",
+                    "role": "synthesizer",
+                },
             ],
             coordination_strategy=CoordinationStrategy.parallel,
         )
@@ -93,7 +102,9 @@ class TestGoldenPath:
         assert task.task_type == "web_search"
 
     def test_finding_creation_with_source_attribution(self):
-        from app.models.finding import FindingType, SourceType as FSourceType
+        from app.models.finding import FindingType
+        from app.models.finding import SourceType as FSourceType
+
         finding = Finding(
             id=uuid.uuid4(),
             project_id=uuid.uuid4(),
@@ -129,13 +140,17 @@ class TestGoldenPath:
 
         # Mission
         mission = Mission(
-            id=mission_id, project_id=project_id, user_id=user_id,
-            name="Test Mission", status=MissionStatus.draft,
+            id=mission_id,
+            project_id=project_id,
+            user_id=user_id,
+            name="Test Mission",
+            status=MissionStatus.draft,
         )
 
         # Crew
         crew = AgentCrew(
-            id=crew_id, mission_id=mission_id,
+            id=crew_id,
+            mission_id=mission_id,
             agents=[{"agent_id": str(expert_id), "slug": "web-researcher", "role": "researcher"}],
         )
 
@@ -144,17 +159,26 @@ class TestGoldenPath:
 
         # Task
         task = CrewTask(
-            id=task_id, mission_run_id=run_id, expert_agent_id=expert_id,
-            task_type="web_search", description="Search",
+            id=task_id,
+            mission_run_id=run_id,
+            expert_agent_id=expert_id,
+            task_type="web_search",
+            description="Search",
         )
 
         # Finding
-        from app.models.finding import FindingType, SourceType as FSourceType
+        from app.models.finding import FindingType
+        from app.models.finding import SourceType as FSourceType
+
         finding = Finding(
-            id=uuid.uuid4(), project_id=project_id, mission_id=mission_id,
+            id=uuid.uuid4(),
+            project_id=project_id,
+            mission_id=mission_id,
             finding_type=FindingType.fact,
-            title="Test Finding", content="Test content",
-            confidence=0.7, source_type=FSourceType.web,
+            title="Test Finding",
+            content="Test content",
+            confidence=0.7,
+            source_type=FSourceType.web,
         )
 
         # Verify chain integrity

@@ -3,10 +3,10 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
-
+from pydantic import BaseModel, ConfigDict
 
 # ── Request schemas ──────────────────────────────────────────────────
+
 
 class ReportCreate(BaseModel):
     mission_id: str
@@ -25,6 +25,7 @@ class RegenerateSection(BaseModel):
 
 
 # ── Response schemas ─────────────────────────────────────────────────
+
 
 class ReportSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)

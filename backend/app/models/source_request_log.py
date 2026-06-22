@@ -11,7 +11,9 @@ class SourceRequestLog(Base):
     __tablename__ = "source_request_logs"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    data_source_id = Column(UUID(as_uuid=True), ForeignKey("data_sources.id"), nullable=False, index=True)
+    data_source_id = Column(
+        UUID(as_uuid=True), ForeignKey("data_sources.id"), nullable=False, index=True
+    )
     mission_id = Column(UUID(as_uuid=True), nullable=True)
     request_type = Column(String(100), nullable=True)
     request_params = Column(JSONB, nullable=True)

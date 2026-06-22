@@ -14,10 +14,12 @@ list rather than silently dropping it — the refinement loop treats that
 as a signal to either request more research or skip the section rather
 than let the section synthesizer hallucinate citations.
 """
+
 from __future__ import annotations
 
 import logging
-from typing import Any, Iterable, Sequence
+from collections.abc import Iterable, Sequence
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +30,7 @@ DEFAULT_SCORE_THRESHOLD = 0.55
 def _cosine(a: list[float], b: list[float]) -> float:
     if not a or not b or len(a) != len(b):
         return 0.0
-    dot = sum(x * y for x, y in zip(a, b))
+    dot = sum(x * y for x, y in zip(a, b, strict=False))
     na = sum(x * x for x in a) ** 0.5
     nb = sum(y * y for y in b) ** 0.5
     if na == 0.0 or nb == 0.0:
@@ -38,11 +40,13 @@ def _cosine(a: list[float], b: list[float]) -> float:
 
 async def _embed_scope(scope: str) -> list[float]:
     from ..gemini import embed_text
+
     return await embed_text(scope, task_type="SEMANTIC_SIMILARITY")
 
 
 async def _embed_finding_content(finding: Any) -> list[float]:
     from ..gemini import embed_text
+
     snippet = (finding.title or "") + "\n" + (finding.content or "")
     return await embed_text(snippet[:2000], task_type="RETRIEVAL_DOCUMENT")
 
@@ -58,9 +62,9 @@ async def bind_findings_to_sections(
 
     Embeds each section scope once and each finding once, then computes
     pairwise cosine similarity in-memory. For the typical Agentary mission
-    (≤50 findings × ≤6 sections) this is 300 cosine ops — trivial.
+    (<=50 findings x <=6 sections) this is 300 cosine ops -- trivial.
     """
-    findings_list = [f for f in findings]
+    findings_list = list(findings)
     if not sections or not findings_list:
         return {}
 
@@ -81,9 +85,7 @@ async def bind_findings_to_sections(
         try:
             scope_emb = await _embed_scope(scope)
         except Exception as exc:
-            logger.warning(
-                "evidence_binder: scope embed failed for section %d: %s", idx, exc
-            )
+            logger.warning("evidence_binder: scope embed failed for section %d: %s", idx, exc)
             bindings[idx] = []
             continue
 

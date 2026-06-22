@@ -5,6 +5,7 @@ Without the cache, two missions on overlapping topics — common during
 research crew runs — pay Exa twice for identical searches. Default TTL is
 1 hour because Exa results don't shift meaningfully on shorter horizons.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -87,7 +88,7 @@ async def _fetch(query: str, num_results: int, search_type: str) -> dict[str, An
 async def execute(
     query: str,
     num_results: int = 5,
-    type: str = "neural",  # noqa: A002 - matches schema; renamed to search_type internally
+    type: str = "neural",
     **kwargs: Any,
 ) -> dict[str, Any]:
     """Execute an Exa search with result caching."""

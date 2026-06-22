@@ -33,8 +33,10 @@ Out of scope (defense in depth still needed at the network/OS layer)
   thread can't preempt
 Operators are still expected to restrict outbound network from worker pools.
 """
+
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import threading
@@ -192,7 +194,7 @@ def _run_in_thread(byte_code: Any, restricted: dict[str, Any]) -> tuple[Any, Bas
             exec(byte_code, restricted)  # noqa: S102 - intentional: sandboxed bytecode only
             printed = restricted.get("_print")
             result["output"] = printed() if callable(printed) else ""
-        except BaseException as exc:  # noqa: BLE001 - propagate to caller
+        except BaseException as exc:
             result["error"] = exc
 
     thread = threading.Thread(target=_target, daemon=True)
@@ -257,10 +259,8 @@ async def execute(code: str, **kwargs: Any) -> dict[str, Any]:
         stdout = stdout[:MAX_OUTPUT_BYTES] + "\n…[truncated]"
 
     parsed: Any = stdout
-    try:
+    with contextlib.suppress(json.JSONDecodeError, ValueError):
         parsed = json.loads(stdout) if stdout.strip() else stdout
-    except (json.JSONDecodeError, ValueError):
-        pass
 
     return {
         "tool": "python_executor",

@@ -1,4 +1,5 @@
 """Chart.js configuration generator for data visualization."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -44,14 +45,14 @@ TOOL_SCHEMA: dict[str, Any] = {
 }
 
 DEFAULT_COLORS = [
-    "rgba(59, 130, 246, 0.8)",   # blue
-    "rgba(16, 185, 129, 0.8)",   # green
-    "rgba(245, 158, 11, 0.8)",   # amber
-    "rgba(239, 68, 68, 0.8)",    # red
-    "rgba(139, 92, 246, 0.8)",   # purple
-    "rgba(236, 72, 153, 0.8)",   # pink
-    "rgba(14, 165, 233, 0.8)",   # sky
-    "rgba(249, 115, 22, 0.8)",   # orange
+    "rgba(59, 130, 246, 0.8)",  # blue
+    "rgba(16, 185, 129, 0.8)",  # green
+    "rgba(245, 158, 11, 0.8)",  # amber
+    "rgba(239, 68, 68, 0.8)",  # red
+    "rgba(139, 92, 246, 0.8)",  # purple
+    "rgba(236, 72, 153, 0.8)",  # pink
+    "rgba(14, 165, 233, 0.8)",  # sky
+    "rgba(249, 115, 22, 0.8)",  # orange
 ]
 
 
@@ -69,15 +70,17 @@ async def execute(
     for i, ds in enumerate(datasets):
         color = ds.get("color", DEFAULT_COLORS[i % len(DEFAULT_COLORS)])
         border_color = color.replace("0.8)", "1)")
-        chartjs_datasets.append({
-            "label": ds["label"],
-            "data": ds["data"],
-            "backgroundColor": color,
-            "borderColor": border_color,
-            "borderWidth": 2,
-            "fill": chart_type == "line",
-            "tension": 0.3 if chart_type == "line" else 0,
-        })
+        chartjs_datasets.append(
+            {
+                "label": ds["label"],
+                "data": ds["data"],
+                "backgroundColor": color,
+                "borderColor": border_color,
+                "borderWidth": 2,
+                "fill": chart_type == "line",
+                "tension": 0.3 if chart_type == "line" else 0,
+            }
+        )
 
     config: dict[str, Any] = {
         "type": chart_type,

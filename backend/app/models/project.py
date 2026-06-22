@@ -3,7 +3,18 @@ from __future__ import annotations
 import enum
 import uuid
 
-from sqlalchemy import Boolean, Column, DateTime, Enum as SAEnum, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (
+    Column,
+    DateTime,
+)
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import (
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -43,7 +54,9 @@ class Project(Base):
     total_calls_made = Column(Integer, default=0, nullable=False)
     total_reports_generated = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
 
     # Relationships
     missions = relationship("Mission", back_populates="project", lazy="dynamic")

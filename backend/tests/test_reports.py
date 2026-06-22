@@ -4,13 +4,13 @@ These tests are written as standalone unit tests that mock the database
 and don't rely on importing the full FastAPI app (which has cascading
 import issues from the ongoing domain restructure).
 """
+
 import json
 import uuid
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # ── ChartGenerator tests ─────────────────────────────────────────────
 
@@ -20,6 +20,7 @@ class TestChartGenerator:
 
     def _make_gen(self):
         from app.services.reports.chart_generator import ChartGenerator
+
         return ChartGenerator()
 
     def test_comparison_bar_chart(self):
@@ -120,6 +121,7 @@ class TestDataExporter:
 
     def _make_exporter(self):
         from app.services.reports.data_exporter import DataExporter
+
         return DataExporter()
 
     def _mock_finding(self, **kwargs):
@@ -130,15 +132,15 @@ class TestDataExporter:
         finding.category = kwargs.get("category", "data_point")
         finding.title = kwargs.get("title", "Test Finding")
         finding.content = kwargs.get("content", "Test content here")
-        finding.structured_data = kwargs.get("structured_data", None)
+        finding.structured_data = kwargs.get("structured_data")
         finding.source_type = kwargs.get("source_type", "web")
         finding.source_url = kwargs.get("source_url", "https://example.com")
         finding.source_name = kwargs.get("source_name", "Example")
         finding.confidence = kwargs.get("confidence", 0.85)
         finding.verified = kwargs.get("verified", False)
         finding.tags = kwargs.get("tags", ["test"])
-        finding.expert_agent_id = kwargs.get("expert_agent_id", None)
-        finding.project_id = kwargs.get("project_id", None)
+        finding.expert_agent_id = kwargs.get("expert_agent_id")
+        finding.project_id = kwargs.get("project_id")
         finding.created_at = kwargs.get("created_at", datetime(2024, 1, 15))
         return finding
 
@@ -197,7 +199,9 @@ class TestDataExporter:
         findings = [self._mock_finding(category="insight", confidence=0.9)]
         db = self._mock_db_with_findings(findings)
         csv_bytes = exporter.export_findings_csv(
-            mission_id, {"category": "insight", "confidence_min": 0.8}, db,
+            mission_id,
+            {"category": "insight", "confidence_min": 0.8},
+            db,
         )
         assert isinstance(csv_bytes, bytes)
 
@@ -210,6 +214,7 @@ class TestShareService:
 
     def _make_service(self):
         from app.services.reports.share_service import ShareService
+
         return ShareService()
 
     def _mock_report(self, user_id=None, share_enabled=False, share_token=None):
@@ -244,7 +249,9 @@ class TestShareService:
         mock_settings.base_url = "http://localhost:3000"
         svc = self._make_service()
         user_id = uuid.uuid4()
-        report = self._mock_report(user_id=user_id, share_enabled=True, share_token="existing_token")
+        report = self._mock_report(
+            user_id=user_id, share_enabled=True, share_token="existing_token"
+        )
 
         db = MagicMock()
         db.query.return_value.filter.return_value.first.return_value = report
@@ -327,6 +334,7 @@ class TestPDFExporter:
 
     def _make_exporter(self):
         from app.services.reports.pdf_exporter import PDFExporter
+
         return PDFExporter()
 
     def _mock_report(self):

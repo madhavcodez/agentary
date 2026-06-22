@@ -6,6 +6,7 @@ company information without requiring an extra search API key.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 from typing import Any
@@ -112,22 +113,24 @@ async def gemini_research(company: str, role: str) -> dict[str, Any]:
                 if chunks:
                     for chunk in chunks:
                         web = getattr(chunk, "web", None)
-                        if web and hasattr(web, "uri") and web.uri:
-                            if web.uri not in result["sources"]:
-                                result["sources"].append(web.uri)
+                        if (
+                            web
+                            and hasattr(web, "uri")
+                            and web.uri
+                            and web.uri not in result["sources"]
+                        ):
+                            result["sources"].append(web.uri)
 
         return result
 
     except json.JSONDecodeError:
         logger.warning("Failed to parse Gemini research JSON for %s", company)
         # Attempt to extract JSON from response
-        try:
+        with contextlib.suppress(Exception):
             start = text.find("{")
             end = text.rfind("}") + 1
             if start >= 0 and end > start:
                 return json.loads(text[start:end])
-        except Exception:
-            pass
         return {
             "company_overview": f"Research for {company} returned non-JSON response.",
             "recent_news": [],

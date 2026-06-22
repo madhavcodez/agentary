@@ -3,7 +3,9 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Enum as SAEnum, ForeignKey, String, Text
+from sqlalchemy import Boolean, Column, DateTime
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSON, JSONB, UUID
 from sqlalchemy.orm import relationship
 

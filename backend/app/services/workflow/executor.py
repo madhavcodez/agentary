@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import time
 from collections import defaultdict, deque
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -15,7 +15,8 @@ from ...core.events import Event, EventType, event_bus
 from ...models.enums import FailureCategory, RunStatus
 from ...models.workflow import Workflow
 from ...models.workflow_run import WorkflowRun
-from ..state_machine import InvalidTransition, transition as sm_transition
+from ..state_machine import InvalidTransition
+from ..state_machine import transition as sm_transition
 from .node_handlers import execute_handler
 
 logger = logging.getLogger(__name__)
@@ -46,16 +47,18 @@ class WorkflowExecutor:
         run.state_transitions = transitions
         self.db.commit()
 
-        await event_bus.broadcast(Event(
-            event_type=EventType.run_state_changed,
-            data={
-                "run_type": "workflow",
-                "run_id": str(run.id),
-                "from_state": record["from"],
-                "to_state": record["to"],
-                "reason": reason,
-            },
-        ))
+        await event_bus.broadcast(
+            Event(
+                event_type=EventType.run_state_changed,
+                data={
+                    "run_type": "workflow",
+                    "run_id": str(run.id),
+                    "from_state": record["from"],
+                    "to_state": record["to"],
+                    "reason": reason,
+                },
+            )
+        )
 
     async def execute_run(self, run_id: UUID) -> WorkflowRun:
         run = self.db.query(WorkflowRun).filter(WorkflowRun.id == run_id).first()
@@ -67,7 +70,7 @@ class WorkflowExecutor:
             raise ValueError(f"Workflow {run.workflow_id} not found")
 
         await self._transition_run(run, RunStatus.running, "Starting workflow execution")
-        run.started_at = datetime.now(timezone.utc)
+        run.started_at = datetime.now(UTC)
         run.node_results = {}
         self.db.commit()
 
@@ -79,7 +82,11 @@ class WorkflowExecutor:
         try:
             execution_order = self._topological_sort(nodes, edges)
             node_outputs: dict[str, Any] = {}
-            context = {"variables": variables, "workflow_id": str(workflow.id), "run_id": str(run.id)}
+            context = {
+                "variables": variables,
+                "workflow_id": str(workflow.id),
+                "run_id": str(run.id),
+            }
 
             for node_id in execution_order:
                 node = self._find_node(nodes, node_id)
@@ -94,7 +101,10 @@ class WorkflowExecutor:
 
                 # Update status
                 node_results = dict(run.node_results)
-                node_results[node_id] = {"status": "running", "started_at": datetime.now(timezone.utc).isoformat()}
+                node_results[node_id] = {
+                    "status": "running",
+                    "started_at": datetime.now(UTC).isoformat(),
+                }
                 run.node_results = node_results
                 self.db.commit()
 
@@ -103,15 +113,25 @@ class WorkflowExecutor:
                     output = await execute_handler(node_type, config, input_data, context)
 
                     # Handle condition branching
-                    if node_type == "condition" and isinstance(output, dict) and "__condition_result" in output:
+                    if (
+                        node_type == "condition"
+                        and isinstance(output, dict)
+                        and "__condition_result" in output
+                    ):
                         condition_result = output["__condition_result"]
                         actual_data = output.get("data")
                         # Store output and determine which downstream path to take
                         node_outputs[node_id] = actual_data
                         node_outputs[f"{node_id}:true"] = actual_data if condition_result else None
-                        node_outputs[f"{node_id}:false"] = actual_data if not condition_result else None
+                        node_outputs[f"{node_id}:false"] = (
+                            actual_data if not condition_result else None
+                        )
                     # Handle loop
-                    elif node_type == "loop" and isinstance(output, dict) and "__loop_items" in output:
+                    elif (
+                        node_type == "loop"
+                        and isinstance(output, dict)
+                        and "__loop_items" in output
+                    ):
                         loop_items = output["__loop_items"]
                         item_var = output.get("item_variable", "item")
                         loop_results = []
@@ -137,7 +157,7 @@ class WorkflowExecutor:
                         "output": self._truncate_output(output),
                         "duration": round(node_duration, 2),
                         "started_at": node_results[node_id]["started_at"],
-                        "completed_at": datetime.now(timezone.utc).isoformat(),
+                        "completed_at": datetime.now(UTC).isoformat(),
                     }
                     run.node_results = node_results
                     self.db.commit()
@@ -150,7 +170,7 @@ class WorkflowExecutor:
                         "error": str(e),
                         "duration": round(node_duration, 2),
                         "started_at": node_results[node_id]["started_at"],
-                        "completed_at": datetime.now(timezone.utc).isoformat(),
+                        "completed_at": datetime.now(UTC).isoformat(),
                     }
                     run.node_results = node_results
                     self.db.commit()
@@ -168,29 +188,32 @@ class WorkflowExecutor:
 
             # Check if any nodes failed
             failed_nodes = [
-                nid for nid, nr in (run.node_results or {}).items()
+                nid
+                for nid, nr in (run.node_results or {}).items()
                 if isinstance(nr, dict) and nr.get("status") == "failed"
             ]
             if failed_nodes and len(failed_nodes) < len(execution_order):
                 await self._transition_run(
-                    run, RunStatus.partially_failed,
+                    run,
+                    RunStatus.partially_failed,
                     f"{len(failed_nodes)} node(s) failed",
                 )
                 await self._transition_run(
-                    run, RunStatus.completed,
+                    run,
+                    RunStatus.completed,
                     "Resolved: partial results available",
                 )
             else:
                 await self._transition_run(run, RunStatus.completed, "Workflow completed")
 
-            run.completed_at = datetime.now(timezone.utc)
+            run.completed_at = datetime.now(UTC)
             run.duration_seconds = round(total_duration, 2)
             run.output_data = final_output
 
             # Emit signal for the intelligence pipeline
             try:
-                from ..intelligence.signal_service import SignalService
                 from ...models.signal import SignalSourceType, SignalType
+                from ..intelligence.signal_service import SignalService
 
                 if workflow.project_id:
                     signal_svc = SignalService(self.db)
@@ -207,7 +230,7 @@ class WorkflowExecutor:
                 logger.debug("Signal emission failed for workflow run %s", run.id)
 
             # Update workflow stats
-            workflow.last_run_at = datetime.now(timezone.utc)
+            workflow.last_run_at = datetime.now(UTC)
             workflow.total_runs = (workflow.total_runs or 0) + 1
             if workflow.avg_duration_seconds:
                 workflow.avg_duration_seconds = (
@@ -224,7 +247,7 @@ class WorkflowExecutor:
             err_msg = str(e)
             run.failure_category = FailureCategory.internal
             run.failure_message = err_msg
-            run.completed_at = datetime.now(timezone.utc)
+            run.completed_at = datetime.now(UTC)
             run.duration_seconds = round(time.time() - start_time, 2)
             run.error = {"message": err_msg, "type": type(e).__name__}
             try:
@@ -233,12 +256,14 @@ class WorkflowExecutor:
                 current_status = run.status if isinstance(run.status, str) else run.status.value
                 run.status = "failed"
                 transitions = list(run.state_transitions or [])
-                transitions.append({
-                    "from": current_status,
-                    "to": "failed",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "reason": "InvalidTransition fallback — forced to failed",
-                })
+                transitions.append(
+                    {
+                        "from": current_status,
+                        "to": "failed",
+                        "timestamp": datetime.now(UTC).isoformat(),
+                        "reason": "InvalidTransition fallback — forced to failed",
+                    }
+                )
                 run.state_transitions = transitions
                 self.db.commit()
             return run
@@ -246,7 +271,7 @@ class WorkflowExecutor:
     def _topological_sort(self, nodes: list[dict], edges: list[dict]) -> list[str]:
         """Topological sort of the DAG. Raises ValueError if cycle detected."""
         node_ids = {n["id"] for n in nodes}
-        in_degree: dict[str, int] = {nid: 0 for nid in node_ids}
+        in_degree: dict[str, int] = dict.fromkeys(node_ids, 0)
         adj: dict[str, list[str]] = defaultdict(list)
 
         for edge in edges:
@@ -314,10 +339,15 @@ class WorkflowExecutor:
     def _truncate_output(self, output: Any, max_size: int = 10000) -> Any:
         """Truncate large outputs to avoid bloating node_results JSONB."""
         import json as json_mod
+
         try:
             serialized = json_mod.dumps(output, default=str)
             if len(serialized) > max_size:
-                return {"__truncated": True, "preview": serialized[:max_size], "original_size": len(serialized)}
+                return {
+                    "__truncated": True,
+                    "preview": serialized[:max_size],
+                    "original_size": len(serialized),
+                }
             return output
         except Exception:
             return str(output)[:max_size]

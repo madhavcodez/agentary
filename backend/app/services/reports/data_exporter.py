@@ -200,18 +200,14 @@ class DataExporter:
 
         fmt = format.lower().strip()
         if fmt == "json":
-            return json.dumps(
-                records, indent=2, default=str, ensure_ascii=False
-            ).encode("utf-8")
+            return json.dumps(records, indent=2, default=str, ensure_ascii=False).encode("utf-8")
 
         if fmt == "csv":
             buf = io.StringIO()
             writer = csv.DictWriter(buf, fieldnames=columns, extrasaction="ignore")
             writer.writeheader()
             for row in records:
-                writer.writerow(
-                    {k: self._flatten_value(row.get(k, "")) for k in columns}
-                )
+                writer.writerow({k: self._flatten_value(row.get(k, "")) for k in columns})
             return buf.getvalue().encode("utf-8-sig")
 
         if fmt == "excel":
@@ -242,9 +238,7 @@ class DataExporter:
             output.seek(0)
             return output.read()
 
-        raise ValueError(
-            f"Unsupported export format: {format!r}. Use 'csv', 'json', or 'excel'."
-        )
+        raise ValueError(f"Unsupported export format: {format!r}. Use 'csv', 'json', or 'excel'.")
 
     # ------------------------------------------------------------------
     # Entity collection CSV
@@ -261,11 +255,7 @@ class DataExporter:
         found across every entity's ``canonical_data`` dict, plus standard
         entity fields (name, entity_type, description, aliases, tags).
         """
-        collection = (
-            db.query(EntityCollection)
-            .filter(EntityCollection.id == collection_id)
-            .first()
-        )
+        collection = db.query(EntityCollection).filter(EntityCollection.id == collection_id).first()
         if collection is None:
             logger.warning("Entity collection %s not found", collection_id)
             return b""
@@ -275,9 +265,7 @@ class DataExporter:
             logger.info("Entity collection %s has no entities", collection_id)
             return b""
 
-        entities = (
-            db.query(Entity).filter(Entity.id.in_(entity_ids)).all()
-        )
+        entities = db.query(Entity).filter(Entity.id.in_(entity_ids)).all()
 
         # Discover all canonical_data keys across every entity
         canonical_keys: list[str] = []
@@ -306,9 +294,7 @@ class DataExporter:
             }
             if entity.canonical_data and isinstance(entity.canonical_data, dict):
                 for key in canonical_keys:
-                    row[key] = self._flatten_value(
-                        entity.canonical_data.get(key, "")
-                    )
+                    row[key] = self._flatten_value(entity.canonical_data.get(key, ""))
             writer.writerow(row)
 
         logger.info(
@@ -338,7 +324,7 @@ class DataExporter:
         query = db.query(Finding).filter(Finding.mission_id == mission_id)
 
         if filters:
-            if "category" in filters and filters["category"]:
+            if filters.get("category"):
                 query = query.filter(Finding.finding_type == filters["category"])
             if "confidence_min" in filters and filters["confidence_min"] is not None:
                 try:
@@ -349,7 +335,7 @@ class DataExporter:
                         "Invalid confidence_min filter value: %r",
                         filters["confidence_min"],
                     )
-            if "source_type" in filters and filters["source_type"]:
+            if filters.get("source_type"):
                 query = query.filter(Finding.source_type == filters["source_type"])
 
         return query.order_by(Finding.created_at).all()
@@ -370,9 +356,7 @@ class DataExporter:
             "expert": str(f.expert_agent_id) if f.expert_agent_id else "",
             "tags": "; ".join(f.tags) if f.tags else "",
             "verified": "Yes" if f.verified else "No",
-            "created_at": (
-                f.created_at.isoformat() if f.created_at else ""
-            ),
+            "created_at": (f.created_at.isoformat() if f.created_at else ""),
         }
 
     @staticmethod
@@ -392,9 +376,7 @@ class DataExporter:
             "verified": f.verified,
             "tags": f.tags or [],
             "expert_agent_id": str(f.expert_agent_id) if f.expert_agent_id else None,
-            "created_at": (
-                f.created_at.isoformat() if f.created_at else None
-            ),
+            "created_at": (f.created_at.isoformat() if f.created_at else None),
         }
 
     @staticmethod
@@ -431,9 +413,7 @@ class DataExporter:
                 verified_count += 1
             total_confidence += f.confidence if f.confidence is not None else 0.0
 
-        avg_confidence = (
-            total_confidence / len(findings) if findings else 0.0
-        )
+        avg_confidence = total_confidence / len(findings) if findings else 0.0
 
         summary_rows: list[tuple[str, Any]] = [
             ("Mission ID", str(mission_id)),
@@ -591,9 +571,7 @@ class DataExporter:
                     "count": 1,
                 }
 
-        sorted_sources = sorted(
-            source_key_to_data.values(), key=lambda s: -s["count"]
-        )
+        sorted_sources = sorted(source_key_to_data.values(), key=lambda s: -s["count"])
 
         for row_idx, source in enumerate(sorted_sources, start=2):
             values = [

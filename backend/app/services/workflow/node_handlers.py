@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import csv
 import io
 import json
 import logging
-import re
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -37,6 +37,7 @@ def _eval_condition(expression: str, data: Any, variables: dict[str, Any]) -> bo
 
 # ── Trigger Handlers ─────────────────────────────────────────────────
 
+
 async def handle_manual_trigger(config: dict, input_data: Any, context: dict) -> Any:
     return {"triggered": True, "trigger_type": "manual"}
 
@@ -51,10 +52,13 @@ async def handle_webhook_trigger(config: dict, input_data: Any, context: dict) -
 
 # ── Research Handlers ────────────────────────────────────────────────
 
+
 async def handle_web_search(config: dict, input_data: Any, context: dict) -> Any:
     from ..gemini import generate_structured
 
-    query = _render_template(config.get("query_template", ""), context.get("variables", {}), input_data)
+    query = _render_template(
+        config.get("query_template", ""), context.get("variables", {}), input_data
+    )
     num_results = config.get("num_results", 10)
 
     prompt = (
@@ -73,7 +77,9 @@ async def handle_web_search(config: dict, input_data: Any, context: dict) -> Any
 async def handle_api_query(config: dict, input_data: Any, context: dict) -> Any:
     import httpx
 
-    endpoint = _render_template(config.get("endpoint", ""), context.get("variables", {}), input_data)
+    endpoint = _render_template(
+        config.get("endpoint", ""), context.get("variables", {}), input_data
+    )
     params = config.get("params_template", {})
     try:
         async with httpx.AsyncClient(timeout=30) as client:
@@ -120,7 +126,9 @@ async def handle_voice_call(config: dict, input_data: Any, context: dict) -> Any
 async def handle_expert_research(config: dict, input_data: Any, context: dict) -> Any:
     from ..gemini import generate_structured
 
-    task = _render_template(config.get("task_description", ""), context.get("variables", {}), input_data)
+    task = _render_template(
+        config.get("task_description", ""), context.get("variables", {}), input_data
+    )
     prompt = (
         f"You are an expert researcher. Complete this research task:\n\n{task}\n\n"
         f"Input data: {json.dumps(input_data) if input_data else 'None'}\n\n"
@@ -134,6 +142,7 @@ async def handle_expert_research(config: dict, input_data: Any, context: dict) -
 
 
 # ── Data Handlers ────────────────────────────────────────────────────
+
 
 async def handle_filter(config: dict, input_data: Any, context: dict) -> Any:
     conditions = config.get("conditions", [])
@@ -149,17 +158,14 @@ async def handle_filter(config: dict, input_data: Any, context: dict) -> Any:
             op = cond.get("op", "eq")
             value = cond.get("value")
             item_val = item.get(field)
-            if op == "eq" and item_val != value:
-                match = False
-            elif op == "ne" and item_val == value:
-                match = False
-            elif op == "gt" and (item_val is None or item_val <= value):
-                match = False
-            elif op == "lt" and (item_val is None or item_val >= value):
-                match = False
-            elif op == "contains" and (item_val is None or str(value) not in str(item_val)):
-                match = False
-            elif op == "in" and item_val not in (value if isinstance(value, list) else [value]):
+            if (
+                (op == "eq" and item_val != value)
+                or (op == "ne" and item_val == value)
+                or (op == "gt" and (item_val is None or item_val <= value))
+                or (op == "lt" and (item_val is None or item_val >= value))
+                or (op == "contains" and (item_val is None or str(value) not in str(item_val)))
+                or (op == "in" and item_val not in (value if isinstance(value, list) else [value]))
+            ):
                 match = False
         if match:
             filtered.append(item)
@@ -181,12 +187,10 @@ async def handle_transform(config: dict, input_data: Any, context: dict) -> Any:
                 if op["from"] in transformed:
                     transformed[op["to"]] = transformed.pop(op["from"])
             elif op_type == "calculate" and "field" in op and "expression" in op:
-                try:
+                with contextlib.suppress(Exception):
                     transformed[op["field"]] = eval(  # noqa: S307
                         op["expression"], {"__builtins__": {}}, transformed
                     )
-                except Exception:
-                    pass
             elif op_type == "format" and "field" in op and "template" in op:
                 transformed[op["field"]] = _render_template(op["template"], transformed)
         result.append(transformed)
@@ -196,8 +200,16 @@ async def handle_transform(config: dict, input_data: Any, context: dict) -> Any:
 async def handle_merge(config: dict, input_data: Any, context: dict) -> Any:
     strategy = config.get("strategy", "concat")
     if isinstance(input_data, dict) and "input_a" in input_data and "input_b" in input_data:
-        a = input_data["input_a"] if isinstance(input_data["input_a"], list) else [input_data["input_a"]]
-        b = input_data["input_b"] if isinstance(input_data["input_b"], list) else [input_data["input_b"]]
+        a = (
+            input_data["input_a"]
+            if isinstance(input_data["input_a"], list)
+            else [input_data["input_a"]]
+        )
+        b = (
+            input_data["input_b"]
+            if isinstance(input_data["input_b"], list)
+            else [input_data["input_b"]]
+        )
     elif isinstance(input_data, list):
         mid = len(input_data) // 2
         a, b = input_data[:mid], input_data[mid:]
@@ -206,9 +218,9 @@ async def handle_merge(config: dict, input_data: Any, context: dict) -> Any:
 
     if strategy == "concat":
         return a + b
-    elif strategy == "zip":
-        return [{"a": x, "b": y} for x, y in zip(a, b)]
-    elif strategy == "join":
+    if strategy == "zip":
+        return [{"a": x, "b": y} for x, y in zip(a, b, strict=False)]
+    if strategy == "join":
         key = config.get("key_field", "id")
         b_map = {item.get(key): item for item in b if isinstance(item, dict)}
         return [{**item, **b_map.get(item.get(key), {})} for item in a if isinstance(item, dict)]
@@ -299,10 +311,13 @@ async def handle_aggregate(config: dict, input_data: Any, context: dict) -> Any:
 
 # ── Analysis Handlers ────────────────────────────────────────────────
 
+
 async def handle_ai_analyze(config: dict, input_data: Any, context: dict) -> Any:
     from ..gemini import generate_structured, generate_text
 
-    prompt = _render_template(config.get("prompt_template", ""), context.get("variables", {}), input_data)
+    prompt = _render_template(
+        config.get("prompt_template", ""), context.get("variables", {}), input_data
+    )
     full_prompt = f"{prompt}\n\nData to analyze:\n{json.dumps(input_data, default=str)[:4000]}"
     output_format = config.get("output_format", "json")
     try:
@@ -351,6 +366,7 @@ async def handle_trend_detect(config: dict, input_data: Any, context: dict) -> A
 
 # ── Output Handlers ──────────────────────────────────────────────────
 
+
 async def handle_generate_report(config: dict, input_data: Any, context: dict) -> Any:
     from ..gemini import generate_text
 
@@ -393,7 +409,7 @@ async def handle_export_data(config: dict, input_data: Any, context: dict) -> An
     items = input_data if isinstance(input_data, list) else [input_data]
     if fmt == "json":
         return {"format": "json", "data": items}
-    elif fmt == "csv":
+    if fmt == "csv":
         if items and isinstance(items[0], dict):
             output = io.StringIO()
             writer = csv.DictWriter(output, fieldnames=items[0].keys())
@@ -419,7 +435,9 @@ async def handle_send_email(config: dict, input_data: Any, context: dict) -> Any
 
 async def handle_send_alert(config: dict, input_data: Any, context: dict) -> Any:
     channel = config.get("channel", "dashboard")
-    message = _render_template(config.get("message_template", ""), context.get("variables", {}), input_data)
+    message = _render_template(
+        config.get("message_template", ""), context.get("variables", {}), input_data
+    )
     return {"status": "alert_sent", "channel": channel, "message": message}
 
 
@@ -436,6 +454,7 @@ async def handle_save_findings(config: dict, input_data: Any, context: dict) -> 
 
 
 # ── Control Flow Handlers ───────────────────────────────────────────
+
 
 async def handle_condition(config: dict, input_data: Any, context: dict) -> Any:
     expression = config.get("expression", "True")

@@ -38,7 +38,7 @@ def generate_insights_for_entity(self, entity_id: str, project_id: str) -> dict:
     except Exception as exc:
         db.rollback()
         logger.exception("Insight generation failed for entity %s", entity_id)
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from exc
     finally:
         db.close()
 
@@ -71,7 +71,7 @@ def generate_project_insights(self, project_id: str) -> dict:
     except Exception as exc:
         db.rollback()
         logger.exception("Project insight generation failed for %s", project_id)
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from exc
     finally:
         db.close()
 

@@ -9,8 +9,6 @@ All external APIs are mocked -- no database or network access required.
 
 from __future__ import annotations
 
-import asyncio
-import hashlib
 import json
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -35,10 +33,10 @@ from app.services.entities.entity_service import (
     _normalize_address,
 )
 
-
 # =====================================================================
 # Helpers
 # =====================================================================
+
 
 def _make_mock_connector(
     name: str = "mock",
@@ -171,17 +169,13 @@ class TestSourceResult:
         assert "raw_response" not in d
 
     def test_to_dict_empty_data(self):
-        result = SourceResult(
-            data=[], raw_response=None, total_results=0, source_name="empty"
-        )
+        result = SourceResult(data=[], raw_response=None, total_results=0, source_name="empty")
         d = result.to_dict()
         assert d["data"] == []
         assert d["total_results"] == 0
 
     def test_frozen_immutability(self):
-        result = SourceResult(
-            data=[], raw_response=None, total_results=0, source_name="frozen"
-        )
+        result = SourceResult(data=[], raw_response=None, total_results=0, source_name="frozen")
         with pytest.raises(AttributeError):
             result.source_name = "changed"
 
@@ -230,18 +224,11 @@ class TestSourceRegistry:
 
     def test_list_available_returns_correct_format(self):
         registry = SourceRegistry()
-        registry.register(
-            _make_mock_connector(provider="a", name="Alpha", description="desc A")
-        )
-        registry.register(
-            _make_mock_connector(provider="b", name="Beta", description="desc B")
-        )
+        registry.register(_make_mock_connector(provider="a", name="Alpha", description="desc A"))
+        registry.register(_make_mock_connector(provider="b", name="Beta", description="desc B"))
         available = registry.list_available()
         assert len(available) == 2
-        assert all(
-            set(entry.keys()) == {"provider", "name", "description"}
-            for entry in available
-        )
+        assert all(set(entry.keys()) == {"provider", "name", "description"} for entry in available)
         providers = {e["provider"] for e in available}
         assert providers == {"a", "b"}
 
@@ -356,11 +343,13 @@ class TestAllConnectorToolDefinitions:
         self._assert_valid_tool_def(connector.get_tool_definition())
 
     def test_custom_api_tool_def(self):
-        connector = CustomApiConnector({
-            "base_url": "https://api.example.com",
-            "name": "Example",
-            "search_params_map": {"query": "q", "category": "cat"},
-        })
+        connector = CustomApiConnector(
+            {
+                "base_url": "https://api.example.com",
+                "name": "Example",
+                "search_params_map": {"query": "q", "category": "cat"},
+            }
+        )
         td = connector.get_tool_definition()
         self._assert_valid_tool_def(td)
         # Extra params from search_params_map should appear
@@ -683,9 +672,7 @@ class TestWebScraperConnector:
 
         with patch.object(connector, "_fetch_page", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = (html, 200)
-            result = await connector.get(
-                "https://example.com", extract_type="text"
-            )
+            result = await connector.get("https://example.com", extract_type="text")
 
         assert result.total_results == 1
         assert result.data[0]["title"] == "Test Page"
@@ -710,9 +697,7 @@ class TestWebScraperConnector:
 
         with patch.object(connector, "_fetch_page", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = (html, 200)
-            result = await connector.get(
-                "https://example.com/data", extract_type="tables"
-            )
+            result = await connector.get("https://example.com/data", extract_type="tables")
 
         assert result.data[0]["extract_type"] == "tables"
         tables = result.data[0]["tables"]
@@ -764,9 +749,7 @@ class TestWebScraperConnector:
     @pytest.mark.asyncio
     async def test_timeout_returns_error(self):
         connector = WebScraperConnector()
-        with patch.object(
-            connector, "_fetch_page", new_callable=AsyncMock
-        ) as mock_fetch:
+        with patch.object(connector, "_fetch_page", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.side_effect = httpx.TimeoutException("timed out")
             result = await connector.get("https://slow.com")
 
@@ -776,9 +759,7 @@ class TestWebScraperConnector:
     @pytest.mark.asyncio
     async def test_connection_error(self):
         connector = WebScraperConnector()
-        with patch.object(
-            connector, "_fetch_page", new_callable=AsyncMock
-        ) as mock_fetch:
+        with patch.object(connector, "_fetch_page", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.side_effect = httpx.ConnectError("connection refused")
             result = await connector.get("https://unreachable.com")
 
@@ -931,12 +912,8 @@ class TestEntityServiceCreateEntity:
             "source_urls": ["https://linkedin.com/jane"],
             "tags": ["lead"],
         }
-        with patch(
-            "app.services.entities.entity_service.Entity"
-        ) as MockEntity:
-            mock_instance = _make_entity(
-                user_id=user_id, name="Jane Doe", entity_type="person"
-            )
+        with patch("app.services.entities.entity_service.Entity") as MockEntity:
+            mock_instance = _make_entity(user_id=user_id, name="Jane Doe", entity_type="person")
             MockEntity.return_value = mock_instance
             result = await service.create_entity(user_id, data, db)
 
@@ -1020,18 +997,14 @@ class TestEntityServiceFindOrCreate:
 
         identifiers = {"name": "Totally Different Co"}
 
-        with patch(
-            "app.services.entities.entity_service.Entity"
-        ) as MockEntity:
+        with patch("app.services.entities.entity_service.Entity") as MockEntity:
             new_entity = _make_entity(
                 user_id=user_id,
                 entity_type="company",
                 name="Totally Different Co",
             )
             MockEntity.return_value = new_entity
-            result = await service.find_or_create(
-                user_id, "company", identifiers, db
-            )
+            result = await service.find_or_create(user_id, "company", identifiers, db)
 
         # Should have created a new entity since names are too different
         db.add.assert_called_once()
@@ -1078,18 +1051,14 @@ class TestEntityServiceFindOrCreate:
             "email": "new@company.com",
         }
 
-        with patch(
-            "app.services.entities.entity_service.Entity"
-        ) as MockEntity:
+        with patch("app.services.entities.entity_service.Entity") as MockEntity:
             new_entity = _make_entity(
                 user_id=user_id,
                 entity_type="company",
                 name="Brand New Company",
             )
             MockEntity.return_value = new_entity
-            result = await service.find_or_create(
-                user_id, "company", identifiers, db
-            )
+            result = await service.find_or_create(user_id, "company", identifiers, db)
 
         db.add.assert_called_once()
         assert result.name == "Brand New Company"
@@ -1142,7 +1111,7 @@ class TestEntityServiceUpdateEntity:
         mock_query.first.return_value = existing
         db.query.return_value = mock_query
 
-        result = await service.update_entity(
+        await service.update_entity(
             entity_id,
             {
                 "canonical_data": {"phone": "555-0000", "role": "CEO"},
@@ -1205,9 +1174,7 @@ class TestEntityServiceMergeEntities:
         mock_query.all.return_value = [other]
         db.query.return_value = mock_query
 
-        result = await service.merge_entities(
-            [primary_id, other_id], primary_id, db
-        )
+        result = await service.merge_entities([primary_id, other_id], primary_id, db)
 
         assert result is primary
         # The other's name should appear in aliases
@@ -1249,9 +1216,7 @@ class TestEntityServiceSearchEntities:
         mock_query.all.return_value = [entity_a]
         db.query.return_value = mock_query
 
-        results = await service.search_entities(
-            user_id, query="Alice", db=db
-        )
+        results = await service.search_entities(user_id, query="Alice", db=db)
         assert len(results) == 1
         assert results[0].name == "Alice Smith"
 
@@ -1269,9 +1234,7 @@ class TestEntityServiceSearchEntities:
         mock_query.all.return_value = []
         db.query.return_value = mock_query
 
-        results = await service.search_entities(
-            user_id, entity_type="company", db=db
-        )
+        await service.search_entities(user_id, entity_type="company", db=db)
         # filter() should have been called at least twice (user_id + entity_type)
         assert mock_query.filter.call_count >= 2
 
@@ -1289,9 +1252,7 @@ class TestEntityServiceSearchEntities:
         mock_query.all.return_value = []
         db.query.return_value = mock_query
 
-        await service.search_entities(
-            user_id, limit=10, offset=20, db=db
-        )
+        await service.search_entities(user_id, limit=10, offset=20, db=db)
         mock_query.offset.assert_called_once_with(20)
         mock_query.limit.assert_called_once_with(10)
 
@@ -1395,9 +1356,7 @@ class TestSourceCache:
         cache = SourceCache()
         cache._available = False
         cache._redis = AsyncMock()
-        sr = SourceResult(
-            data=[], raw_response=None, total_results=0, source_name="x"
-        )
+        sr = SourceResult(data=[], raw_response=None, total_results=0, source_name="x")
         await cache.set("key", sr, 60)
         cache._redis.setex.assert_not_awaited()
 
@@ -1408,9 +1367,7 @@ class TestSourceCache:
         cache._redis = AsyncMock()
         cache._redis.setex = AsyncMock()
 
-        sr = SourceResult(
-            data=[{"v": 1}], raw_response=None, total_results=1, source_name="src"
-        )
+        sr = SourceResult(data=[{"v": 1}], raw_response=None, total_results=1, source_name="src")
         await cache.set("the_key", sr, 300)
         cache._redis.setex.assert_awaited_once()
         call_args = cache._redis.setex.call_args
@@ -1465,8 +1422,10 @@ class TestSourceCache:
         mock_redis = AsyncMock()
         mock_redis.ping = AsyncMock(return_value=True)
 
-        with patch("app.services.data_sources.cache.settings") as mock_settings, \
-             patch("app.services.data_sources.cache.aioredis") as mock_aioredis:
+        with (
+            patch("app.services.data_sources.cache.settings") as mock_settings,
+            patch("app.services.data_sources.cache.aioredis") as mock_aioredis,
+        ):
             mock_settings.redis_url = "redis://localhost:6379"
             mock_aioredis.from_url.return_value = mock_redis
             await cache.connect()
@@ -1478,8 +1437,10 @@ class TestSourceCache:
     async def test_connect_sets_unavailable_on_failure(self):
         cache = SourceCache()
 
-        with patch("app.services.data_sources.cache.settings") as mock_settings, \
-             patch("app.services.data_sources.cache.aioredis") as mock_aioredis:
+        with (
+            patch("app.services.data_sources.cache.settings") as mock_settings,
+            patch("app.services.data_sources.cache.aioredis") as mock_aioredis,
+        ):
             mock_settings.redis_url = "redis://localhost:6379"
             mock_aioredis.from_url.side_effect = Exception("connection refused")
             await cache.connect()

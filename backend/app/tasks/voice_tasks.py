@@ -1,4 +1,5 @@
 """Celery tasks for voice extraction: call execution, post-processing, batch."""
+
 from __future__ import annotations
 
 import asyncio
@@ -40,14 +41,12 @@ def execute_voice_call(self, call_record_id: str) -> dict:
 
     db = SessionLocal()
     try:
-        result = _run_async(
-            voice_service.start_call(call_record_id, db)
-        )
+        result = _run_async(voice_service.start_call(call_record_id, db))
         logger.info("Voice call executed: call_record=%s", call_record_id)
         return result
     except Exception as exc:
         logger.exception("Voice call failed: call_record=%s", call_record_id)
-        raise self.retry(exc=exc, countdown=30)
+        raise self.retry(exc=exc, countdown=30) from exc
     finally:
         db.close()
 
@@ -74,9 +73,7 @@ def process_completed_call(self, call_record_id: str) -> dict:
 
     db = SessionLocal()
     try:
-        result = _run_async(
-            voice_service.process_completed_call(call_record_id, db)
-        )
+        result = _run_async(voice_service.process_completed_call(call_record_id, db))
         logger.info(
             "Post-processing complete: call_record=%s findings=%d",
             call_record_id,
@@ -84,10 +81,8 @@ def process_completed_call(self, call_record_id: str) -> dict:
         )
         return result
     except Exception as exc:
-        logger.exception(
-            "Post-processing failed: call_record=%s", call_record_id
-        )
-        raise self.retry(exc=exc, countdown=60)
+        logger.exception("Post-processing failed: call_record=%s", call_record_id)
+        raise self.retry(exc=exc, countdown=60) from exc
     finally:
         db.close()
 
@@ -117,9 +112,7 @@ def execute_voice_batch(self, voice_extraction_id: str) -> dict:
 
     db = SessionLocal()
     try:
-        result = _run_async(
-            voice_service.execute_batch(voice_extraction_id, db)
-        )
+        result = _run_async(voice_service.execute_batch(voice_extraction_id, db))
         logger.info(
             "Batch execution complete: voice_extraction=%s total=%d completed=%d",
             voice_extraction_id,
@@ -128,9 +121,7 @@ def execute_voice_batch(self, voice_extraction_id: str) -> dict:
         )
         return result
     except Exception:
-        logger.exception(
-            "Batch execution failed: voice_extraction=%s", voice_extraction_id
-        )
+        logger.exception("Batch execution failed: voice_extraction=%s", voice_extraction_id)
         raise
     finally:
         db.close()

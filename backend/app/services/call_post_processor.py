@@ -113,14 +113,18 @@ async def process_call_result(
         db.commit()
         logger.info(
             "Post-processing complete for call_log=%s outcome=%s sentiment=%s score=%s",
-            call_log.id, outcome, sentiment, quality_score,
+            call_log.id,
+            outcome,
+            sentiment,
+            quality_score,
         )
 
     except Exception as exc:
         # Log and continue — don't fail the whole extraction pipeline
         logger.error(
             "Gemini post-processing failed for call_log=%s: %s",
-            call_log.id, exc,
+            call_log.id,
+            exc,
             exc_info=True,
         )
         if hasattr(call_log, "extraction_notes"):

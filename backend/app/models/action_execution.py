@@ -3,8 +3,10 @@ from __future__ import annotations
 import enum
 import uuid
 
-from sqlalchemy import Column, DateTime, Enum as SAEnum, ForeignKey, String, func
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Column, DateTime
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import ForeignKey, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
 from ..database import Base
@@ -27,7 +29,9 @@ class ActionExecution(Base):
     __tablename__ = "action_executions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    action_request_id = Column(UUID(as_uuid=True), ForeignKey("action_requests.id"), nullable=False, index=True)
+    action_request_id = Column(
+        UUID(as_uuid=True), ForeignKey("action_requests.id"), nullable=False, index=True
+    )
     executor_type = Column(SAEnum(ExecutorType), default=ExecutorType.celery_worker, nullable=False)
     status = Column(SAEnum(ExecutionStatus), default=ExecutionStatus.running, nullable=False)
     result = Column(JSONB, default=dict)

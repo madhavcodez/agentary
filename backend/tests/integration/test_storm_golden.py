@@ -16,12 +16,12 @@ Gated behind ``AGENTARY_STORM_LIVE_TEST=1`` because it hits real Gemini.
 Offline mode: the same structural invariants are checked against mocked
 fixtures so CI can run the assertion logic without a network.
 """
+
 from __future__ import annotations
 
 import os
 import uuid
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -34,9 +34,7 @@ def assert_perspectives_diverse(perspectives: list[dict], max_cos: float = 0.85)
     assert len(set(roles)) == len(roles), f"duplicate roles: {roles}"
 
 
-def assert_every_section_has_citations(
-    sections: list[dict], allow_skipped: bool = True
-) -> None:
+def assert_every_section_has_citations(sections: list[dict], allow_skipped: bool = True) -> None:
     for s in sections:
         if s.get("skipped_no_evidence") and allow_skipped:
             continue
@@ -44,9 +42,7 @@ def assert_every_section_has_citations(
         assert fids, f"section {s.get('title')} has no citations"
 
 
-def assert_budget_under_cap(
-    flash_calls: int, pro_calls: int, cap: int = 14
-) -> None:
+def assert_budget_under_cap(flash_calls: int, pro_calls: int, cap: int = 14) -> None:
     total = flash_calls + pro_calls
     assert total <= cap, f"{total} calls exceeds cap {cap}"
 
@@ -57,7 +53,12 @@ def test_invariants_on_mock_fixture():
     perspectives = [
         {"role": "skeptical homeowner", "focus": "cost", "stakes": "x", "seed_query": "y"},
         {"role": "installer sales rep", "focus": "adoption", "stakes": "z", "seed_query": "w"},
-        {"role": "public utility regulator", "focus": "grid safety", "stakes": "a", "seed_query": "b"},
+        {
+            "role": "public utility regulator",
+            "focus": "grid safety",
+            "stakes": "a",
+            "seed_query": "b",
+        },
     ]
     sections = [
         {
@@ -96,9 +97,8 @@ async def test_storm_golden_path_live():
            FROM section_citations WHERE report_id=... ORDER BY section_index;
       3. Point out that `flash_calls + pro_calls` is bounded.
     """
-    from app.services.storm import run_storm_prewrite
 
-    mission = SimpleNamespace(
+    SimpleNamespace(
         id=uuid.uuid4(),
         project_id=uuid.uuid4(),
         name="Evaluate residential solar leases vs. buying in California",

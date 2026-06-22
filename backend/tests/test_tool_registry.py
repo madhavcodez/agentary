@@ -1,7 +1,8 @@
 """Tests for the tool registry."""
+
 import pytest
 
-from app.services.crews.tool_registry import ToolRegistry, tool_registry
+from app.services.crews.tool_registry import tool_registry
 
 
 class TestToolRegistry:
@@ -11,8 +12,12 @@ class TestToolRegistry:
 
     def test_expected_tools_registered(self):
         expected = {
-            "gemini_search", "exa_search", "web_scraper",
-            "python_executor", "voice_caller", "chart_generator",
+            "gemini_search",
+            "exa_search",
+            "web_scraper",
+            "python_executor",
+            "voice_caller",
+            "chart_generator",
         }
         tool_names = {t["name"] for t in tool_registry.list_tools()}
         assert expected.issubset(tool_names)

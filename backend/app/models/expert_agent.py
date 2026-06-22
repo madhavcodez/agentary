@@ -3,8 +3,10 @@ from __future__ import annotations
 import enum
 import uuid
 
-from sqlalchemy import Boolean, Column, DateTime, Enum as SAEnum, String, Text, func
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Boolean, Column, DateTime
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import String, Text, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from ..database import Base
 

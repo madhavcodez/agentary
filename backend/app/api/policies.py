@@ -19,10 +19,7 @@ def list_policies(
     user: User = Depends(get_current_user),
 ):
     return (
-        db.query(Policy)
-        .filter(Policy.user_id == user.id)
-        .order_by(Policy.created_at.desc())
-        .all()
+        db.query(Policy).filter(Policy.user_id == user.id).order_by(Policy.created_at.desc()).all()
     )
 
 
@@ -51,11 +48,7 @@ def get_policy(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    policy = (
-        db.query(Policy)
-        .filter(Policy.id == policy_id, Policy.user_id == user.id)
-        .first()
-    )
+    policy = db.query(Policy).filter(Policy.id == policy_id, Policy.user_id == user.id).first()
     if not policy:
         raise HTTPException(status_code=404, detail="Policy not found")
     return policy
@@ -68,11 +61,7 @@ def update_policy(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    policy = (
-        db.query(Policy)
-        .filter(Policy.id == policy_id, Policy.user_id == user.id)
-        .first()
-    )
+    policy = db.query(Policy).filter(Policy.id == policy_id, Policy.user_id == user.id).first()
     if not policy:
         raise HTTPException(status_code=404, detail="Policy not found")
 
@@ -96,11 +85,7 @@ def delete_policy(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    policy = (
-        db.query(Policy)
-        .filter(Policy.id == policy_id, Policy.user_id == user.id)
-        .first()
-    )
+    policy = db.query(Policy).filter(Policy.id == policy_id, Policy.user_id == user.id).first()
     if not policy:
         raise HTTPException(status_code=404, detail="Policy not found")
     db.delete(policy)

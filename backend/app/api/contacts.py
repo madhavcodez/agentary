@@ -28,12 +28,7 @@ def list_contacts(
         query = query.filter(Contact.company.ilike(f"%{company}%"))
 
     total = query.count()
-    items = (
-        query.order_by(Contact.created_at.desc())
-        .offset((page - 1) * limit)
-        .limit(limit)
-        .all()
-    )
+    items = query.order_by(Contact.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
     return ContactList(items=items, total=total, page=page, limit=limit)
 
 
@@ -58,11 +53,7 @@ def get_contact(
     user: User = Depends(get_current_user),
 ):
     """Get a single contact by ID."""
-    contact = (
-        db.query(Contact)
-        .filter(Contact.id == contact_id, Contact.user_id == user.id)
-        .first()
-    )
+    contact = db.query(Contact).filter(Contact.id == contact_id, Contact.user_id == user.id).first()
     if not contact:
         raise HTTPException(status_code=404, detail="Contact not found")
     return contact
@@ -76,11 +67,7 @@ def update_contact(
     user: User = Depends(get_current_user),
 ):
     """Update an existing contact."""
-    contact = (
-        db.query(Contact)
-        .filter(Contact.id == contact_id, Contact.user_id == user.id)
-        .first()
-    )
+    contact = db.query(Contact).filter(Contact.id == contact_id, Contact.user_id == user.id).first()
     if not contact:
         raise HTTPException(status_code=404, detail="Contact not found")
 
@@ -100,11 +87,7 @@ def delete_contact(
     user: User = Depends(get_current_user),
 ):
     """Delete a contact."""
-    contact = (
-        db.query(Contact)
-        .filter(Contact.id == contact_id, Contact.user_id == user.id)
-        .first()
-    )
+    contact = db.query(Contact).filter(Contact.id == contact_id, Contact.user_id == user.id).first()
     if not contact:
         raise HTTPException(status_code=404, detail="Contact not found")
     db.delete(contact)

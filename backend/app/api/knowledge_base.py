@@ -1,11 +1,14 @@
 from __future__ import annotations
+
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from ..deps import get_db, get_current_user
-from ..models.user import User
+
+from ..deps import get_current_user, get_db
 from ..models.knowledge_base import KnowledgeBase
-from ..schemas.knowledge_base import KnowledgeBaseCreate, KnowledgeBaseUpdate, KnowledgeBaseResponse
+from ..models.user import User
+from ..schemas.knowledge_base import KnowledgeBaseCreate, KnowledgeBaseResponse, KnowledgeBaseUpdate
 
 router = APIRouter(prefix="/api/knowledge-base", tags=["knowledge_base"])
 
@@ -38,7 +41,11 @@ def update_kb(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    kb = db.query(KnowledgeBase).filter(KnowledgeBase.id == kb_id, KnowledgeBase.user_id == user.id).first()
+    kb = (
+        db.query(KnowledgeBase)
+        .filter(KnowledgeBase.id == kb_id, KnowledgeBase.user_id == user.id)
+        .first()
+    )
     if not kb:
         raise HTTPException(status_code=404, detail="Knowledge base not found")
     for key, value in body.model_dump(exclude_unset=True).items():

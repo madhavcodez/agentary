@@ -8,13 +8,14 @@ Covers:
 - Templates (lookup + validation)
 - API routes (FastAPI TestClient)
 """
+
 from __future__ import annotations
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.models.finding import FindingType
-
 
 # ---------------------------------------------------------------------------
 # 1. TranscriptProcessor
@@ -287,7 +288,12 @@ class TestGenerateScript:
                 "target_name": "Jane",
                 "target_business": "Acme Corp",
                 "extraction_goals": [
-                    {"field": "business_hours", "question": "What are your hours?", "type": "text", "required": True},
+                    {
+                        "field": "business_hours",
+                        "question": "What are your hours?",
+                        "type": "text",
+                        "required": True,
+                    },
                 ],
                 "session_type": "research_extraction",
             }
@@ -342,7 +348,12 @@ class TestGenerateScript:
             session_data = {
                 "target_name": "Bob",
                 "extraction_goals": [
-                    {"field": "pricing", "question": "How much?", "type": "currency", "required": True},
+                    {
+                        "field": "pricing",
+                        "question": "How much?",
+                        "type": "currency",
+                        "required": True,
+                    },
                     {"field": "hours", "question": "When open?", "type": "text", "required": False},
                 ],
             }
@@ -386,7 +397,12 @@ class TestBuildSystemPrompt:
             "target_business": "Widget Co",
             "target_context": {"industry": "manufacturing"},
             "extraction_goals": [
-                {"field": "revenue", "question": "Annual revenue?", "type": "currency", "required": True},
+                {
+                    "field": "revenue",
+                    "question": "Annual revenue?",
+                    "type": "currency",
+                    "required": True,
+                },
             ],
         }
         script = {
@@ -839,45 +855,39 @@ class TestTemplateSchemaValidity:
         from app.services.voice.templates import BUILT_IN_TEMPLATES
 
         for template in BUILT_IN_TEMPLATES:
-            assert "extraction_schema" in template, (
-                f"Template '{template['name']}' missing extraction_schema"
-            )
+            assert (
+                "extraction_schema" in template
+            ), f"Template '{template['name']}' missing extraction_schema"
             schema = template["extraction_schema"]
-            assert "fields" in schema, (
-                f"Template '{template['name']}' schema missing 'fields' key"
-            )
-            assert isinstance(schema["fields"], list), (
-                f"Template '{template['name']}' fields should be a list"
-            )
+            assert "fields" in schema, f"Template '{template['name']}' schema missing 'fields' key"
+            assert isinstance(
+                schema["fields"], list
+            ), f"Template '{template['name']}' fields should be a list"
 
     def test_all_fields_have_required_keys(self):
         from app.services.voice.templates import BUILT_IN_TEMPLATES
 
         for template in BUILT_IN_TEMPLATES:
             for field in template["extraction_schema"]["fields"]:
-                assert "name" in field, (
-                    f"Field in '{template['name']}' missing 'name'"
-                )
-                assert "type" in field, (
-                    f"Field '{field.get('name', '?')}' in '{template['name']}' missing 'type'"
-                )
-                assert "question" in field, (
-                    f"Field '{field['name']}' in '{template['name']}' missing 'question'"
-                )
-                assert "required" in field, (
-                    f"Field '{field['name']}' in '{template['name']}' missing 'required'"
-                )
-                assert isinstance(field["required"], bool), (
-                    f"Field '{field['name']}' in '{template['name']}' 'required' should be bool"
-                )
+                assert "name" in field, f"Field in '{template['name']}' missing 'name'"
+                assert (
+                    "type" in field
+                ), f"Field '{field.get('name', '?')}' in '{template['name']}' missing 'type'"
+                assert (
+                    "question" in field
+                ), f"Field '{field['name']}' in '{template['name']}' missing 'question'"
+                assert (
+                    "required" in field
+                ), f"Field '{field['name']}' in '{template['name']}' missing 'required'"
+                assert isinstance(
+                    field["required"], bool
+                ), f"Field '{field['name']}' in '{template['name']}' 'required' should be bool"
 
     def test_all_templates_have_persona(self):
         from app.services.voice.templates import BUILT_IN_TEMPLATES
 
         for template in BUILT_IN_TEMPLATES:
-            assert "persona" in template, (
-                f"Template '{template['name']}' missing persona"
-            )
+            assert "persona" in template, f"Template '{template['name']}' missing persona"
             persona = template["persona"]
             assert "name" in persona
             assert "role" in persona
@@ -888,13 +898,9 @@ class TestTemplateSchemaValidity:
         from app.services.voice.templates import BUILT_IN_TEMPLATES
 
         for template in BUILT_IN_TEMPLATES:
-            assert template.get("name"), f"Template missing name"
-            assert template.get("description"), (
-                f"Template '{template['name']}' missing description"
-            )
-            assert template.get("category"), (
-                f"Template '{template['name']}' missing category"
-            )
+            assert template.get("name"), "Template missing name"
+            assert template.get("description"), f"Template '{template['name']}' missing description"
+            assert template.get("category"), f"Template '{template['name']}' missing category"
 
     def test_template_names_are_unique(self):
         from app.services.voice.templates import BUILT_IN_TEMPLATES

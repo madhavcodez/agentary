@@ -1,17 +1,17 @@
 """Extract structured data from call transcripts using AI."""
+
 from __future__ import annotations
 
 import json
 import logging
 import uuid
-from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy.orm import Session
 
-from ..gemini import generate_structured
-from ...models.voice_extraction import CallRecord, VoiceExtraction
 from ...models.finding import Finding, FindingType, SourceType
+from ...models.voice_extraction import CallRecord, VoiceExtraction
+from ..gemini import generate_structured
 
 logger = logging.getLogger(__name__)
 
@@ -69,16 +69,14 @@ async def extract_from_transcript(
 
     if not transcript.strip():
         logger.warning(
-            "extract_from_transcript called with empty transcript for "
-            "call_record %s",
+            "extract_from_transcript called with empty transcript for " "call_record %s",
             call_record.id,
         )
         return {"fields": [], "overall_confidence": 0.0, "quality_score": 0.0}
 
     if not goals:
         logger.warning(
-            "extract_from_transcript called with no extraction fields for "
-            "voice_extraction %s",
+            "extract_from_transcript called with no extraction fields for " "voice_extraction %s",
             voice_extraction.id,
         )
         return {"fields": [], "overall_confidence": 0.0, "quality_score": 0.0}
@@ -89,9 +87,7 @@ async def extract_from_transcript(
     try:
         raw_result = await generate_structured(prompt, schema_hint=schema_hint)
     except Exception:
-        logger.exception(
-            "Gemini extraction failed for call_record %s", call_record.id
-        )
+        logger.exception("Gemini extraction failed for call_record %s", call_record.id)
         return {"fields": [], "overall_confidence": 0.0, "quality_score": 0.0}
 
     raw_fields: list[dict[str, Any]] = raw_result.get("fields", [])
@@ -105,16 +101,18 @@ async def extract_from_transcript(
 
         goal_spec = _find_goal_spec(field_name, goals)
 
-        if goal_spec is not None and value is not None:
-            if not _validate_extraction(goal_spec, value):
-                logger.info(
-                    "Extracted value for '%s' failed validation; "
-                    "discarding (value=%r)",
-                    field_name,
-                    value,
-                )
-                confidence = min(confidence, 0.2)
-                value = None
+        if (
+            goal_spec is not None
+            and value is not None
+            and not _validate_extraction(goal_spec, value)
+        ):
+            logger.info(
+                "Extracted value for '%s' failed validation; " "discarding (value=%r)",
+                field_name,
+                value,
+            )
+            confidence = min(confidence, 0.2)
+            value = None
 
         validated_fields.append(
             {
@@ -136,17 +134,14 @@ async def extract_from_transcript(
 
     # Persist summary back onto the call record.
     call_record.extracted_data = {
-        f["field_name"]: f["value"]
-        for f in validated_fields
-        if f["value"] is not None
+        f["field_name"]: f["value"] for f in validated_fields if f["value"] is not None
     }
     call_record.extraction_confidence = overall_confidence
     db.add(call_record)
     db.flush()
 
     logger.info(
-        "Extraction complete for call_record %s: %d fields, "
-        "confidence=%.2f, quality=%.2f",
+        "Extraction complete for call_record %s: %d fields, " "confidence=%.2f, quality=%.2f",
         call_record.id,
         len(validated_fields),
         overall_confidence,
@@ -214,9 +209,7 @@ async def extract_findings(
 
     if created:
         db.flush()
-        logger.info(
-            "Created %d findings for call_record %s", len(created), call_record.id
-        )
+        logger.info("Created %d findings for call_record %s", len(created), call_record.id)
 
     return created
 
@@ -312,9 +305,7 @@ def _validate_extraction(field: dict, value: Any) -> bool:
     return True
 
 
-def _find_goal_spec(
-    field_name: str, goals: list[dict[str, Any]]
-) -> dict[str, Any] | None:
+def _find_goal_spec(field_name: str, goals: list[dict[str, Any]]) -> dict[str, Any] | None:
     """Find the goal spec whose name matches *field_name*."""
     for goal in goals:
         name = goal.get("name", goal.get("field_name", ""))
@@ -335,9 +326,7 @@ def _compute_overall_confidence(fields: list[dict[str, Any]]) -> float:
     return round(sum(scored) / len(scored), 4)
 
 
-def _compute_quality_score(
-    fields: list[dict[str, Any]], goals: list[dict[str, Any]]
-) -> float:
+def _compute_quality_score(fields: list[dict[str, Any]], goals: list[dict[str, Any]]) -> float:
     """Fraction of required goals that were successfully extracted."""
     required_names: list[str] = []
     for goal in goals:
@@ -345,9 +334,7 @@ def _compute_quality_score(
             required_names.append(goal.get("name", goal.get("field_name", "")))
 
     if not required_names:
-        required_names = [
-            goal.get("name", goal.get("field_name", "")) for goal in goals
-        ]
+        required_names = [goal.get("name", goal.get("field_name", "")) for goal in goals]
 
     if not required_names:
         return 0.0
@@ -355,8 +342,7 @@ def _compute_quality_score(
     extracted_names = {
         f["field_name"]
         for f in fields
-        if f.get("value") is not None
-        and f.get("confidence", 0) >= _MIN_FINDING_CONFIDENCE
+        if f.get("value") is not None and f.get("confidence", 0) >= _MIN_FINDING_CONFIDENCE
     }
 
     matched = sum(1 for name in required_names if name in extracted_names)

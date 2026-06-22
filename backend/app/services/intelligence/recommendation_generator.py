@@ -45,8 +45,8 @@ class RecommendationGenerator:
         """Generate recommendations from active, non-stale insights."""
         q = self.db.query(Insight).filter(
             Insight.project_id == project_id,
-            Insight.is_active == True,
-            Insight.is_stale == False,
+            Insight.is_active.is_(True),
+            Insight.is_stale.is_(False),
         )
         if entity_id:
             q = q.filter(Insight.entity_id == entity_id)

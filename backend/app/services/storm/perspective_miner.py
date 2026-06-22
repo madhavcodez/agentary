@@ -11,6 +11,7 @@ focus-sentence embeddings are too similar to each other, the batch is
 rejected and the call is retried once with a stronger "emphasize contrast"
 prompt. This prevents silent collapse onto near-duplicates.
 """
+
 from __future__ import annotations
 
 import logging
@@ -34,7 +35,7 @@ _MIN_PERSPECTIVES = 2
 def _cosine(a: list[float], b: list[float]) -> float:
     if not a or not b or len(a) != len(b):
         return 0.0
-    dot = sum(x * y for x, y in zip(a, b))
+    dot = sum(x * y for x, y in zip(a, b, strict=False))
     na = sum(x * x for x in a) ** 0.5
     nb = sum(y * y for y in b) ** 0.5
     if na == 0.0 or nb == 0.0:
@@ -121,12 +122,10 @@ async def mine_perspectives(
             retry_result = await generate_structured(
                 retry_prompt, schema_hint=PERSPECTIVE_SCHEMA_HINT
             )
-            retry_perspectives = _normalise(
-                retry_result.get("perspectives"), max_perspectives
-            )
-            if len(retry_perspectives) >= _MIN_PERSPECTIVES and not await _has_collapsed_perspectives(
+            retry_perspectives = _normalise(retry_result.get("perspectives"), max_perspectives)
+            if len(
                 retry_perspectives
-            ):
+            ) >= _MIN_PERSPECTIVES and not await _has_collapsed_perspectives(retry_perspectives):
                 return retry_perspectives
         except Exception as exc:
             logger.warning("perspective_miner: retry failed (%s)", exc)
@@ -145,10 +144,12 @@ def _normalise(raw: Any, limit: int) -> list[dict[str, Any]]:
         focus = (item.get("focus") or "").strip()
         if not role or not focus:
             continue
-        out.append({
-            "role": role[:200],
-            "focus": focus[:500],
-            "stakes": (item.get("stakes") or "").strip()[:500],
-            "seed_query": (item.get("seed_query") or "").strip()[:500],
-        })
+        out.append(
+            {
+                "role": role[:200],
+                "focus": focus[:500],
+                "stakes": (item.get("stakes") or "").strip()[:500],
+                "seed_query": (item.get("seed_query") or "").strip()[:500],
+            }
+        )
     return out

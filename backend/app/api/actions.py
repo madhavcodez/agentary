@@ -1,4 +1,5 @@
 """API routes for action requests -- create, list, approve, reject, cancel."""
+
 from __future__ import annotations
 
 from uuid import UUID
@@ -8,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from ..deps import get_current_user, get_db
 from ..models.user import User
-from ..schemas.actions import ActionRequestCreate, ActionReject
+from ..schemas.actions import ActionReject, ActionRequestCreate
 from ..services.actions.action_service import ActionService
 
 router = APIRouter(prefix="/api/actions", tags=["actions"])
@@ -95,7 +96,7 @@ def approve_action(
         db.commit()
         return _serialize(action)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.put("/{action_id}/reject")
@@ -111,7 +112,7 @@ def reject_action(
         db.commit()
         return _serialize(action)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.put("/{action_id}/cancel")
@@ -126,7 +127,7 @@ def cancel_action(
         db.commit()
         return _serialize(action)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 def _serialize(a) -> dict:
@@ -136,7 +137,9 @@ def _serialize(a) -> dict:
         "recommendation_id": str(a.recommendation_id) if a.recommendation_id else None,
         "entity_id": str(a.entity_id) if a.entity_id else None,
         "user_id": str(a.user_id),
-        "action_type": a.action_type.value if hasattr(a.action_type, "value") else str(a.action_type),
+        "action_type": (
+            a.action_type.value if hasattr(a.action_type, "value") else str(a.action_type)
+        ),
         "title": a.title,
         "description": a.description,
         "parameters": a.parameters,

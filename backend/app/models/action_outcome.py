@@ -3,8 +3,10 @@ from __future__ import annotations
 import enum
 import uuid
 
-from sqlalchemy import Column, DateTime, Enum as SAEnum, ForeignKey, Text, func
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Column, DateTime
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import ForeignKey, Text, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
 from ..database import Base
@@ -23,8 +25,12 @@ class ActionOutcome(Base):
     __tablename__ = "action_outcomes"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    action_request_id = Column(UUID(as_uuid=True), ForeignKey("action_requests.id"), nullable=False, index=True)
-    execution_id = Column(UUID(as_uuid=True), ForeignKey("action_executions.id"), nullable=True, index=True)
+    action_request_id = Column(
+        UUID(as_uuid=True), ForeignKey("action_requests.id"), nullable=False, index=True
+    )
+    execution_id = Column(
+        UUID(as_uuid=True), ForeignKey("action_executions.id"), nullable=True, index=True
+    )
     outcome_type = Column(SAEnum(OutcomeType), nullable=False)
     impact = Column(JSONB, default=dict)
     feedback_signal_id = Column(UUID(as_uuid=True), ForeignKey("signals.id"), nullable=True)

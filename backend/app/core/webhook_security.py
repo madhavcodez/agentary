@@ -15,6 +15,7 @@ The functions are framework-agnostic — they raise ``WebhookVerificationError``
 on failure and return ``None`` on success — so they can be reused from FastAPI
 dependencies, Celery tasks, or one-off scripts.
 """
+
 from __future__ import annotations
 
 import base64
@@ -22,7 +23,7 @@ import hashlib
 import hmac
 import logging
 import time
-from typing import Mapping
+from collections.abc import Mapping
 
 from fastapi import HTTPException, Request, status
 
@@ -195,7 +196,7 @@ def verify_resend_signature(
         # Fall back to treating the secret as a plain UTF-8 string.
         secret_bytes = raw_secret.encode("utf-8")
 
-    signed_payload = f"{webhook_id}.{timestamp}.".encode("utf-8") + body
+    signed_payload = f"{webhook_id}.{timestamp}.".encode() + body
     expected = base64.b64encode(
         hmac.new(secret_bytes, signed_payload, hashlib.sha256).digest()
     ).decode("ascii")

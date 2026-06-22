@@ -12,6 +12,7 @@ and returns a persisted :class:`ResearchOutline` (or ``None`` if the per-mission
 Gemini budget was exhausted before completion — caller falls back to the
 legacy single-pass synthesis path).
 """
+
 from __future__ import annotations
 
 import logging
@@ -82,13 +83,15 @@ async def run_storm_prewrite(mission: Any, db: Session) -> Any | None:
                 max_questions=max_questions,
             )
             for q in questions:
-                question_matrix.append({
-                    "id": next_qid,
-                    "perspective_index": p_idx,
-                    "text": q["text"],
-                    "priority": q.get("priority", 0.5),
-                    "evidence_type": q.get("evidence_type", "fact"),
-                })
+                question_matrix.append(
+                    {
+                        "id": next_qid,
+                        "perspective_index": p_idx,
+                        "text": q["text"],
+                        "priority": q.get("priority", 0.5),
+                        "evidence_type": q.get("evidence_type", "fact"),
+                    }
+                )
                 next_qid += 1
 
         if not question_matrix:

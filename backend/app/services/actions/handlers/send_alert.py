@@ -1,4 +1,5 @@
 """Send alert via dashboard."""
+
 from __future__ import annotations
 
 import logging

@@ -29,6 +29,7 @@ router = APIRouter(prefix="/api/workflows", tags=["workflows"])
 
 # ── CRUD ─────────────────────────────────────────────────────────────
 
+
 @router.post("", response_model=WorkflowResponse, status_code=201)
 def create_workflow(
     body: WorkflowCreate,
@@ -55,12 +56,7 @@ def list_workflows(
         query = query.filter(Workflow.project_id == project_id)
 
     total = query.count()
-    items = (
-        query.order_by(Workflow.updated_at.desc())
-        .offset((page - 1) * limit)
-        .limit(limit)
-        .all()
-    )
+    items = query.order_by(Workflow.updated_at.desc()).offset((page - 1) * limit).limit(limit).all()
     return WorkflowList(items=items, total=total, page=page, limit=limit)
 
 
@@ -71,9 +67,7 @@ def get_workflow(
     user: User = Depends(get_current_user),
 ):
     workflow = (
-        db.query(Workflow)
-        .filter(Workflow.id == workflow_id, Workflow.user_id == user.id)
-        .first()
+        db.query(Workflow).filter(Workflow.id == workflow_id, Workflow.user_id == user.id).first()
     )
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
@@ -88,9 +82,7 @@ def update_workflow(
     user: User = Depends(get_current_user),
 ):
     workflow = (
-        db.query(Workflow)
-        .filter(Workflow.id == workflow_id, Workflow.user_id == user.id)
-        .first()
+        db.query(Workflow).filter(Workflow.id == workflow_id, Workflow.user_id == user.id).first()
     )
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
@@ -107,9 +99,7 @@ def delete_workflow(
     user: User = Depends(get_current_user),
 ):
     workflow = (
-        db.query(Workflow)
-        .filter(Workflow.id == workflow_id, Workflow.user_id == user.id)
-        .first()
+        db.query(Workflow).filter(Workflow.id == workflow_id, Workflow.user_id == user.id).first()
     )
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
@@ -120,6 +110,7 @@ def delete_workflow(
 
 # ── Activation / Pause ───────────────────────────────────────────────
 
+
 @router.post("/{workflow_id}/activate", response_model=WorkflowResponse)
 def activate_workflow(
     workflow_id: UUID,
@@ -127,9 +118,7 @@ def activate_workflow(
     user: User = Depends(get_current_user),
 ):
     workflow = (
-        db.query(Workflow)
-        .filter(Workflow.id == workflow_id, Workflow.user_id == user.id)
-        .first()
+        db.query(Workflow).filter(Workflow.id == workflow_id, Workflow.user_id == user.id).first()
     )
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
@@ -137,7 +126,7 @@ def activate_workflow(
     try:
         workflow = wf_service.activate_workflow(db, workflow)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     return workflow
 
 
@@ -148,9 +137,7 @@ def pause_workflow(
     user: User = Depends(get_current_user),
 ):
     workflow = (
-        db.query(Workflow)
-        .filter(Workflow.id == workflow_id, Workflow.user_id == user.id)
-        .first()
+        db.query(Workflow).filter(Workflow.id == workflow_id, Workflow.user_id == user.id).first()
     )
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
@@ -161,6 +148,7 @@ def pause_workflow(
 
 # ── Run Management ───────────────────────────────────────────────────
 
+
 @router.post("/{workflow_id}/run", response_model=WorkflowRunResponse)
 async def trigger_run(
     workflow_id: UUID,
@@ -168,9 +156,7 @@ async def trigger_run(
     user: User = Depends(get_current_user),
 ):
     workflow = (
-        db.query(Workflow)
-        .filter(Workflow.id == workflow_id, Workflow.user_id == user.id)
-        .first()
+        db.query(Workflow).filter(Workflow.id == workflow_id, Workflow.user_id == user.id).first()
     )
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
@@ -188,9 +174,7 @@ def list_runs(
     user: User = Depends(get_current_user),
 ):
     workflow = (
-        db.query(Workflow)
-        .filter(Workflow.id == workflow_id, Workflow.user_id == user.id)
-        .first()
+        db.query(Workflow).filter(Workflow.id == workflow_id, Workflow.user_id == user.id).first()
     )
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
@@ -198,10 +182,7 @@ def list_runs(
     query = db.query(WorkflowRun).filter(WorkflowRun.workflow_id == workflow_id)
     total = query.count()
     items = (
-        query.order_by(WorkflowRun.created_at.desc())
-        .offset((page - 1) * limit)
-        .limit(limit)
-        .all()
+        query.order_by(WorkflowRun.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
     )
     return WorkflowRunList(items=items, total=total, page=page, limit=limit)
 
@@ -229,6 +210,7 @@ def get_run(
 
 # ── From Template ────────────────────────────────────────────────────
 
+
 @router.post("/from-template", response_model=WorkflowResponse, status_code=201)
 def create_from_template(
     body: WorkflowFromTemplate,
@@ -237,15 +219,20 @@ def create_from_template(
 ):
     try:
         workflow = wf_service.create_from_template(
-            db, user.id, body.template_id, body.variables,
-            project_id=body.project_id, name=body.name,
+            db,
+            user.id,
+            body.template_id,
+            body.variables,
+            project_id=body.project_id,
+            name=body.name,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     return workflow
 
 
 # ── From Natural Language ────────────────────────────────────────────
+
 
 @router.post("/from-description", response_model=WorkflowResponse, status_code=201)
 async def create_from_description(
@@ -255,18 +242,22 @@ async def create_from_description(
 ):
     try:
         workflow = await wf_service.create_from_natural_language(
-            db, user.id, body.description, project_id=body.project_id,
+            db,
+            user.id,
+            body.description,
+            project_id=body.project_id,
         )
-    except Exception:
+    except Exception as exc:
         logger.exception("NL workflow generation failed")
         raise HTTPException(
             status_code=500,
             detail="Workflow generation failed; see server logs (correlation id)",
-        )
+        ) from exc
     return workflow
 
 
 # ── Validation ───────────────────────────────────────────────────────
+
 
 @router.post("/{workflow_id}/validate")
 def validate_workflow(
@@ -275,9 +266,7 @@ def validate_workflow(
     user: User = Depends(get_current_user),
 ):
     workflow = (
-        db.query(Workflow)
-        .filter(Workflow.id == workflow_id, Workflow.user_id == user.id)
-        .first()
+        db.query(Workflow).filter(Workflow.id == workflow_id, Workflow.user_id == user.id).first()
     )
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")

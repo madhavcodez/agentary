@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 from typing import Any
@@ -42,10 +43,8 @@ class RedisBridge:
         """Cancel the subscriber task and close the Redis connection."""
         if self._subscriber_task is not None:
             self._subscriber_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._subscriber_task
-            except asyncio.CancelledError:
-                pass
             self._subscriber_task = None
 
         if self._redis is not None:
@@ -126,6 +125,7 @@ redis_bridge = RedisBridge()
 
 # ── Convenience function used by EventBus.broadcast ──────────────
 
+
 async def publish_event(event) -> None:
     """Publish an :class:`Event` via the global :data:`redis_bridge`.
 
@@ -166,18 +166,19 @@ async def publish_event(event) -> None:
 
 # ── Backward-compatible helpers used by main.py lifespan ─────────
 
+
 async def subscribe_and_forward(ws_manager) -> None:
     """Subscribe to all agentary event channels and forward to WebSocket clients.
 
     Runs as a long-lived coroutine -- launch via ``asyncio.create_task``
     in the app lifespan.  Delegates to the singleton :data:`redis_bridge`.
     """
-    from .websocket_manager import ws_manager as _ws  # noqa: F811
 
     # Ensure the bridge has a Redis connection
     if redis_bridge._redis is None:
         redis_bridge._redis = aioredis.from_url(
-            settings.redis_url, decode_responses=True,
+            settings.redis_url,
+            decode_responses=True,
         )
 
     while True:

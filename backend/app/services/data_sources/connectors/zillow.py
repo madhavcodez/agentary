@@ -12,7 +12,6 @@ import httpx
 
 from ..base_connector import SourceResult
 
-
 _RAPIDAPI_HOST = "zillow-com1.p.rapidapi.com"
 _SEARCH_URL = f"https://{_RAPIDAPI_HOST}/propertyExtendedSearch"
 _PROPERTY_URL = f"https://{_RAPIDAPI_HOST}/property"
@@ -280,13 +279,15 @@ class ZillowConnector:
     ) -> SourceResult:
         filtered = list(_MOCK_LISTINGS)
         if price_min is not None:
-            filtered = [l for l in filtered if (l.get("price") or 0) >= price_min]
+            filtered = [listing for listing in filtered if (listing.get("price") or 0) >= price_min]
         if price_max is not None:
-            filtered = [l for l in filtered if (l.get("price") or 0) <= price_max]
+            filtered = [listing for listing in filtered if (listing.get("price") or 0) <= price_max]
         if beds_min is not None:
-            filtered = [l for l in filtered if (l.get("beds") or 0) >= beds_min]
+            filtered = [listing for listing in filtered if (listing.get("beds") or 0) >= beds_min]
         if property_type is not None:
-            filtered = [l for l in filtered if l.get("property_type") == property_type]
+            filtered = [
+                listing for listing in filtered if listing.get("property_type") == property_type
+            ]
 
         return SourceResult(
             data=filtered,

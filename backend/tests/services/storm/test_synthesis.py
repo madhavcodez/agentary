@@ -4,6 +4,7 @@ These tests exercise the citation-validation logic and the bounded
 refinement gate without hitting Gemini. Live tests are gated by
 ``AGENTARY_STORM_LIVE_TEST=1``.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -14,7 +15,6 @@ import pytest
 
 from app.services.storm.budget import StormBudget
 from app.services.storm.refinement import (
-    DEFAULT_MIN_CITATION_DENSITY,
     evaluate_section,
     refine_report_drafts,
 )
@@ -85,9 +85,7 @@ async def test_synthesize_section_rejects_hallucinated_finding_ids(budget):
             "scope": "scope text",
             "expected_evidence_types": ["fact"],
         }
-        draft = await synthesize_section(
-            section=section, bound_findings=bound, budget=budget
-        )
+        draft = await synthesize_section(section=section, bound_findings=bound, budget=budget)
 
     assert draft is not None
     # First attempt had one valid + one hallucinated; partial_evidence true
@@ -101,9 +99,7 @@ async def test_synthesize_section_rejects_hallucinated_finding_ids(budget):
 def test_evaluate_section_thresholds():
     # Low density — flagged for refinement
     content = "word " * 400  # 400 words, 1 citation → density 0.0025 < 0.005
-    citations = [
-        ValidatedCitation(finding_id=str(uuid.uuid4()), quote_span=None, confidence=0.9)
-    ]
+    citations = [ValidatedCitation(finding_id=str(uuid.uuid4()), quote_span=None, confidence=0.9)]
     bound = [(_fake_finding(), 0.8) for _ in range(5)]
     # Make one finding match the cited id
     citations[0].finding_id = str(bound[0][0].id)
@@ -137,9 +133,7 @@ async def test_refinement_respects_global_cap(budget):
     for idx in range(3):
         b = [(_fake_finding(), 0.8) for _ in range(5)]
         bound_per_section[idx] = b
-        citation = ValidatedCitation(
-            finding_id=str(b[0][0].id), quote_span=None, confidence=0.9
-        )
+        citation = ValidatedCitation(finding_id=str(b[0][0].id), quote_span=None, confidence=0.9)
         drafts[idx] = SectionDraft(
             section_index=idx,
             title=f"Section {idx}",
@@ -149,7 +143,10 @@ async def test_refinement_respects_global_cap(budget):
             refinement_passes=0,
             bound_findings_used=[str(f.id) for (f, _) in b],
         )
-    sections = [{"index": i, "title": f"s{i}", "scope": "sc", "expected_evidence_types": ["fact"]} for i in range(3)]
+    sections = [
+        {"index": i, "title": f"s{i}", "scope": "sc", "expected_evidence_types": ["fact"]}
+        for i in range(3)
+    ]
 
     refine_mock = AsyncMock(
         side_effect=lambda **kwargs: SectionDraft(

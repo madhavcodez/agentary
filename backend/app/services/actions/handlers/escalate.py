@@ -1,4 +1,5 @@
 """Escalate -- create high-priority alert."""
+
 from __future__ import annotations
 
 import logging
@@ -34,7 +35,5 @@ class EscalateHandler:
 
         return {
             "result": {"alert_id": str(alert.id), "severity": "critical"},
-            "side_effects": [
-                {"type": "escalation_alert_created", "alert_id": str(alert.id)}
-            ],
+            "side_effects": [{"type": "escalation_alert_created", "alert_id": str(alert.id)}],
         }

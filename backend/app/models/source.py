@@ -3,8 +3,10 @@ from __future__ import annotations
 import enum
 import uuid
 
-from sqlalchemy import Boolean, Column, DateTime, Enum as SAEnum, ForeignKey, String, func
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Boolean, Column, DateTime
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import ForeignKey, String, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from ..database import Base
 
@@ -27,7 +29,9 @@ class Source(Base):
     __tablename__ = "sources"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)  # null = system source
+    user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )  # null = system source
     name = Column(String(255), nullable=False)
     source_type = Column(SAEnum(SourceKind), nullable=False)
     adapter_slug = Column(String(100))

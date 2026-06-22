@@ -1,22 +1,25 @@
 from __future__ import annotations
+
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
+
 from ..core.background_tasks import spawn_background_task as _spawn_background_task
+from ..core.correlation import get_correlation_id
 from ..core.rate_limiter import limiter
-from ..deps import get_db, get_current_user
-from ..models.user import User
+from ..deps import get_current_user, get_db
 from ..models.project import Project, ProjectStatus
-from ..schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
+from ..models.user import User
 from ..schemas.onboarding import (
-    GenerateQuestionsRequest,
-    GenerateQuestionsResponse,
     ConfigureAndStartRequest,
     ConfigureAndStartResponse,
+    GenerateQuestionsRequest,
+    GenerateQuestionsResponse,
 )
-from ..core.correlation import get_correlation_id
+from ..schemas.project import ProjectCreate, ProjectResponse, ProjectUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -30,13 +33,17 @@ def _mission_response(project: Project, mission) -> dict:
             "id": str(project.id),
             "name": project.name,
             "domain_context": project.domain_context,
-            "status": project.status.value if hasattr(project.status, "value") else str(project.status),
+            "status": (
+                project.status.value if hasattr(project.status, "value") else str(project.status)
+            ),
             "total_missions": project.total_missions,
         },
         "mission": {
             "id": str(mission.id),
             "name": mission.name,
-            "status": mission.status.value if hasattr(mission.status, "value") else str(mission.status),
+            "status": (
+                mission.status.value if hasattr(mission.status, "value") else str(mission.status)
+            ),
             "objective": mission.objective,
             "created_at": mission.created_at.isoformat() if mission.created_at else None,
         },
@@ -143,22 +150,28 @@ async def configure_and_start(
     """Take answered onboarding questions, configure the project, create a mission, and start it."""
     from ..models.mission import Mission
     from ..services.crews.crew_service import assemble_crew, start_crew_run
-    from ..services.onboarding import synthesize_domain_context, create_mission_for_project
+    from ..services.onboarding import create_mission_for_project, synthesize_domain_context
 
     project = db.query(Project).filter(Project.id == project_id, Project.user_id == user.id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
     # ── Deduplication: reject if a mission was created in the last 30s ──
-    dedup_cutoff = datetime.now(timezone.utc) - timedelta(seconds=30)
+    dedup_cutoff = datetime.now(UTC) - timedelta(seconds=30)
     recent_mission = (
         db.query(Mission)
-        .filter(Mission.project_id == project.id, Mission.user_id == user.id, Mission.created_at >= dedup_cutoff)
+        .filter(
+            Mission.project_id == project.id,
+            Mission.user_id == user.id,
+            Mission.created_at >= dedup_cutoff,
+        )
         .order_by(Mission.created_at.desc())
         .first()
     )
     if recent_mission is not None:
-        logger.info("Dedup: returning existing mission %s for project %s", recent_mission.id, project_id)
+        logger.info(
+            "Dedup: returning existing mission %s for project %s", recent_mission.id, project_id
+        )
         return _mission_response(project, recent_mission)
 
     # Synthesize domain context + create mission via service layer
@@ -176,21 +189,24 @@ async def configure_and_start(
         # Enqueue Celery task with fallback
         try:
             from ..tasks.crew_tasks import execute_crew_run
+
             execute_crew_run.delay(str(run.id), correlation_id=get_correlation_id())
         except Exception as celery_exc:
             logger.warning("Celery unavailable, falling back to inline execution: %s", celery_exc)
-            import asyncio
-            from ..services.crews.crew_runner import CrewRunner
             from ..models.mission_run import MissionRun
+            from ..services.crews.crew_runner import CrewRunner
 
             async def _run_inline():
                 from ..database import SessionLocal
+
                 inline_db = SessionLocal()
                 try:
                     runner = CrewRunner(inline_db)
                     await runner.execute_run(run.id)
                 except Exception as exc:
-                    logger.error("Inline crew run failed for run %s: %s", run.id, exc, exc_info=True)
+                    logger.error(
+                        "Inline crew run failed for run %s: %s", run.id, exc, exc_info=True
+                    )
                     try:
                         run_obj = inline_db.query(MissionRun).filter_by(id=run.id).first()
                         if run_obj and run_obj.status not in ("completed", "failed", "cancelled"):
@@ -207,7 +223,9 @@ async def configure_and_start(
     except Exception as exc:
         db.rollback()
         logger.error("Failed to start mission %s: %s", mission.id, exc)
-        raise HTTPException(status_code=500, detail="Failed to start mission. Please try again.")
+        raise HTTPException(
+            status_code=500, detail="Failed to start mission. Please try again."
+        ) from exc
 
     db.refresh(project)
     db.refresh(mission)

@@ -1,4 +1,5 @@
 """Trigger a monitor check."""
+
 from __future__ import annotations
 
 import logging
@@ -26,9 +27,7 @@ class TriggerMonitorHandler:
             check_monitor.delay(monitor_id)
             return {
                 "result": {"monitor_id": monitor_id, "status": "check_queued"},
-                "side_effects": [
-                    {"type": "monitor_check_triggered", "monitor_id": monitor_id}
-                ],
+                "side_effects": [{"type": "monitor_check_triggered", "monitor_id": monitor_id}],
             }
         except Exception as e:
             return {"result": {"error": str(e)}, "side_effects": []}

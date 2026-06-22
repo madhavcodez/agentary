@@ -10,6 +10,7 @@ issued, blocking premium-rate prefixes, disallowed regions, and emergency
 short codes that a prompt-injected research target could otherwise smuggle
 in.
 """
+
 from __future__ import annotations
 
 import logging
@@ -110,14 +111,16 @@ async def execute(
 
     # Normalize questions format — accept both list[str] and list[dict]
     normalized_questions: list[dict[str, Any]] = []
-    for q in (questions or []):
+    for q in questions or []:
         if isinstance(q, str):
-            normalized_questions.append({
-                "name": q.lower().replace(" ", "_"),
-                "type": "text",
-                "question": q,
-                "required": True,
-            })
+            normalized_questions.append(
+                {
+                    "name": q.lower().replace(" ", "_"),
+                    "type": "text",
+                    "question": q,
+                    "required": True,
+                }
+            )
         elif isinstance(q, dict):
             normalized_questions.append(q)
 
@@ -153,11 +156,13 @@ async def execute(
                     "style": "conversational",
                 },
                 "extraction_schema": {"fields": normalized_questions},
-                "targets": [{
-                    "phone_number": phone_number,
-                    "name": business_name,
-                    "context": context_dict,
-                }],
+                "targets": [
+                    {
+                        "phone_number": phone_number,
+                        "name": business_name,
+                        "context": context_dict,
+                    }
+                ],
             },
             db,
         )
@@ -183,16 +188,12 @@ async def execute(
         call_record = records[0]
 
         # 3. Execute the call
-        call_result = await voice_pipeline_adapter.create_outbound_call(
-            call_record, ve, db
-        )
+        call_result = await voice_pipeline_adapter.create_outbound_call(call_record, ve, db)
         db.commit()
 
         # 4. Process if completed (simulation) or transcript available
         if call_result.get("simulated") or call_record.transcript:
-            post_result = await voice_service.process_completed_call(
-                call_record.id, db
-            )
+            post_result = await voice_service.process_completed_call(call_record.id, db)
 
             db.refresh(call_record)
 

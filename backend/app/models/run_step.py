@@ -8,7 +8,9 @@ import uuid
 from sqlalchemy import (
     Column,
     DateTime,
-    Enum as SAEnum,
+)
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
@@ -41,8 +43,8 @@ class RunStep(Base):
     step_name = Column(String(255), nullable=False)
     status = Column(String(50), nullable=False, default="running")
 
-    input_summary = Column(JSONB, default=dict)   # truncated input snapshot
-    output_summary = Column(JSONB, default=dict)   # truncated output snapshot
+    input_summary = Column(JSONB, default=dict)  # truncated input snapshot
+    output_summary = Column(JSONB, default=dict)  # truncated output snapshot
     error = Column(JSONB, nullable=True)
 
     tokens_used = Column(Integer, nullable=True)

@@ -3,11 +3,12 @@
 Provides the main entry points for creating voice extractions, planning calls,
 executing calls (real or simulated), and processing completed calls.
 """
+
 from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -22,7 +23,6 @@ from ...models.voice_extraction import (
     VoiceExtractionStatus,
 )
 from . import extraction_service, transcript_processor, voice_pipeline_adapter
-from .call_script_generator import generate_script
 
 logger = logging.getLogger(__name__)
 
@@ -37,19 +37,21 @@ def _append_call_transition(
 
     Validates the transition using CALL_VALID_TRANSITIONS from the state machine.
     """
-    from ..state_machine import call_transition, InvalidTransition
+    from ..state_machine import InvalidTransition, call_transition
 
     try:
         record = call_transition(from_state, to_state, reason)
     except InvalidTransition:
         logger.warning(
             "Invalid call transition %s -> %s (reason=%s); recording anyway",
-            from_state, to_state, reason,
+            from_state,
+            to_state,
+            reason,
         )
         record = {
             "from": from_state,
             "to": to_state,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "reason": reason,
         }
     transitions = list(call_record.state_transitions or [])
@@ -163,11 +165,7 @@ async def start_call(
     Returns:
         Dict with call_sid and status.
     """
-    call_record = (
-        db.query(CallRecord)
-        .filter(CallRecord.id == call_record_id)
-        .first()
-    )
+    call_record = db.query(CallRecord).filter(CallRecord.id == call_record_id).first()
     if not call_record:
         raise ValueError(f"CallRecord {call_record_id} not found")
 
@@ -177,35 +175,41 @@ async def start_call(
         .first()
     )
     if not voice_extraction:
-        raise ValueError(
-            f"VoiceExtraction {call_record.voice_extraction_id} not found"
-        )
+        raise ValueError(f"VoiceExtraction {call_record.voice_extraction_id} not found")
 
     # Activate the extraction if it's still in draft
     if voice_extraction.status == VoiceExtractionStatus.draft:
         voice_extraction.status = VoiceExtractionStatus.active
         db.add(voice_extraction)
 
-    old_status = call_record.status.value if hasattr(call_record.status, 'value') else str(call_record.status)
-    result = await voice_pipeline_adapter.create_outbound_call(
-        call_record, voice_extraction, db
+    old_status = (
+        call_record.status.value
+        if hasattr(call_record.status, "value")
+        else str(call_record.status)
     )
-    new_status = call_record.status.value if hasattr(call_record.status, 'value') else str(call_record.status)
+    result = await voice_pipeline_adapter.create_outbound_call(call_record, voice_extraction, db)
+    new_status = (
+        call_record.status.value
+        if hasattr(call_record.status, "value")
+        else str(call_record.status)
+    )
     if old_status != new_status:
         _append_call_transition(call_record, old_status, new_status, "Call initiated")
 
-    await event_bus.broadcast(Event(
-        event_type=EventType.run_state_changed,
-        data={
-            "run_type": "voice",
-            "run_id": str(call_record.id),
-            "from_state": old_status,
-            "to_state": new_status,
-            "reason": "Call initiated",
-        },
-        project_id=str(voice_extraction.project_id) if voice_extraction.project_id else None,
-        mission_id=str(voice_extraction.mission_id) if voice_extraction.mission_id else None,
-    ))
+    await event_bus.broadcast(
+        Event(
+            event_type=EventType.run_state_changed,
+            data={
+                "run_type": "voice",
+                "run_id": str(call_record.id),
+                "from_state": old_status,
+                "to_state": new_status,
+                "reason": "Call initiated",
+            },
+            project_id=str(voice_extraction.project_id) if voice_extraction.project_id else None,
+            mission_id=str(voice_extraction.mission_id) if voice_extraction.mission_id else None,
+        )
+    )
 
     db.commit()
     return result
@@ -229,11 +233,7 @@ async def process_completed_call(
     Returns:
         Dict with extraction_result and findings_count.
     """
-    call_record = (
-        db.query(CallRecord)
-        .filter(CallRecord.id == call_record_id)
-        .first()
-    )
+    call_record = db.query(CallRecord).filter(CallRecord.id == call_record_id).first()
     if not call_record:
         raise ValueError(f"CallRecord {call_record_id} not found")
 
@@ -243,9 +243,7 @@ async def process_completed_call(
         .first()
     )
     if not voice_extraction:
-        raise ValueError(
-            f"VoiceExtraction {call_record.voice_extraction_id} not found"
-        )
+        raise ValueError(f"VoiceExtraction {call_record.voice_extraction_id} not found")
 
     # 1. Process transcript
     if call_record.transcript:
@@ -269,12 +267,10 @@ async def process_completed_call(
     # 4. Update counters on the parent VoiceExtraction
     voice_extraction.calls_completed = (voice_extraction.calls_completed or 0) + 1
     if extraction_result.get("quality_score", 0) > 0.5:
-        voice_extraction.calls_successful = (
-            voice_extraction.calls_successful or 0
-        ) + 1
-    voice_extraction.data_points_extracted = (
-        voice_extraction.data_points_extracted or 0
-    ) + len(findings)
+        voice_extraction.calls_successful = (voice_extraction.calls_successful or 0) + 1
+    voice_extraction.data_points_extracted = (voice_extraction.data_points_extracted or 0) + len(
+        findings
+    )
 
     # Check if all calls are done (skipped during batch to avoid N+1)
     if not skip_completion_check:
@@ -294,8 +290,8 @@ async def process_completed_call(
 
     # Emit signal for the intelligence pipeline
     try:
-        from ..intelligence.signal_service import SignalService
         from ...models.signal import SignalSourceType, SignalType
+        from ..intelligence.signal_service import SignalService
 
         if call_record.project_id:
             signal_svc = SignalService(db)
@@ -315,8 +311,7 @@ async def process_completed_call(
         logger.debug("Signal emission failed for call_record %s", call_record.id)
 
     logger.info(
-        "Post-processing complete for call_record %s: "
-        "%d findings, confidence=%.2f",
+        "Post-processing complete for call_record %s: " "%d findings, confidence=%.2f",
         call_record.id,
         len(findings),
         extraction_result.get("overall_confidence", 0),
@@ -342,9 +337,7 @@ async def execute_batch(
         Dict with total, completed, failed counts and per-call results.
     """
     voice_extraction = (
-        db.query(VoiceExtraction)
-        .filter(VoiceExtraction.id == voice_extraction_id)
-        .first()
+        db.query(VoiceExtraction).filter(VoiceExtraction.id == voice_extraction_id).first()
     )
     if not voice_extraction:
         raise ValueError(f"VoiceExtraction {voice_extraction_id} not found")
@@ -379,7 +372,9 @@ async def execute_batch(
 
             # If simulated, process immediately
             if call_result.get("simulated"):
-                post_result = await process_completed_call(record.id, db, skip_completion_check=True)
+                post_result = await process_completed_call(
+                    record.id, db, skip_completion_check=True
+                )
                 status = "completed"
                 results.append(
                     {
@@ -404,21 +399,23 @@ async def execute_batch(
                 completed += 1
 
             # Emit per-call event
-            await event_bus.broadcast(Event(
-                event_type=EventType.run_state_changed,
-                data={
-                    "run_type": "voice",
-                    "call_id": str(record.id),
-                    "status": status,
-                },
-                project_id=str(voice_extraction.project_id) if voice_extraction.project_id else None,
-            ))
+            await event_bus.broadcast(
+                Event(
+                    event_type=EventType.run_state_changed,
+                    data={
+                        "run_type": "voice",
+                        "call_id": str(record.id),
+                        "status": status,
+                    },
+                    project_id=(
+                        str(voice_extraction.project_id) if voice_extraction.project_id else None
+                    ),
+                )
+            )
 
         except Exception as exc:
-            logger.exception(
-                "Failed to execute call for record %s", record.id
-            )
-            old_st = record.status.value if hasattr(record.status, 'value') else str(record.status)
+            logger.exception("Failed to execute call for record %s", record.id)
+            old_st = record.status.value if hasattr(record.status, "value") else str(record.status)
             record.status = CallStatus.failed
             record.failure_category = FailureCategory.internal
             record.failure_message = str(exc)
@@ -435,15 +432,19 @@ async def execute_batch(
             failed += 1
 
             # Emit per-call failure event
-            await event_bus.broadcast(Event(
-                event_type=EventType.run_state_changed,
-                data={
-                    "run_type": "voice",
-                    "call_id": str(record.id),
-                    "status": "failed",
-                },
-                project_id=str(voice_extraction.project_id) if voice_extraction.project_id else None,
-            ))
+            await event_bus.broadcast(
+                Event(
+                    event_type=EventType.run_state_changed,
+                    data={
+                        "run_type": "voice",
+                        "call_id": str(record.id),
+                        "status": "failed",
+                    },
+                    project_id=(
+                        str(voice_extraction.project_id) if voice_extraction.project_id else None
+                    ),
+                )
+            )
 
     # Single aggregation after batch loop (avoids N+1 per-call COUNT queries)
     total_completed = (
@@ -480,18 +481,12 @@ def get_extraction_status(
     Returns:
         Dict with status, progress, and per-call statuses.
     """
-    ve = (
-        db.query(VoiceExtraction)
-        .filter(VoiceExtraction.id == voice_extraction_id)
-        .first()
-    )
+    ve = db.query(VoiceExtraction).filter(VoiceExtraction.id == voice_extraction_id).first()
     if not ve:
         raise ValueError(f"VoiceExtraction {voice_extraction_id} not found")
 
     records = (
-        db.query(CallRecord)
-        .filter(CallRecord.voice_extraction_id == voice_extraction_id)
-        .all()
+        db.query(CallRecord).filter(CallRecord.voice_extraction_id == voice_extraction_id).all()
     )
 
     status_counts: dict[str, int] = {}

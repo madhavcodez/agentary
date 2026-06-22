@@ -29,7 +29,9 @@ def _run_expensive_checks() -> dict:
     # Redis
     try:
         import redis as _redis
+
         from ..config import settings
+
         r = _redis.from_url(settings.redis_url, socket_connect_timeout=1, socket_timeout=1)
         try:
             r.ping()
@@ -42,7 +44,9 @@ def _run_expensive_checks() -> dict:
     # Qdrant
     try:
         from qdrant_client import QdrantClient
+
         from ..config import settings
+
         client = QdrantClient(url=settings.qdrant_url, timeout=2, check_compatibility=False)
         try:
             client.get_collections()
@@ -55,6 +59,7 @@ def _run_expensive_checks() -> dict:
     # Celery — 0.5s max
     try:
         from ..celery_app import celery_app
+
         ping = celery_app.control.ping(timeout=0.5)
         checks["celery_workers"] = "available" if ping else "unavailable"
     except Exception as e:
@@ -64,6 +69,7 @@ def _run_expensive_checks() -> dict:
     # Circuit breakers
     try:
         from ..services.circuit_breakers import get_breaker_status
+
         breakers = get_breaker_status()
     except Exception as e:
         logger.debug("Circuit breaker status unavailable: %s", e)
@@ -81,8 +87,7 @@ def _background_health_loop() -> None:
                 _cache["checks"].update(result["checks"])
                 _cache["circuit_breakers"] = result["circuit_breakers"]
                 all_ok = all(
-                    v == "ok" for k, v in _cache["checks"].items()
-                    if k not in ("celery_workers",)
+                    v == "ok" for k, v in _cache["checks"].items() if k not in ("celery_workers",)
                 )
                 _cache["status"] = "ok" if all_ok else "degraded"
         except (ConnectionError, OSError, RuntimeError) as exc:
@@ -117,10 +122,7 @@ def health(db: Session = Depends(get_db)) -> dict:
         result["checks"] = dict(result.get("checks", {}))
         result["checks"]["postgres"] = pg
 
-    all_ok = all(
-        v == "ok" for k, v in result["checks"].items()
-        if k not in ("celery_workers",)
-    )
+    all_ok = all(v == "ok" for k, v in result["checks"].items() if k not in ("celery_workers",))
     result["status"] = "ok" if all_ok else "degraded"
     return result
 

@@ -1,4 +1,5 @@
 """API routes for batch voice calling operations."""
+
 from __future__ import annotations
 
 import logging
@@ -30,11 +31,7 @@ async def create_batch(
     user: User = Depends(get_current_user),
 ):
     """Plan a batch of calls for an existing voice extraction."""
-    ve = (
-        db.query(VoiceExtraction)
-        .filter(VoiceExtraction.id == body.voice_extraction_id)
-        .first()
-    )
+    ve = db.query(VoiceExtraction).filter(VoiceExtraction.id == body.voice_extraction_id).first()
     if not ve:
         raise HTTPException(status_code=404, detail="Voice extraction not found")
 
@@ -71,11 +68,7 @@ async def execute_batch(
     user: User = Depends(get_current_user),
 ):
     """Execute all pending calls in a batch sequentially."""
-    ve = (
-        db.query(VoiceExtraction)
-        .filter(VoiceExtraction.id == batch_id)
-        .first()
-    )
+    ve = db.query(VoiceExtraction).filter(VoiceExtraction.id == batch_id).first()
     if not ve:
         raise HTTPException(status_code=404, detail="Voice extraction not found")
 
@@ -92,19 +85,11 @@ def get_batch_results(
     """Get aggregated results for a completed batch."""
     from ..models.voice_extraction import CallRecord, CallStatus
 
-    ve = (
-        db.query(VoiceExtraction)
-        .filter(VoiceExtraction.id == batch_id)
-        .first()
-    )
+    ve = db.query(VoiceExtraction).filter(VoiceExtraction.id == batch_id).first()
     if not ve:
         raise HTTPException(status_code=404, detail="Voice extraction not found")
 
-    records = (
-        db.query(CallRecord)
-        .filter(CallRecord.voice_extraction_id == batch_id)
-        .all()
-    )
+    records = db.query(CallRecord).filter(CallRecord.voice_extraction_id == batch_id).all()
 
     completed = 0
     failed = 0
@@ -115,13 +100,15 @@ def get_batch_results(
             completed += 1
         elif r.status == CallStatus.failed:
             failed += 1
-        results.append({
-            "call_record_id": str(r.id),
-            "target_name": r.target_name,
-            "status": status_val,
-            "extracted_data": r.extracted_data,
-            "extraction_confidence": r.extraction_confidence,
-        })
+        results.append(
+            {
+                "call_record_id": str(r.id),
+                "target_name": r.target_name,
+                "status": status_val,
+                "extracted_data": r.extracted_data,
+                "extraction_confidence": r.extraction_confidence,
+            }
+        )
 
     return BatchResultsResponse(
         voice_extraction_id=batch_id,

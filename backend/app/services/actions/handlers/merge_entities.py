@@ -1,4 +1,5 @@
 """Execute entity merge."""
+
 from __future__ import annotations
 
 import logging
@@ -18,9 +19,7 @@ class MergeEntitiesHandler:
 
         if not primary_id or not secondary_id:
             return {
-                "result": {
-                    "error": "Missing primary_entity_id or secondary_entity_id"
-                },
+                "result": {"error": "Missing primary_entity_id or secondary_entity_id"},
                 "side_effects": [],
             }
 

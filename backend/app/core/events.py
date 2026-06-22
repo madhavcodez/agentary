@@ -3,8 +3,9 @@ from __future__ import annotations
 import enum
 import json
 import logging
-from datetime import datetime, timezone
-from typing import Any, Callable
+from collections.abc import Callable
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 logger = logging.getLogger(__name__)
@@ -83,7 +84,7 @@ class Event:
         self.project_id = str(project_id) if project_id else None
         self.mission_id = str(mission_id) if mission_id else None
         self.user_id = str(user_id) if user_id else None
-        self.timestamp = datetime.now(timezone.utc).isoformat()
+        self.timestamp = datetime.now(UTC).isoformat()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -125,6 +126,7 @@ class EventBus:
         await self.publish(event)
         try:
             from .redis_bridge import publish_event
+
             await publish_event(event)
         except Exception:
             logger.debug("Redis publish skipped (not available)")

@@ -3,8 +3,20 @@ from __future__ import annotations
 import enum
 import uuid
 
-from sqlalchemy import Boolean, Column, DateTime, Enum as SAEnum, Float, ForeignKey, String, Text, func
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+)
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import (
+    Float,
+    ForeignKey,
+    String,
+    Text,
+    func,
+)
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
 from ..database import Base
@@ -59,7 +71,9 @@ class Finding(Base):
     contradicts = Column(UUID(as_uuid=True), ForeignKey("findings.id"), nullable=True)
     tags = Column(JSONB, default=list)
     entity_refs = Column(JSONB, default=list)  # [{type, name, id}]
-    observation_id = Column(UUID(as_uuid=True), ForeignKey("observations.id"), nullable=True, index=True)
+    observation_id = Column(
+        UUID(as_uuid=True), ForeignKey("observations.id"), nullable=True, index=True
+    )
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships

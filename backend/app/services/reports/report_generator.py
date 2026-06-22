@@ -2,20 +2,18 @@ import json
 import logging
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import markdown2
-
 from google import genai
 from sqlalchemy.orm import Session
 
 from ...config import settings
-from ...core.events import Event, EventType, event_bus
+from ...models.crew_run import CrewRun
 from ...models.enums import FailureCategory
 from ...models.finding import Finding
 from ...models.mission import Mission
-from ...models.crew_run import CrewRun
 from ...models.report import Report
 from .chart_generator import ChartGenerator
 
@@ -34,12 +32,13 @@ def _append_report_transition(
     record = {
         "from": from_state,
         "to": to_state,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "reason": reason,
     }
     transitions = list(report.state_transitions or [])
     transitions.append(record)
     report.state_transitions = transitions
+
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 
@@ -192,7 +191,11 @@ class ReportGenerator:
         )
 
         finding_ids_used = [str(f.id) for f in relevant]
-        findings_text = self._format_findings_for_prompt(relevant) if relevant else "No findings available for this section."
+        findings_text = (
+            self._format_findings_for_prompt(relevant)
+            if relevant
+            else "No findings available for this section."
+        )
 
         structured_snippet = ""
         if structured_data:
@@ -263,9 +266,7 @@ class ReportGenerator:
     def _generate_executive_summary(self, sections: list[dict], mission: Mission) -> str:
         """Generate a concise executive summary from completed sections."""
         section_summaries = "\n\n".join(
-            f"### {s['title']}\n{s['content_md'][:800]}"
-            for s in sections
-            if s.get("content_md")
+            f"### {s['title']}\n{s['content_md'][:800]}" for s in sections if s.get("content_md")
         )
 
         prompt = (
@@ -301,9 +302,7 @@ class ReportGenerator:
         if crew_runs:
             parts: list[str] = []
             for run in crew_runs:
-                duration = (
-                    f"{run.duration_seconds:.0f}s" if run.duration_seconds else "N/A"
-                )
+                duration = f"{run.duration_seconds:.0f}s" if run.duration_seconds else "N/A"
                 metrics_str = json.dumps(run.metrics, default=str) if run.metrics else "{}"
                 parts.append(
                     f"- Run {run.iteration} | Status: {run.status} | "
@@ -387,9 +386,7 @@ class ReportGenerator:
             .order_by(Finding.category, Finding.confidence.desc())
             .all()
         )
-        logger.info(
-            "Loaded %d findings for mission %s", len(findings), mission_id
-        )
+        logger.info("Loaded %d findings for mission %s", len(findings), mission_id)
 
         # ---- 3. Load crew runs ----
         crew_runs: list[CrewRun] = (
@@ -441,9 +438,7 @@ class ReportGenerator:
 
         # ---- 7. Executive summary ----
         logger.info("Generating executive summary")
-        executive_summary_text = self._generate_executive_summary(
-            generated_sections, mission
-        )
+        executive_summary_text = self._generate_executive_summary(generated_sections, mission)
 
         # ---- 8. Methodology ----
         logger.info("Generating methodology section")
@@ -471,7 +466,9 @@ class ReportGenerator:
             md_parts.append("## Sources & References\n")
             for src in sources:
                 url_part = f" - [{src['url']}]({src['url']})" if src.get("url") else ""
-                accessed = f" (accessed {src['accessed_at'][:10]})" if src.get("accessed_at") else ""
+                accessed = (
+                    f" (accessed {src['accessed_at'][:10]})" if src.get("accessed_at") else ""
+                )
                 md_parts.append(f"- **{src['name']}**{url_part}{accessed}")
             md_parts.append("")
 
@@ -495,7 +492,7 @@ class ReportGenerator:
             "chart_configs": [],
             "order": max((s["order"] for s in sorted_sections), default=0) + 1,
         }
-        all_sections_json = [exec_section] + sorted_sections + [methodology_section]
+        all_sections_json = [exec_section, *sorted_sections, methodology_section]
 
         # ---- 12. Calculate metadata ----
         generation_time = time.monotonic() - start_time
@@ -513,7 +510,7 @@ class ReportGenerator:
             "word_count": word_count,
             "template_used": report_type,
             "model": _REPORT_MODEL,
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": datetime.now(UTC).isoformat(),
         }
 
         # ---- 13. Create Report record ----
@@ -580,9 +577,7 @@ class ReportGenerator:
 
         sections: list[dict] = list(report.sections or [])
         if section_index < 0 or section_index >= len(sections):
-            raise IndexError(
-                f"Section index {section_index} out of range (0-{len(sections) - 1})"
-            )
+            raise IndexError(f"Section index {section_index} out of range (0-{len(sections) - 1})")
 
         target_section = dict(sections[section_index])
         section_title = target_section["title"]
@@ -662,8 +657,7 @@ class ReportGenerator:
 
         # Update the sections list immutably
         updated_sections = [
-            target_section if i == section_index else dict(s)
-            for i, s in enumerate(sections)
+            target_section if i == section_index else dict(s) for i, s in enumerate(sections)
         ]
 
         # Rebuild full markdown
@@ -677,7 +671,7 @@ class ReportGenerator:
         existing_metadata = dict(report.metadata_ or {})
         existing_metadata["word_count"] = len(content_markdown.split())
         existing_metadata["last_section_regenerated"] = section_title
-        existing_metadata["last_regenerated_at"] = datetime.now(timezone.utc).isoformat()
+        existing_metadata["last_regenerated_at"] = datetime.now(UTC).isoformat()
 
         # Collect all charts from updated sections
         all_charts = []

@@ -18,9 +18,7 @@ from ..schemas.voice_extraction import (
 router = APIRouter(prefix="/api/voice-extractions", tags=["voice"])
 
 
-def _owned_voice_extraction(
-    db: Session, ve_id: UUID, user: User
-) -> VoiceExtraction:
+def _owned_voice_extraction(db: Session, ve_id: UUID, user: User) -> VoiceExtraction:
     """Load a voice extraction only if the caller owns the parent project.
 
     Without this join, any authenticated user can read any voice extraction
@@ -45,9 +43,7 @@ def create_voice_extraction(
 ):
     """Create a voice extraction. Verifies the caller owns the parent project."""
     project = (
-        db.query(Project)
-        .filter(Project.id == body.project_id, Project.user_id == user.id)
-        .first()
+        db.query(Project).filter(Project.id == body.project_id, Project.user_id == user.id).first()
     )
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -75,12 +71,7 @@ def list_voice_extractions(
     )
     if project_id:
         query = query.filter(VoiceExtraction.project_id == project_id)
-    return (
-        query.order_by(VoiceExtraction.created_at.desc())
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
+    return query.order_by(VoiceExtraction.created_at.desc()).offset(offset).limit(limit).all()
 
 
 @router.get("/{ve_id}", response_model=VoiceExtractionResponse)

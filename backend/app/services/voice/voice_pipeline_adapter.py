@@ -3,11 +3,12 @@
 Handles outbound call initiation via Twilio, media stream setup, and provides
 simulation mode for development without real Twilio credentials.
 """
+
 from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -66,7 +67,7 @@ async def create_outbound_call(
 
     call_record.provider_call_id = result["call_sid"]
     call_record.status = CallStatus.ringing
-    call_record.started_at = datetime.now(timezone.utc)
+    call_record.started_at = datetime.now(UTC)
     db.add(call_record)
     db.flush()
 
@@ -104,13 +105,14 @@ async def simulate_call(
 
     # Build a description of what info to extract
     fields_desc = "\n".join(
-        f"- {f.get('name', 'unknown')}: {f.get('question', f.get('type', 'text'))}"
-        for f in fields
+        f"- {f.get('name', 'unknown')}: {f.get('question', f.get('type', 'text'))}" for f in fields
     )
 
-    context_desc = "\n".join(
-        f"- {k}: {v}" for k, v in target_context.items()
-    ) if target_context else "No additional context."
+    context_desc = (
+        "\n".join(f"- {k}: {v}" for k, v in target_context.items())
+        if target_context
+        else "No additional context."
+    )
 
     prompt = f"""Generate a realistic phone call transcript between a caller and {target_name}.
 
@@ -168,8 +170,8 @@ Generate ONLY the transcript, no other text."""
     call_record.provider_call_id = simulated_id
     call_record.status = CallStatus.completed
     call_record.transcript = transcript.strip()
-    call_record.started_at = datetime.now(timezone.utc)
-    call_record.ended_at = datetime.now(timezone.utc)
+    call_record.started_at = datetime.now(UTC)
+    call_record.ended_at = datetime.now(UTC)
     call_record.duration_seconds = 180  # simulated 3 minutes
     db.add(call_record)
     db.flush()
@@ -245,9 +247,7 @@ def build_gemini_live_config(
         # We're in an async context already — just call it sync-compatible
         system_prompt = _build_simple_system_prompt(session_data, script)
     else:
-        system_prompt = loop.run_until_complete(
-            build_system_prompt(session_data, script)
-        )
+        system_prompt = loop.run_until_complete(build_system_prompt(session_data, script))
 
     return {
         "system_prompt": system_prompt,
@@ -257,9 +257,7 @@ def build_gemini_live_config(
     }
 
 
-def _build_simple_system_prompt(
-    session_data: dict[str, Any], script: dict[str, Any]
-) -> str:
+def _build_simple_system_prompt(session_data: dict[str, Any], script: dict[str, Any]) -> str:
     """Synchronous fallback for building system prompt (no Gemini call)."""
     # Import here to avoid circular imports at module level
     from .call_script_generator import (

@@ -1,9 +1,11 @@
 """Core action request lifecycle management."""
+
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -12,6 +14,10 @@ from ...core.events import Event, EventType, event_bus
 from ...models.action_request import ActionRequest, ActionRequestStatus, ActionType
 
 logger = logging.getLogger(__name__)
+
+# Strong references to fire-and-forget broadcast tasks so they are not
+# garbage-collected mid-flight (see RUF006).
+_background_tasks: set[asyncio.Task] = set()
 
 
 class ActionService:
@@ -56,14 +62,18 @@ class ActionService:
 
         if decision.get("auto_approve"):
             action.status = ActionRequestStatus.approved
-            action.approved_at = datetime.now(timezone.utc)
-            self._append_transition(action, "pending_approval", "approved", "auto-approved by policy")
+            action.approved_at = datetime.now(UTC)
+            self._append_transition(
+                action, "pending_approval", "approved", "auto-approved by policy"
+            )
             self.db.flush()
             # Dispatch execution
             self._dispatch_execution(action)
         else:
             action.status = ActionRequestStatus.pending_approval
-            self._append_transition(action, None, "pending_approval", "awaiting approval per policy")
+            self._append_transition(
+                action, None, "pending_approval", "awaiting approval per policy"
+            )
             self.db.flush()
             # Emit pending event
             self._emit_event("action.pending_approval", action)
@@ -79,8 +89,10 @@ class ActionService:
 
         action.status = ActionRequestStatus.approved
         action.approved_by = approved_by
-        action.approved_at = datetime.now(timezone.utc)
-        self._append_transition(action, "pending_approval", "approved", f"approved by user {approved_by}")
+        action.approved_at = datetime.now(UTC)
+        self._append_transition(
+            action, "pending_approval", "approved", f"approved by user {approved_by}"
+        )
         self.db.flush()
 
         self._dispatch_execution(action)
@@ -104,7 +116,11 @@ class ActionService:
         action = self.db.query(ActionRequest).filter_by(id=action_id).first()
         if not action:
             raise ValueError(f"ActionRequest {action_id} not found")
-        terminal = (ActionRequestStatus.completed, ActionRequestStatus.failed, ActionRequestStatus.cancelled)
+        terminal = (
+            ActionRequestStatus.completed,
+            ActionRequestStatus.failed,
+            ActionRequestStatus.cancelled,
+        )
         if action.status in terminal:
             raise ValueError(f"Cannot cancel action in terminal status {action.status}")
 
@@ -144,12 +160,14 @@ class ActionService:
         self, action: ActionRequest, from_state: str | None, to_state: str, reason: str
     ) -> None:
         transitions = list(action.state_transitions or [])
-        transitions.append({
-            "from": from_state,
-            "to": to_state,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "reason": reason,
-        })
+        transitions.append(
+            {
+                "from": from_state,
+                "to": to_state,
+                "timestamp": datetime.now(UTC).isoformat(),
+                "reason": reason,
+            }
+        )
         action.state_transitions = transitions
 
     def _dispatch_execution(self, action: ActionRequest) -> None:
@@ -158,7 +176,9 @@ class ActionService:
 
             dispatch_action.delay(str(action.id))
         except Exception:
-            logger.warning("Could not dispatch action %s to Celery, will need manual execution", action.id)
+            logger.warning(
+                "Could not dispatch action %s to Celery, will need manual execution", action.id
+            )
 
     def _emit_event(self, event_type_str: str, action: ActionRequest) -> None:
         try:
@@ -167,19 +187,27 @@ class ActionService:
                 event_type=et,
                 data={
                     "action_id": str(action.id),
-                    "action_type": action.action_type.value if hasattr(action.action_type, "value") else str(action.action_type),
+                    "action_type": (
+                        action.action_type.value
+                        if hasattr(action.action_type, "value")
+                        else str(action.action_type)
+                    ),
                     "title": action.title,
-                    "status": action.status.value if hasattr(action.status, "value") else str(action.status),
+                    "status": (
+                        action.status.value
+                        if hasattr(action.status, "value")
+                        else str(action.status)
+                    ),
                     "priority": action.priority,
                 },
                 project_id=action.project_id,
                 user_id=action.user_id,
             )
-            try:
+            with contextlib.suppress(RuntimeError):
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
-                    loop.create_task(event_bus.broadcast(event))
-            except RuntimeError:
-                pass
+                    task = loop.create_task(event_bus.broadcast(event))
+                    _background_tasks.add(task)
+                    task.add_done_callback(_background_tasks.discard)
         except Exception:
-            pass
+            logger.debug("Failed to emit event %s for action %s", event_type_str, action.id)

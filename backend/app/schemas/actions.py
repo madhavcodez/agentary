@@ -5,8 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-
 # ── Action Request ──────────────────────────────────────────────────
+
 
 class ActionRequestCreate(BaseModel):
     project_id: UUID
@@ -54,6 +54,7 @@ class ActionReject(BaseModel):
 
 # ── Action Policy ───────────────────────────────────────────────────
 
+
 class ActionPolicyCreate(BaseModel):
     name: str
     description: str | None = None
@@ -79,6 +80,7 @@ class ActionPolicyResponse(BaseModel):
 
 # ── Action Execution ────────────────────────────────────────────────
 
+
 class ActionExecutionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -96,6 +98,7 @@ class ActionExecutionResponse(BaseModel):
 
 # ── Action Outcome ──────────────────────────────────────────────────
 
+
 class ActionOutcomeResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -110,6 +113,7 @@ class ActionOutcomeResponse(BaseModel):
 
 
 # ── Policy Decision ─────────────────────────────────────────────────
+
 
 class PolicyDecision(BaseModel):
     requires_approval: bool

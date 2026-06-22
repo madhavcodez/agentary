@@ -11,17 +11,14 @@ import uuid
 import pytest
 from sqlalchemy.orm import Session
 
+from app.models.enums import RunStatus as LifecycleRunStatus
 from app.models.mission import Mission, MissionStatus, MissionType
 from app.models.mission_run import MissionRun, RunStatus, TriggerType
 from app.models.project import Project, ProjectStatus, ProjectType
 from app.models.user import User
 from app.services.state_machine import (
-    InvalidTransition,
-    can_transition,
     transition,
 )
-from app.models.enums import RunStatus as LifecycleRunStatus
-
 
 # ── Fixtures ──────────────────────────────────────────────────────────
 
@@ -81,9 +78,7 @@ def test_mission(db: Session, test_user: User, test_project: Project) -> Mission
 class TestMissionCreation:
     """Test that missions and their runs are created correctly."""
 
-    def test_mission_created_with_draft_status(
-        self, db: Session, test_mission: Mission
-    ) -> None:
+    def test_mission_created_with_draft_status(self, db: Session, test_mission: Mission) -> None:
         fetched = db.get(Mission, test_mission.id)
         assert fetched is not None
         assert fetched.status == MissionStatus.draft
@@ -106,9 +101,7 @@ class TestMissionCreation:
 class TestMissionRunCreation:
     """Test that mission runs are created with correct initial state."""
 
-    def test_run_created_with_queued_status(
-        self, db: Session, test_mission: Mission
-    ) -> None:
+    def test_run_created_with_queued_status(self, db: Session, test_mission: Mission) -> None:
         run = MissionRun(
             id=uuid.uuid4(),
             mission_id=test_mission.id,
@@ -122,9 +115,7 @@ class TestMissionRunCreation:
         assert fetched is not None
         assert fetched.status == RunStatus.queued
 
-    def test_run_linked_to_mission(
-        self, db: Session, test_mission: Mission
-    ) -> None:
+    def test_run_linked_to_mission(self, db: Session, test_mission: Mission) -> None:
         run = MissionRun(
             id=uuid.uuid4(),
             mission_id=test_mission.id,
@@ -138,12 +129,8 @@ class TestMissionRunCreation:
         assert fetched is not None
         assert fetched.mission_id == test_mission.id
 
-    def test_run_stores_state_transitions(
-        self, db: Session, test_mission: Mission
-    ) -> None:
-        initial_transition = transition(
-            LifecycleRunStatus.created, LifecycleRunStatus.queued
-        )
+    def test_run_stores_state_transitions(self, db: Session, test_mission: Mission) -> None:
+        initial_transition = transition(LifecycleRunStatus.created, LifecycleRunStatus.queued)
         run = MissionRun(
             id=uuid.uuid4(),
             mission_id=test_mission.id,
@@ -163,9 +150,7 @@ class TestMissionRunCreation:
 class TestMissionStateTransitions:
     """Test state transition recording for mission runs."""
 
-    def test_full_lifecycle_queued_to_completed(
-        self, db: Session, test_mission: Mission
-    ) -> None:
+    def test_full_lifecycle_queued_to_completed(self, db: Session, test_mission: Mission) -> None:
         transitions = []
 
         t1 = transition(LifecycleRunStatus.created, LifecycleRunStatus.queued)
@@ -195,9 +180,7 @@ class TestMissionStateTransitions:
         assert fetched.state_transitions[1]["to"] == "running"
         assert fetched.state_transitions[2]["to"] == "completed"
 
-    def test_failure_lifecycle_with_reason(
-        self, db: Session, test_mission: Mission
-    ) -> None:
+    def test_failure_lifecycle_with_reason(self, db: Session, test_mission: Mission) -> None:
         transitions = [
             transition(LifecycleRunStatus.created, LifecycleRunStatus.queued),
             transition(LifecycleRunStatus.queued, LifecycleRunStatus.running),
@@ -225,9 +208,7 @@ class TestMissionStateTransitions:
         assert fetched.failure_message == "API key expired"
         assert fetched.state_transitions[-1]["reason"] == "API key expired"
 
-    def test_retry_lifecycle(
-        self, db: Session, test_mission: Mission
-    ) -> None:
+    def test_retry_lifecycle(self, db: Session, test_mission: Mission) -> None:
         transitions = [
             transition(LifecycleRunStatus.created, LifecycleRunStatus.queued),
             transition(LifecycleRunStatus.queued, LifecycleRunStatus.running),
@@ -267,11 +248,7 @@ class TestMissionCleanup:
         This test runs after others and checks that no stale test data exists
         with the test email domain.
         """
-        count = (
-            db.query(User)
-            .filter(User.email.like("%@agentary-test.local"))
-            .count()
-        )
+        count = db.query(User).filter(User.email.like("%@agentary-test.local")).count()
         # Due to rollback, there should be no persisted test users from fixtures
         # (The fixture-created user from THIS test is still in the session)
         assert count <= 1

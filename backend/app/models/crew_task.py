@@ -3,8 +3,20 @@ from __future__ import annotations
 import enum
 import uuid
 
-from sqlalchemy import Column, DateTime, Enum as SAEnum, Float, ForeignKey, Integer, String, Text, func
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import (
+    Column,
+    DateTime,
+)
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import (
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    func,
+)
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
 from ..database import Base
@@ -22,8 +34,12 @@ class CrewTask(Base):
     __tablename__ = "crew_tasks"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    mission_run_id = Column(UUID(as_uuid=True), ForeignKey("mission_runs.id"), nullable=False, index=True)
-    expert_agent_id = Column(UUID(as_uuid=True), ForeignKey("expert_agents.id"), nullable=False, index=True)
+    mission_run_id = Column(
+        UUID(as_uuid=True), ForeignKey("mission_runs.id"), nullable=False, index=True
+    )
+    expert_agent_id = Column(
+        UUID(as_uuid=True), ForeignKey("expert_agents.id"), nullable=False, index=True
+    )
 
     task_type = Column(String(100), nullable=False)
     description = Column(Text)
@@ -43,9 +59,13 @@ class CrewTask(Base):
     duration_seconds = Column(Float, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
 
     # Relationships
     mission_run = relationship("MissionRun")
     expert_agent = relationship("ExpertAgent")
-    findings = relationship("Finding", primaryjoin="foreign(Finding.call_record_id)==CrewTask.id", viewonly=True)
+    findings = relationship(
+        "Finding", primaryjoin="foreign(Finding.call_record_id)==CrewTask.id", viewonly=True
+    )

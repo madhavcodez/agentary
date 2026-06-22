@@ -19,7 +19,7 @@ async def webrtc_offer():
     try:
         from .bot import create_bot
 
-        task, transport = await create_bot()
+        task, _transport = await create_bot()
         if task is None:
             return {"error": "Pipecat not installed. Install pipecat-ai to enable voice."}
 

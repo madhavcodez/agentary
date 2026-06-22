@@ -1,6 +1,18 @@
 import uuid
 
-from sqlalchemy import Column, DateTime, Enum as SAEnum, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (
+    Column,
+    DateTime,
+)
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import (
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
@@ -14,7 +26,11 @@ class WorkflowRun(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workflow_id = Column(UUID(as_uuid=True), ForeignKey("workflows.id"), nullable=False, index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
-    status = Column(SAEnum(RunStatus, name="runstatus", create_type=False), nullable=False, default=RunStatus.created)
+    status = Column(
+        SAEnum(RunStatus, name="runstatus", create_type=False),
+        nullable=False,
+        default=RunStatus.created,
+    )
     trigger_type = Column(String(20), nullable=False, default="manual")
     started_at = Column(DateTime(timezone=True), nullable=True)
     completed_at = Column(DateTime(timezone=True), nullable=True)

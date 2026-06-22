@@ -4,6 +4,7 @@ These are seeded as VoiceExtraction presets — each template provides a
 pre-configured extraction_schema, persona, and objective that users can
 clone when creating new voice extractions.
 """
+
 from __future__ import annotations
 
 import logging
@@ -25,12 +26,42 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         },
         "extraction_schema": {
             "fields": [
-                {"name": "business_hours", "type": "text", "question": "What are your hours of operation?", "required": True},
-                {"name": "address", "type": "text", "question": "Can you confirm your address?", "required": True},
-                {"name": "services", "type": "list", "question": "What services do you offer?", "required": True},
-                {"name": "contact_person", "type": "string", "question": "Who would be the best person to follow up with?", "required": False},
-                {"name": "website", "type": "url", "question": "Do you have a website I can check out?", "required": False},
-                {"name": "phone_alternative", "type": "phone", "question": "Is there a direct line or cell I could use?", "required": False},
+                {
+                    "name": "business_hours",
+                    "type": "text",
+                    "question": "What are your hours of operation?",
+                    "required": True,
+                },
+                {
+                    "name": "address",
+                    "type": "text",
+                    "question": "Can you confirm your address?",
+                    "required": True,
+                },
+                {
+                    "name": "services",
+                    "type": "list",
+                    "question": "What services do you offer?",
+                    "required": True,
+                },
+                {
+                    "name": "contact_person",
+                    "type": "string",
+                    "question": "Who would be the best person to follow up with?",
+                    "required": False,
+                },
+                {
+                    "name": "website",
+                    "type": "url",
+                    "question": "Do you have a website I can check out?",
+                    "required": False,
+                },
+                {
+                    "name": "phone_alternative",
+                    "type": "phone",
+                    "question": "Is there a direct line or cell I could use?",
+                    "required": False,
+                },
             ]
         },
     },
@@ -47,12 +78,42 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         },
         "extraction_schema": {
             "fields": [
-                {"name": "regular_price", "type": "currency", "question": "What's the current price for your standard option?", "required": True},
-                {"name": "premium_price", "type": "currency", "question": "Do you have a premium tier? What does that run?", "required": False},
-                {"name": "bulk_discount", "type": "text", "question": "Do you offer any volume or bulk discounts?", "required": False},
-                {"name": "price_valid_until", "type": "date", "question": "How long are these prices good for?", "required": False},
-                {"name": "payment_methods", "type": "list", "question": "What payment methods do you accept?", "required": False},
-                {"name": "minimum_order", "type": "text", "question": "Is there a minimum order or purchase amount?", "required": False},
+                {
+                    "name": "regular_price",
+                    "type": "currency",
+                    "question": "What's the current price for your standard option?",
+                    "required": True,
+                },
+                {
+                    "name": "premium_price",
+                    "type": "currency",
+                    "question": "Do you have a premium tier? What does that run?",
+                    "required": False,
+                },
+                {
+                    "name": "bulk_discount",
+                    "type": "text",
+                    "question": "Do you offer any volume or bulk discounts?",
+                    "required": False,
+                },
+                {
+                    "name": "price_valid_until",
+                    "type": "date",
+                    "question": "How long are these prices good for?",
+                    "required": False,
+                },
+                {
+                    "name": "payment_methods",
+                    "type": "list",
+                    "question": "What payment methods do you accept?",
+                    "required": False,
+                },
+                {
+                    "name": "minimum_order",
+                    "type": "text",
+                    "question": "Is there a minimum order or purchase amount?",
+                    "required": False,
+                },
             ]
         },
     },
@@ -69,11 +130,36 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         },
         "extraction_schema": {
             "fields": [
-                {"name": "next_available", "type": "date", "question": "When is your next available opening?", "required": True},
-                {"name": "wait_time", "type": "text", "question": "How long is the typical wait?", "required": True},
-                {"name": "slots_open", "type": "integer", "question": "How many openings do you have this week?", "required": False},
-                {"name": "booking_required", "type": "boolean", "question": "Do I need to book in advance or can I walk in?", "required": True},
-                {"name": "cancellation_policy", "type": "text", "question": "What's your cancellation policy?", "required": False},
+                {
+                    "name": "next_available",
+                    "type": "date",
+                    "question": "When is your next available opening?",
+                    "required": True,
+                },
+                {
+                    "name": "wait_time",
+                    "type": "text",
+                    "question": "How long is the typical wait?",
+                    "required": True,
+                },
+                {
+                    "name": "slots_open",
+                    "type": "integer",
+                    "question": "How many openings do you have this week?",
+                    "required": False,
+                },
+                {
+                    "name": "booking_required",
+                    "type": "boolean",
+                    "question": "Do I need to book in advance or can I walk in?",
+                    "required": True,
+                },
+                {
+                    "name": "cancellation_policy",
+                    "type": "text",
+                    "question": "What's your cancellation policy?",
+                    "required": False,
+                },
             ]
         },
     },
@@ -90,12 +176,42 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         },
         "extraction_schema": {
             "fields": [
-                {"name": "meets_primary_criteria", "type": "boolean", "question": "Can you tell me about your experience/qualifications in this area?", "required": True},
-                {"name": "qualifications", "type": "list", "question": "What relevant qualifications or certifications do you have?", "required": True},
-                {"name": "deal_breakers", "type": "list", "question": "Are there any constraints or limitations I should know about?", "required": True},
-                {"name": "timeline", "type": "text", "question": "What's your availability or timeline?", "required": False},
-                {"name": "references", "type": "boolean", "question": "Could you provide references if needed?", "required": False},
-                {"name": "follow_up_needed", "type": "boolean", "question": "Would you be open to a more detailed follow-up conversation?", "required": False},
+                {
+                    "name": "meets_primary_criteria",
+                    "type": "boolean",
+                    "question": "Can you tell me about your experience/qualifications in this area?",
+                    "required": True,
+                },
+                {
+                    "name": "qualifications",
+                    "type": "list",
+                    "question": "What relevant qualifications or certifications do you have?",
+                    "required": True,
+                },
+                {
+                    "name": "deal_breakers",
+                    "type": "list",
+                    "question": "Are there any constraints or limitations I should know about?",
+                    "required": True,
+                },
+                {
+                    "name": "timeline",
+                    "type": "text",
+                    "question": "What's your availability or timeline?",
+                    "required": False,
+                },
+                {
+                    "name": "references",
+                    "type": "boolean",
+                    "question": "Could you provide references if needed?",
+                    "required": False,
+                },
+                {
+                    "name": "follow_up_needed",
+                    "type": "boolean",
+                    "question": "Would you be open to a more detailed follow-up conversation?",
+                    "required": False,
+                },
             ]
         },
     },
@@ -112,12 +228,43 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
         },
         "extraction_schema": {
             "fields": [
-                {"name": "response_1", "type": "text", "question": "On a scale of 1-10, how would you rate your overall experience?", "required": True},
-                {"name": "response_2", "type": "text", "question": "What's the one thing you'd most like to see improved?", "required": True},
-                {"name": "response_3", "type": "text", "question": "Would you recommend this to others? Why or why not?", "required": True},
-                {"name": "sentiment", "type": "enum", "question": "Overall, how are you feeling about the topic?", "required": False, "options": ["positive", "neutral", "negative", "mixed"]},
-                {"name": "additional_comments", "type": "text", "question": "Is there anything else you'd like to share?", "required": False},
-                {"name": "willingness_to_follow_up", "type": "boolean", "question": "Would you be willing to participate in a more detailed follow-up?", "required": False},
+                {
+                    "name": "response_1",
+                    "type": "text",
+                    "question": "On a scale of 1-10, how would you rate your overall experience?",
+                    "required": True,
+                },
+                {
+                    "name": "response_2",
+                    "type": "text",
+                    "question": "What's the one thing you'd most like to see improved?",
+                    "required": True,
+                },
+                {
+                    "name": "response_3",
+                    "type": "text",
+                    "question": "Would you recommend this to others? Why or why not?",
+                    "required": True,
+                },
+                {
+                    "name": "sentiment",
+                    "type": "enum",
+                    "question": "Overall, how are you feeling about the topic?",
+                    "required": False,
+                    "options": ["positive", "neutral", "negative", "mixed"],
+                },
+                {
+                    "name": "additional_comments",
+                    "type": "text",
+                    "question": "Is there anything else you'd like to share?",
+                    "required": False,
+                },
+                {
+                    "name": "willingness_to_follow_up",
+                    "type": "boolean",
+                    "question": "Would you be willing to participate in a more detailed follow-up?",
+                    "required": False,
+                },
             ]
         },
     },
@@ -132,9 +279,7 @@ BUILT_IN_TEMPLATES: list[dict[str, Any]] = [
             "tone": "friendly and professional",
             "style": "conversational",
         },
-        "extraction_schema": {
-            "fields": []
-        },
+        "extraction_schema": {"fields": []},
     },
 ]
 

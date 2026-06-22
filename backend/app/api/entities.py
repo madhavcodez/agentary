@@ -86,7 +86,7 @@ async def merge_entities_enhanced(
         db.commit()
         return result
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.post("/merge/{merge_id}/undo", response_model=UndoMergeResponse)
@@ -101,7 +101,7 @@ async def undo_merge(
         db.commit()
         return result
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/search", response_model=list[EntityResponse])
@@ -131,11 +131,7 @@ def get_entity(
     user: User = Depends(get_current_user),
 ):
     """Get entity detail with canonical_data."""
-    entity = (
-        db.query(Entity)
-        .filter(Entity.id == entity_id, Entity.user_id == user.id)
-        .first()
-    )
+    entity = db.query(Entity).filter(Entity.id == entity_id, Entity.user_id == user.id).first()
     if not entity:
         raise HTTPException(status_code=404, detail="Entity not found")
     return entity
@@ -149,11 +145,7 @@ async def update_entity(
     user: User = Depends(get_current_user),
 ):
     """Update entity data (merge, don't overwrite)."""
-    entity = (
-        db.query(Entity)
-        .filter(Entity.id == entity_id, Entity.user_id == user.id)
-        .first()
-    )
+    entity = db.query(Entity).filter(Entity.id == entity_id, Entity.user_id == user.id).first()
     if not entity:
         raise HTTPException(status_code=404, detail="Entity not found")
 
@@ -168,9 +160,7 @@ async def merge_entities(
 ):
     """Merge duplicate entities into one."""
     primary = (
-        db.query(Entity)
-        .filter(Entity.id == body.primary_id, Entity.user_id == user.id)
-        .first()
+        db.query(Entity).filter(Entity.id == body.primary_id, Entity.user_id == user.id).first()
     )
     if not primary:
         raise HTTPException(status_code=404, detail="Primary entity not found")

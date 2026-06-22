@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -22,7 +22,7 @@ from .change_detector import (
     detect_text_change,
     detect_value_change,
 )
-from .state_machine import transition as sm_transition, InvalidTransition
+from .state_machine import transition as sm_transition
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,11 @@ def _transition_monitor_run(
     reason: str | None = None,
 ) -> None:
     """Validate and apply a state transition on a MonitorRun."""
-    current_str = monitor_run.status.value if hasattr(monitor_run.status, 'value') else str(monitor_run.status)
+    current_str = (
+        monitor_run.status.value
+        if hasattr(monitor_run.status, "value")
+        else str(monitor_run.status)
+    )
     current = RunStatus(current_str)
     record = sm_transition(current, target, reason)
     monitor_run.status = target
@@ -46,6 +50,7 @@ def _transition_monitor_run(
 
 
 # ── CRUD ────────────────────────────────────────────────────────────
+
 
 def create_monitor(db: Session, user_id: UUID, data: dict[str, Any]) -> Monitor:
     """Create a new monitor and register its schedule."""
@@ -80,8 +85,15 @@ def create_monitor(db: Session, user_id: UUID, data: dict[str, Any]) -> Monitor:
 
 def update_monitor(db: Session, monitor: Monitor, data: dict[str, Any]) -> Monitor:
     """Update a monitor and re-register its schedule if cron changed."""
-    for field in ("name", "description", "monitor_type", "check_config",
-                  "alert_config", "schedule_cron", "timezone"):
+    for field in (
+        "name",
+        "description",
+        "monitor_type",
+        "check_config",
+        "alert_config",
+        "schedule_cron",
+        "timezone",
+    ):
         if field in data:
             setattr(monitor, field, data[field])
     db.commit()
@@ -104,6 +116,7 @@ def pause_monitor(db: Session, monitor: Monitor) -> Monitor:
     db.refresh(monitor)
 
     from .scheduler import remove_monitor_job
+
     remove_monitor_job(str(monitor.id))
     return monitor
 
@@ -115,11 +128,13 @@ def resume_monitor(db: Session, monitor: Monitor) -> Monitor:
 
     if monitor.schedule_cron:
         from .scheduler import add_monitor_job
+
         add_monitor_job(str(monitor.id), monitor.schedule_cron, monitor.timezone)
     return monitor
 
 
 # ── Check execution ─────────────────────────────────────────────────
+
 
 async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str, Any]:
     """Run a single check for a monitor: fetch data, detect changes, create alerts."""
@@ -141,6 +156,7 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
 
         # Create a MonitorRun record to track this check execution
         import time as time_mod
+
         check_start = time_mod.time()
         monitor_run = MonitorRun(
             monitor_id=monitor.id,
@@ -153,16 +169,22 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
         # Transition: created -> queued -> running
         _transition_monitor_run(monitor_run, RunStatus.queued, "Check queued")
         _transition_monitor_run(monitor_run, RunStatus.running, "Check started")
-        monitor_run.started_at = datetime.now(timezone.utc)
+        monitor_run.started_at = datetime.now(UTC)
         db.flush()
 
         # Emit check start event
-        await event_bus.broadcast(Event(
-            event_type=EventType.monitor_triggered,
-            data={"monitor_id": str(monitor.id), "monitor_name": monitor.name, "action": "check_start"},
-            user_id=str(monitor.user_id),
-            project_id=str(monitor.project_id) if monitor.project_id else None,
-        ))
+        await event_bus.broadcast(
+            Event(
+                event_type=EventType.monitor_triggered,
+                data={
+                    "monitor_id": str(monitor.id),
+                    "monitor_name": monitor.name,
+                    "action": "check_start",
+                },
+                user_id=str(monitor.user_id),
+                project_id=str(monitor.project_id) if monitor.project_id else None,
+            )
+        )
 
         # Fetch new data based on monitor type with timeout handling
         try:
@@ -170,19 +192,19 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
                 _fetch_check_data(monitor),
                 timeout=60.0,  # 60-second hard timeout for the fetch
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             error_msg = f"Check timed out after 60s for monitor {monitor.name}"
             logger.warning(error_msg)
             _transition_monitor_run(monitor_run, RunStatus.failed, error_msg)
             monitor_run.failure_category = FailureCategory.timeout
             monitor_run.failure_message = error_msg
-            monitor_run.completed_at = datetime.now(timezone.utc)
+            monitor_run.completed_at = datetime.now(UTC)
             monitor_run.duration_ms = int((time_mod.time() - check_start) * 1000)
             monitor_run.result = {"error": "timeout"}
 
             # Update monitor error tracking without creating a false-positive alert
             monitor.last_error = error_msg
-            monitor.last_error_at = datetime.now(timezone.utc)
+            monitor.last_error_at = datetime.now(UTC)
             monitor.total_checks = (monitor.total_checks or 0) + 1
             db.commit()
             return {"error": error_msg, "monitor_run_id": str(monitor_run.id)}
@@ -193,13 +215,13 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
             _transition_monitor_run(monitor_run, RunStatus.failed, error_msg)
             monitor_run.failure_category = FailureCategory.transient_connector
             monitor_run.failure_message = error_msg
-            monitor_run.completed_at = datetime.now(timezone.utc)
+            monitor_run.completed_at = datetime.now(UTC)
             monitor_run.duration_ms = int((time_mod.time() - check_start) * 1000)
             monitor_run.result = new_data
 
             # Update monitor error tracking — do NOT create a false-positive alert
             monitor.last_error = error_msg
-            monitor.last_error_at = datetime.now(timezone.utc)
+            monitor.last_error_at = datetime.now(UTC)
             monitor.total_checks = (monitor.total_checks or 0) + 1
             db.commit()
             return {"error": error_msg, "monitor_run_id": str(monitor_run.id)}
@@ -208,7 +230,7 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
         changes = _detect_changes(monitor, new_data)
 
         # Update monitor snapshot
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         monitor.last_check_at = now
         monitor.last_snapshot = new_data
         monitor.total_checks = (monitor.total_checks or 0) + 1
@@ -223,7 +245,8 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
 
             # Alert deduplication: check cooldown using (monitor_id, alert_type)
             cooldown_seconds = (monitor.alert_config or {}).get(
-                "cooldown_seconds", DEFAULT_ALERT_COOLDOWN_SECONDS,
+                "cooldown_seconds",
+                DEFAULT_ALERT_COOLDOWN_SECONDS,
             )
             alert_type = "change_detected"
             is_duplicate = _is_duplicate_alert(db, monitor.id, alert_type, cooldown_seconds)
@@ -231,7 +254,9 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
             if is_duplicate:
                 logger.info(
                     "Skipping duplicate alert for monitor %s (cooldown %ds, type=%s)",
-                    monitor.id, cooldown_seconds, alert_type,
+                    monitor.id,
+                    cooldown_seconds,
+                    alert_type,
                 )
             else:
                 monitor.total_alerts = (monitor.total_alerts or 0) + 1
@@ -253,51 +278,61 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
         db.refresh(monitor)
 
         # Emit lifecycle event for the run
-        await event_bus.broadcast(Event(
-            event_type=EventType.run_state_changed,
-            data={
-                "run_type": "monitor",
-                "run_id": str(monitor_run.id),
-                "from_state": "running",
-                "to_state": "completed",
-                "reason": changes.summary,
-            },
-            user_id=str(monitor.user_id),
-            project_id=str(monitor.project_id) if monitor.project_id else None,
-        ))
-
-        # Emit check done event
-        await event_bus.broadcast(Event(
-            event_type=EventType.monitor_triggered,
-            data={
-                "monitor_id": str(monitor.id),
-                "monitor_name": monitor.name,
-                "action": "check_done",
-                "changed": changes.changed,
-                "summary": changes.summary,
-            },
-            user_id=str(monitor.user_id),
-            project_id=str(monitor.project_id) if monitor.project_id else None,
-        ))
-
-        # If alert was created, emit alert event, signal, and send notifications
-        if alert:
-            await event_bus.broadcast(Event(
-                event_type=EventType.monitor_alert,
+        await event_bus.broadcast(
+            Event(
+                event_type=EventType.run_state_changed,
                 data={
-                    "alert_id": str(alert.id),
-                    "monitor_name": monitor.name,
-                    "title": alert.title,
-                    "severity": str(alert.severity.value) if hasattr(alert.severity, 'value') else str(alert.severity),
+                    "run_type": "monitor",
+                    "run_id": str(monitor_run.id),
+                    "from_state": "running",
+                    "to_state": "completed",
+                    "reason": changes.summary,
                 },
                 user_id=str(monitor.user_id),
                 project_id=str(monitor.project_id) if monitor.project_id else None,
-            ))
+            )
+        )
+
+        # Emit check done event
+        await event_bus.broadcast(
+            Event(
+                event_type=EventType.monitor_triggered,
+                data={
+                    "monitor_id": str(monitor.id),
+                    "monitor_name": monitor.name,
+                    "action": "check_done",
+                    "changed": changes.changed,
+                    "summary": changes.summary,
+                },
+                user_id=str(monitor.user_id),
+                project_id=str(monitor.project_id) if monitor.project_id else None,
+            )
+        )
+
+        # If alert was created, emit alert event, signal, and send notifications
+        if alert:
+            await event_bus.broadcast(
+                Event(
+                    event_type=EventType.monitor_alert,
+                    data={
+                        "alert_id": str(alert.id),
+                        "monitor_name": monitor.name,
+                        "title": alert.title,
+                        "severity": (
+                            str(alert.severity.value)
+                            if hasattr(alert.severity, "value")
+                            else str(alert.severity)
+                        ),
+                    },
+                    user_id=str(monitor.user_id),
+                    project_id=str(monitor.project_id) if monitor.project_id else None,
+                )
+            )
 
             # Emit signal for the intelligence pipeline
             try:
-                from .intelligence.signal_service import SignalService
                 from ..models.signal import SignalSourceType, SignalType
+                from .intelligence.signal_service import SignalService
 
                 if monitor.project_id:
                     signal_svc = SignalService(db)
@@ -338,14 +373,16 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
                 monitor_run.status = RunStatus.failed
                 monitor_run.failure_category = FailureCategory.internal
                 monitor_run.failure_message = str(exc)
-                monitor_run.completed_at = datetime.now(timezone.utc)
+                monitor_run.completed_at = datetime.now(UTC)
                 transitions = list(monitor_run.state_transitions or [])
-                transitions.append({
-                    "from": "running",
-                    "to": "failed",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "reason": str(exc),
-                })
+                transitions.append(
+                    {
+                        "from": "running",
+                        "to": "failed",
+                        "timestamp": datetime.now(UTC).isoformat(),
+                        "reason": str(exc),
+                    }
+                )
                 monitor_run.state_transitions = transitions
                 db.commit()
         except Exception:
@@ -358,6 +395,7 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
 
 # ── Data fetching per monitor type ─────────────────────────────────
 
+
 async def _fetch_check_data(monitor: Monitor) -> dict[str, Any]:
     """Fetch fresh data based on monitor type and check_config."""
     config = monitor.check_config or {}
@@ -365,14 +403,11 @@ async def _fetch_check_data(monitor: Monitor) -> dict[str, Any]:
 
     if monitor_type in ("web_content", "competitor_tracker"):
         return await _fetch_web_content(config)
-    elif monitor_type == "api_data":
+    if monitor_type == "api_data":
         return await _fetch_api_data(config)
-    elif monitor_type in ("price_tracker", "listing_watcher"):
+    if monitor_type in ("price_tracker", "listing_watcher") or monitor_type == "custom":
         return await _fetch_web_content(config)
-    elif monitor_type == "custom":
-        return await _fetch_web_content(config)
-    else:
-        return {"error": f"Unknown monitor type: {monitor_type}"}
+    return {"error": f"Unknown monitor type: {monitor_type}"}
 
 
 async def _fetch_web_content(config: dict) -> dict[str, Any]:
@@ -416,6 +451,7 @@ async def _fetch_api_data(config: dict) -> dict[str, Any]:
 
 # ── Change detection ────────────────────────────────────────────────
 
+
 def _detect_changes(monitor: Monitor, new_data: dict[str, Any]) -> ChangeResult:
     """Compare new_data to monitor's last_snapshot."""
     old = monitor.last_snapshot
@@ -435,7 +471,7 @@ def _detect_changes(monitor: Monitor, new_data: dict[str, Any]) -> ChangeResult:
             old.get("content", ""),
             new_data.get("content", ""),
         )
-    elif monitor_type == "api_data":
+    if monitor_type == "api_data":
         # Compare JSON data
         old_data = old.get("data")
         new_d = new_data.get("data")
@@ -446,19 +482,18 @@ def _detect_changes(monitor: Monitor, new_data: dict[str, Any]) -> ChangeResult:
                 return new_items
             return detect_removed_items(old_data, new_d, key)
         return detect_text_change(str(old_data), str(new_d))
-    elif monitor_type == "price_tracker":
+    if monitor_type == "price_tracker":
         field = config.get("value_field", "price")
         threshold = config.get("threshold", 0)
         old_val = _extract_value(old, field)
         new_val = _extract_value(new_data, field)
         return detect_value_change(old_val, new_val, threshold)
-    elif monitor_type == "listing_watcher":
+    if monitor_type == "listing_watcher":
         key = config.get("list_key", "id")
         old_list = old.get("data", []) if isinstance(old.get("data"), list) else []
         new_list = new_data.get("data", []) if isinstance(new_data.get("data"), list) else []
         return detect_new_items(old_list, new_list, key)
-    else:
-        return detect_text_change(str(old), str(new_data))
+    return detect_text_change(str(old), str(new_data))
 
 
 def _extract_value(data: dict, field: str) -> float | None:
@@ -478,6 +513,7 @@ def _extract_value(data: dict, field: str) -> float | None:
 
 # ── Alert deduplication ────────────────────────────────────────────
 
+
 def _is_duplicate_alert(
     db: Session,
     monitor_id: Any,
@@ -492,7 +528,7 @@ def _is_duplicate_alert(
     if cooldown_seconds <= 0:
         return False
 
-    cutoff = datetime.now(timezone.utc) - timedelta(seconds=cooldown_seconds)
+    cutoff = datetime.now(UTC) - timedelta(seconds=cooldown_seconds)
     existing = (
         db.query(Alert)
         .filter(
@@ -506,6 +542,7 @@ def _is_duplicate_alert(
 
 
 # ── Alert creation ──────────────────────────────────────────────────
+
 
 def _create_alert(db: Session, monitor: Monitor, changes: ChangeResult) -> Alert:
     """Create an Alert record from a detected change."""
@@ -533,6 +570,7 @@ def _create_alert(db: Session, monitor: Monitor, changes: ChangeResult) -> Alert
 
 
 # ── Alert notification delivery ─────────────────────────────────────
+
 
 async def _send_alert_notifications(alert: Alert, monitor: Monitor) -> None:
     """Deliver alert via configured channels (email + dashboard)."""

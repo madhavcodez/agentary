@@ -1,4 +1,5 @@
 """Celery application for background task execution."""
+
 from __future__ import annotations
 
 from celery import Celery
@@ -60,15 +61,17 @@ celery_app.conf.update(
 )
 
 # Auto-discover tasks in all task modules
-celery_app.autodiscover_tasks([
-    "app.tasks.crew_tasks",
-    "app.tasks.mission_runs",
-    "app.tasks.research_tasks",
-    "app.tasks.voice_tasks",
-    "app.tasks.monitor_tasks",
-    "app.tasks.report_tasks",
-    "app.tasks.signal_tasks",
-    "app.tasks.migration_tasks",
-    "app.tasks.insight_tasks",
-    "app.tasks.action_tasks",
-])
+celery_app.autodiscover_tasks(
+    [
+        "app.tasks.crew_tasks",
+        "app.tasks.mission_runs",
+        "app.tasks.research_tasks",
+        "app.tasks.voice_tasks",
+        "app.tasks.monitor_tasks",
+        "app.tasks.report_tasks",
+        "app.tasks.signal_tasks",
+        "app.tasks.migration_tasks",
+        "app.tasks.insight_tasks",
+        "app.tasks.action_tasks",
+    ]
+)

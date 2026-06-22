@@ -1,4 +1,5 @@
 """Service layer for project onboarding (question generation + configure-and-start)."""
+
 from __future__ import annotations
 
 import json
@@ -10,8 +11,8 @@ from sqlalchemy.orm import Session
 from ..config import settings
 from ..models.project import Project
 from ..prompts.onboarding import (
-    build_questions_prompt,
     QUESTIONS_SCHEMA_HINT,
+    build_questions_prompt,
     get_fallback_questions,
 )
 
@@ -22,6 +23,7 @@ async def _redis_get(key: str) -> dict | None:
     """Non-fatal Redis cache read. Returns None on miss or error."""
     try:
         import redis.asyncio as aioredis
+
         r = aioredis.from_url(settings.redis_url, decode_responses=True)
         try:
             raw = await r.get(key)
@@ -37,6 +39,7 @@ async def _redis_set(key: str, value: Any, ttl: int = 3600) -> None:
     """Non-fatal Redis cache write."""
     try:
         import redis.asyncio as aioredis
+
         r = aioredis.from_url(settings.redis_url, decode_responses=True)
         try:
             await r.setex(key, ttl, json.dumps(value, default=str))
@@ -78,7 +81,9 @@ async def generate_onboarding_questions(
     questions_raw = result.get("questions", [])
     if not isinstance(questions_raw, list) or len(questions_raw) == 0:
         fallback = get_fallback_questions(project_type)
-        logger.info("Gemini returned empty questions, using fallback for project_type=%s", project_type)
+        logger.info(
+            "Gemini returned empty questions, using fallback for project_type=%s", project_type
+        )
         return {"questions": fallback}
 
     questions = [
@@ -108,8 +113,8 @@ async def synthesize_domain_context(
 
     Falls back to raw Q&A text if Gemini fails.
     """
+    from ..prompts.onboarding import CONTEXT_SYSTEM_INSTRUCTION, build_context_prompt
     from ..services.gemini import generate_text
-    from ..prompts.onboarding import build_context_prompt, CONTEXT_SYSTEM_INSTRUCTION
 
     prompt = build_context_prompt(project_title=project_title, answers=answers)
     try:

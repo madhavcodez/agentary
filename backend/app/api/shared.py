@@ -1,4 +1,5 @@
 """Public shared report endpoint — NO AUTH REQUIRED."""
+
 from __future__ import annotations
 
 import logging

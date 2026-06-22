@@ -10,11 +10,13 @@ Returns a ``SectionDraft`` dataclass that the caller (typically
 ``report_synthesis.synthesize_report_from_outline``) persists alongside
 ``SectionCitation`` rows.
 """
+
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Sequence
+from typing import Any
 
 from ...prompts.storm import (
     SECTION_SCHEMA_HINT,
@@ -65,7 +67,6 @@ async def synthesize_section(
     decides whether to skip or flag for refinement. Raises
     :class:`StormBudgetExceeded` via ``budget.inc("pro")``.
     """
-    from ..gemini import generate_structured
 
     if not bound_findings:
         logger.info(
@@ -160,9 +161,7 @@ async def _synthesize_once(
             # generate_structured may not yet accept a model kwarg in older
             # revisions — fall back to default model (Flash). The call still
             # counts against the pro budget because the intent was Pro.
-            result = await generate_structured(
-                prompt, schema_hint=SECTION_SCHEMA_HINT
-            )
+            result = await generate_structured(prompt, schema_hint=SECTION_SCHEMA_HINT)
         except Exception as exc:
             logger.warning(
                 "section_synthesizer: generate_structured failed on attempt %d: %s",
@@ -183,10 +182,9 @@ async def _synthesize_once(
                 len(rejected),
             )
             prompt = (
-                prompt
-                + "\n\nCRITICAL: Your previous attempt cited finding_ids that do "
+                prompt + "\n\nCRITICAL: Your previous attempt cited finding_ids that do "
                 "not appear in the bound_findings list. You MUST use exact ids "
-                "from the <finding id=\"...\"> attributes above. No other ids are valid."
+                'from the <finding id="..."> attributes above. No other ids are valid.'
             )
             continue
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
@@ -76,7 +76,7 @@ def acknowledge_alert(
         raise HTTPException(404, "Alert not found")
 
     alert.acknowledged = True
-    alert.acknowledged_at = datetime.now(timezone.utc)
+    alert.acknowledged_at = datetime.now(UTC)
     alert.acknowledged_by = user.id
     db.commit()
     db.refresh(alert)

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -49,7 +49,7 @@ class ObservationService:
             source_type=source_type,
             source_url=source_url,
             source_name=source_name,
-            observed_at=observed_at or datetime.now(timezone.utc),
+            observed_at=observed_at or datetime.now(UTC),
             confidence=confidence,
         )
         self.db.add(observation)
@@ -81,7 +81,9 @@ class ObservationService:
             .all()
         )
 
-    def create_from_finding(self, finding: Finding, project_id: UUID | None = None) -> Observation | None:
+    def create_from_finding(
+        self, finding: Finding, project_id: UUID | None = None
+    ) -> Observation | None:
         """Convert a Finding into an Observation, linking them.
 
         Idempotent: if the finding already has an observation_id, returns None.
@@ -123,8 +125,10 @@ class ObservationService:
             subject=finding.title,
             content=finding.content,
             structured_value=finding.structured_data or {},
-            source_type=finding.source_type.value if hasattr(finding.source_type, "value") and finding.source_type else (
-                str(finding.source_type) if finding.source_type else None
+            source_type=(
+                finding.source_type.value
+                if hasattr(finding.source_type, "value") and finding.source_type
+                else (str(finding.source_type) if finding.source_type else None)
             ),
             source_url=finding.source_url,
             source_name=finding.source_name,

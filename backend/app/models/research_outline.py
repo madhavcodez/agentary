@@ -5,6 +5,7 @@ question matrix, the section skeleton, and a metadata bag for
 budget/telemetry. Bind readers: ``section_synthesizer`` and
 ``evidence_binder`` read ``sections`` and ``question_matrix``.
 """
+
 from __future__ import annotations
 
 import uuid

@@ -5,11 +5,12 @@ All three endpoints validate ``X-Twilio-Signature`` via
 signature are rejected with 403 before any DB access. The parsed form body
 is returned by the verifier so we don't pay the cost of parsing twice.
 """
+
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
-from typing import Mapping
+from collections.abc import Mapping
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
@@ -24,11 +25,7 @@ router = APIRouter(tags=["voice-webhooks"])
 
 
 def _lookup_call_record(db: Session, call_sid: str) -> CallRecord | None:
-    return (
-        db.query(CallRecord)
-        .filter(CallRecord.provider_call_id == call_sid)
-        .first()
-    )
+    return db.query(CallRecord).filter(CallRecord.provider_call_id == call_sid).first()
 
 
 @router.post("/webhooks/twilio/voice-status")
@@ -72,11 +69,11 @@ async def twilio_voice_status(
         record.status = new_status
 
     if call_status == "in-progress":
-        record.started_at = record.started_at or datetime.now(timezone.utc)
+        record.started_at = record.started_at or datetime.now(UTC)
 
     terminal_statuses = ("completed", "busy", "no-answer", "failed", "canceled")
     if call_status in terminal_statuses:
-        record.ended_at = datetime.now(timezone.utc)
+        record.ended_at = datetime.now(UTC)
         if call_duration:
             try:
                 record.duration_seconds = int(call_duration)
@@ -89,9 +86,7 @@ async def twilio_voice_status(
             try:
                 await voice_service.process_completed_call(record.id, db)
             except Exception:
-                logger.exception(
-                    "Post-processing failed for call_record %s", record.id
-                )
+                logger.exception("Post-processing failed for call_record %s", record.id)
 
     db.add(record)
     db.commit()
@@ -159,8 +154,6 @@ async def twilio_voice_transcription(
     try:
         await voice_service.process_completed_call(record.id, db)
     except Exception:
-        logger.exception(
-            "Post-processing failed for call_record %s", record.id
-        )
+        logger.exception("Post-processing failed for call_record %s", record.id)
 
     return {"status": "ok"}

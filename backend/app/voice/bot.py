@@ -26,11 +26,11 @@ If someone asks about topics you don't know, offer to take a message."""
 
 async def create_bot():
     try:
-        from pipecat.transports.services.small_webrtc import SmallWebRTCTransport
-        from pipecat.services.google import GoogleLLMService
-        from pipecat.vad.silero import SileroVADAnalyzer
         from pipecat.pipeline.pipeline import Pipeline
         from pipecat.pipeline.task import PipelineParams, PipelineTask
+        from pipecat.services.google import GoogleLLMService
+        from pipecat.transports.services.small_webrtc import SmallWebRTCTransport
+        from pipecat.vad.silero import SileroVADAnalyzer
 
         from .config import voice_settings
         from .tools.registry import register_all_tools
@@ -46,12 +46,14 @@ async def create_bot():
 
         register_all_tools(llm)
 
-        pipeline = Pipeline([
-            transport.input(),
-            SileroVADAnalyzer(),
-            llm,
-            transport.output(),
-        ])
+        pipeline = Pipeline(
+            [
+                transport.input(),
+                SileroVADAnalyzer(),
+                llm,
+                transport.output(),
+            ]
+        )
 
         task = PipelineTask(pipeline, PipelineParams(allow_interruptions=True))
         return task, transport

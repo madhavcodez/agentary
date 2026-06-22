@@ -2,13 +2,13 @@
 
 import pytest
 
+from app.models.enums import RunStatus
 from app.services.state_machine import (
     InvalidTransition,
     can_transition,
     is_terminal,
     transition,
 )
-from app.models.enums import RunStatus
 
 
 class TestTransition:
@@ -166,9 +166,7 @@ class TestTransitionMetadata:
     """Tests for transition record metadata."""
 
     def test_transition_includes_reason(self) -> None:
-        result = transition(
-            RunStatus.running, RunStatus.failed, reason="timeout exceeded"
-        )
+        result = transition(RunStatus.running, RunStatus.failed, reason="timeout exceeded")
         assert result["reason"] == "timeout exceeded"
 
     def test_transition_reason_none_by_default(self) -> None:
@@ -201,5 +199,5 @@ class TestInvalidTransitionError:
         assert exc_info.value.target == RunStatus.running
 
     def test_exception_message_contains_states(self) -> None:
-        with pytest.raises(InvalidTransition, match="completed.*running"):
+        with pytest.raises(InvalidTransition, match=r"completed.*running"):
             transition(RunStatus.completed, RunStatus.running)

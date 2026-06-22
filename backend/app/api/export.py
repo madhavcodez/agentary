@@ -1,10 +1,11 @@
 """Data export API routes — CSV, JSON, Excel for findings and entities."""
+
 from __future__ import annotations
 
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
@@ -20,16 +21,21 @@ def _check_mission_access(mission_id: str, user: User, db: Session):
     """Verify user owns the mission."""
     from ..models.mission import Mission
 
-    mission = db.query(Mission).filter(
-        Mission.id == UUID(mission_id),
-        Mission.user_id == user.id,
-    ).first()
+    mission = (
+        db.query(Mission)
+        .filter(
+            Mission.id == UUID(mission_id),
+            Mission.user_id == user.id,
+        )
+        .first()
+    )
     if not mission:
         raise HTTPException(404, "Mission not found")
     return mission
 
 
 # ── Findings export ──────────────────────────────────────────────────
+
 
 @router.get("/missions/{mission_id}/findings/csv")
 def export_findings_csv(
@@ -152,6 +158,7 @@ def export_structured_data(
 
 # ── Entity collection export ────────────────────────────────────────
 
+
 @router.get("/entity-collections/{collection_id}/csv")
 def export_entity_collection_csv(
     collection_id: str,
@@ -160,10 +167,14 @@ def export_entity_collection_csv(
 ):
     from ..models.entity_collection import EntityCollection
 
-    collection = db.query(EntityCollection).filter(
-        EntityCollection.id == UUID(collection_id),
-        EntityCollection.user_id == user.id,
-    ).first()
+    collection = (
+        db.query(EntityCollection)
+        .filter(
+            EntityCollection.id == UUID(collection_id),
+            EntityCollection.user_id == user.id,
+        )
+        .first()
+    )
     if not collection:
         raise HTTPException(404, "Entity collection not found")
 
@@ -174,7 +185,5 @@ def export_entity_collection_csv(
     return Response(
         content=csv_bytes,
         media_type="text/csv",
-        headers={
-            "Content-Disposition": f'attachment; filename="entities_{collection_id[:8]}.csv"'
-        },
+        headers={"Content-Disposition": f'attachment; filename="entities_{collection_id[:8]}.csv"'},
     )

@@ -1,9 +1,11 @@
 """Action execution Celery tasks."""
+
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ..celery_app import celery_app
 from ..database import SessionLocal
@@ -16,12 +18,12 @@ def dispatch_action(self, action_request_id: str) -> dict:
     """Execute an approved action request."""
     db = SessionLocal()
     try:
-        from ..models.action_request import ActionRequest, ActionRequestStatus
         from ..models.action_execution import (
             ActionExecution,
             ExecutionStatus,
             ExecutorType,
         )
+        from ..models.action_request import ActionRequest, ActionRequestStatus
         from ..services.actions.handlers import get_handler, register_all_handlers
 
         register_all_handlers()
@@ -46,7 +48,7 @@ def dispatch_action(self, action_request_id: str) -> dict:
             {
                 "from": "approved",
                 "to": "executing",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "reason": "dispatched to worker",
             }
         )
@@ -70,16 +72,14 @@ def dispatch_action(self, action_request_id: str) -> dict:
         handler = get_handler(action_type)
         if not handler:
             execution.status = ExecutionStatus.failed
-            execution.error = {
-                "message": f"No handler for action type: {action_type}"
-            }
-            execution.completed_at = datetime.now(timezone.utc)
+            execution.error = {"message": f"No handler for action type: {action_type}"}
+            execution.completed_at = datetime.now(UTC)
             action.status = ActionRequestStatus.failed
             transitions.append(
                 {
                     "from": "executing",
                     "to": "failed",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "reason": f"no handler for {action_type}",
                 }
             )
@@ -94,14 +94,14 @@ def dispatch_action(self, action_request_id: str) -> dict:
             execution.status = ExecutionStatus.completed
             execution.result = result.get("result", {})
             execution.side_effects = result.get("side_effects", [])
-            execution.completed_at = datetime.now(timezone.utc)
+            execution.completed_at = datetime.now(UTC)
 
             action.status = ActionRequestStatus.completed
             transitions.append(
                 {
                     "from": "executing",
                     "to": "completed",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "reason": "handler completed successfully",
                 }
             )
@@ -125,14 +125,14 @@ def dispatch_action(self, action_request_id: str) -> dict:
                 "message": str(handler_error),
                 "type": type(handler_error).__name__,
             }
-            execution.completed_at = datetime.now(timezone.utc)
+            execution.completed_at = datetime.now(UTC)
 
             action.status = ActionRequestStatus.failed
             transitions.append(
                 {
                     "from": "executing",
                     "to": "failed",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "reason": str(handler_error),
                 }
             )
@@ -140,16 +140,14 @@ def dispatch_action(self, action_request_id: str) -> dict:
 
             db.commit()
 
-            _record_outcome(
-                db, action, execution, "failure", {"error": str(handler_error)}
-            )
+            _record_outcome(db, action, execution, "failure", {"error": str(handler_error)})
 
             return {"status": "failed", "error": str(handler_error)}
 
     except Exception as e:
         db.rollback()
         logger.error("dispatch_action failed: %s", e)
-        raise self.retry(exc=e, countdown=30)
+        raise self.retry(exc=e, countdown=30) from e
     finally:
         db.close()
 
@@ -164,8 +162,8 @@ def _record_outcome(
     """Record action outcome and create feedback signal."""
     try:
         from ..models.action_outcome import ActionOutcome, OutcomeType
-        from ..services.intelligence.signal_service import SignalService
         from ..models.signal import SignalSourceType, SignalType
+        from ..services.intelligence.signal_service import SignalService
 
         action_type_val = (
             action.action_type.value
@@ -190,14 +188,10 @@ def _record_outcome(
             user_id=action.user_id,
             source_type=SignalSourceType.action_outcome,
             signal_type=(
-                SignalType.data_extracted
-                if outcome_type == "success"
-                else SignalType.user_flagged
+                SignalType.data_extracted if outcome_type == "success" else SignalType.user_flagged
             ),
             title=f"Action outcome: {action.title} ({outcome_type})",
-            content=(
-                f"Action type: {action_type_val}. Result: {outcome_type}"
-            ),
+            content=(f"Action type: {action_type_val}. Result: {outcome_type}"),
             structured_data=result.get("result", {}),
             source_id=action.id,
             entity_id=action.entity_id,
@@ -208,11 +202,7 @@ def _record_outcome(
         if action.recommendation_id and outcome_type == "success":
             from ..models.recommendation import Recommendation, RecommendationStatus
 
-            rec = (
-                db.query(Recommendation)
-                .filter_by(id=action.recommendation_id)
-                .first()
-            )
+            rec = db.query(Recommendation).filter_by(id=action.recommendation_id).first()
             if rec:
                 rec.status = RecommendationStatus.acted_on
 
@@ -222,14 +212,10 @@ def _record_outcome(
 
             entity = db.query(Entity).filter_by(id=action.entity_id).first()
             if entity and entity.confidence_score is not None:
-                entity.confidence_score = min(
-                    1.0, entity.confidence_score + 0.05
-                )
+                entity.confidence_score = min(1.0, entity.confidence_score + 0.05)
 
         db.commit()
     except Exception as e:
         logger.error("Failed to record outcome for action %s: %s", action.id, e)
-        try:
+        with contextlib.suppress(Exception):
             db.rollback()
-        except Exception:
-            pass

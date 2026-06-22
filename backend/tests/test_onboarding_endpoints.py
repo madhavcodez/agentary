@@ -7,13 +7,10 @@
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 from app.models.finding import Finding, FindingType, SourceType
 from app.models.mission import Mission, MissionStatus
 from app.models.project import Project, ProjectStatus
 from app.models.user import User
-
 
 # ── Helpers ────────────────────────────────────────────────────────────
 

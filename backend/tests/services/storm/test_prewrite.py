@@ -4,6 +4,7 @@ Live Gemini calls are gated behind the ``AGENTARY_STORM_LIVE_TEST=1`` env
 var. By default these tests mock ``generate_structured`` so they run
 offline and fast.
 """
+
 from __future__ import annotations
 
 import os
@@ -54,15 +55,18 @@ async def test_perspective_miner_returns_normalised_shape(fake_mission, budget):
             },
         ]
     }
-    with patch("app.services.gemini.generate_structured", new=AsyncMock(return_value=fake_response)):
-        # Also patch the diversity-check embedding path so the test doesn't hit real Gemini.
-        with patch(
+    # Also patch the diversity-check embedding path so the test doesn't hit real Gemini.
+    with (
+        patch(
+            "app.services.gemini.generate_structured",
+            new=AsyncMock(return_value=fake_response),
+        ),
+        patch(
             "app.services.storm.perspective_miner._has_collapsed_perspectives",
             new=AsyncMock(return_value=False),
-        ):
-            result = await mine_perspectives(
-                mission=fake_mission, budget=budget, max_perspectives=4
-            )
+        ),
+    ):
+        result = await mine_perspectives(mission=fake_mission, budget=budget, max_perspectives=4)
 
     assert len(result) == 2
     assert result[0]["role"] == "skeptical homeowner"
@@ -79,7 +83,9 @@ async def test_question_generator_clamps_and_validates(fake_mission, budget):
             {"text": "Bad priority", "priority": "not-a-number", "evidence_type": "weird"},
         ]
     }
-    with patch("app.services.gemini.generate_structured", new=AsyncMock(return_value=fake_response)):
+    with patch(
+        "app.services.gemini.generate_structured", new=AsyncMock(return_value=fake_response)
+    ):
         result = await generate_questions(
             mission=fake_mission,
             perspective={"role": "skeptical homeowner", "focus": "cost"},
@@ -97,8 +103,20 @@ async def test_question_generator_clamps_and_validates(fake_mission, budget):
 @pytest.mark.asyncio
 async def test_outline_planner_drops_unknown_question_ids(fake_mission, budget):
     question_matrix = [
-        {"id": 0, "perspective_index": 0, "text": "cost?", "priority": 0.9, "evidence_type": "fact"},
-        {"id": 1, "perspective_index": 1, "text": "benefits?", "priority": 0.5, "evidence_type": "fact"},
+        {
+            "id": 0,
+            "perspective_index": 0,
+            "text": "cost?",
+            "priority": 0.9,
+            "evidence_type": "fact",
+        },
+        {
+            "id": 1,
+            "perspective_index": 1,
+            "text": "benefits?",
+            "priority": 0.5,
+            "evidence_type": "fact",
+        },
     ]
     fake_response = {
         "title": "Solar lease analysis",
@@ -111,7 +129,9 @@ async def test_outline_planner_drops_unknown_question_ids(fake_mission, budget):
             }
         ],
     }
-    with patch("app.services.gemini.generate_structured", new=AsyncMock(return_value=fake_response)):
+    with patch(
+        "app.services.gemini.generate_structured", new=AsyncMock(return_value=fake_response)
+    ):
         plan = await plan_outline(
             mission=fake_mission,
             perspectives=[{"role": "X", "focus": "y"}] * 2,
@@ -148,15 +168,13 @@ async def test_budget_raises_when_cap_hit(fake_mission):
 @pytest.mark.asyncio
 async def test_live_end_to_end_prewrite(fake_mission):
     """Real Gemini end-to-end sanity — expects valid API key in settings."""
+    from app.services.storm.outline_planner import plan_outline
     from app.services.storm.perspective_miner import mine_perspectives
     from app.services.storm.question_generator import generate_questions
-    from app.services.storm.outline_planner import plan_outline
 
     budget = StormBudget(mission_id=str(fake_mission.id))
 
-    perspectives = await mine_perspectives(
-        mission=fake_mission, budget=budget, max_perspectives=3
-    )
+    perspectives = await mine_perspectives(mission=fake_mission, budget=budget, max_perspectives=3)
     assert len(perspectives) >= 2
 
     question_matrix: list[dict] = []
@@ -166,13 +184,15 @@ async def test_live_end_to_end_prewrite(fake_mission):
             mission=fake_mission, perspective=p, budget=budget, max_questions=2
         )
         for q in qs:
-            question_matrix.append({
-                "id": qid,
-                "perspective_index": p_idx,
-                "text": q["text"],
-                "priority": q["priority"],
-                "evidence_type": q["evidence_type"],
-            })
+            question_matrix.append(
+                {
+                    "id": qid,
+                    "perspective_index": p_idx,
+                    "text": q["text"],
+                    "priority": q["priority"],
+                    "evidence_type": q["evidence_type"],
+                }
+            )
             qid += 1
 
     assert len(question_matrix) >= 2

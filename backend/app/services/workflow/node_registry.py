@@ -21,7 +21,11 @@ NODE_TYPES: dict[str, dict[str, Any]] = {
         "label": "Schedule Trigger",
         "description": "Run on a cron schedule",
         "config_schema": {
-            "cron": {"type": "string", "required": True, "description": "Cron expression (e.g. '0 9 * * 1-5')"},
+            "cron": {
+                "type": "string",
+                "required": True,
+                "description": "Cron expression (e.g. '0 9 * * 1-5')",
+            },
             "timezone": {"type": "string", "required": False, "default": "America/Los_Angeles"},
         },
         "inputs": [],
@@ -32,21 +36,33 @@ NODE_TYPES: dict[str, dict[str, Any]] = {
         "label": "Webhook Trigger",
         "description": "Trigger from external webhook",
         "config_schema": {
-            "secret": {"type": "string", "required": False, "description": "Webhook secret for validation"},
+            "secret": {
+                "type": "string",
+                "required": False,
+                "description": "Webhook secret for validation",
+            },
         },
         "inputs": [],
         "outputs": ["output"],
     },
-
     # ── Research Nodes ───────────────────────────────────────────────
     "web_search": {
         "category": "research",
         "label": "Web Search",
         "description": "Search the web for information",
         "config_schema": {
-            "query_template": {"type": "string", "required": True, "description": "Search query (supports {{variables}})"},
+            "query_template": {
+                "type": "string",
+                "required": True,
+                "description": "Search query (supports {{variables}})",
+            },
             "num_results": {"type": "integer", "required": False, "default": 10},
-            "search_engine": {"type": "string", "required": False, "default": "gemini", "options": ["gemini", "exa"]},
+            "search_engine": {
+                "type": "string",
+                "required": False,
+                "default": "gemini",
+                "options": ["gemini", "exa"],
+            },
         },
         "inputs": ["input"],
         "outputs": ["output"],
@@ -56,7 +72,11 @@ NODE_TYPES: dict[str, dict[str, Any]] = {
         "label": "API Query",
         "description": "Query an external API",
         "config_schema": {
-            "source_type": {"type": "string", "required": True, "description": "API source identifier"},
+            "source_type": {
+                "type": "string",
+                "required": True,
+                "description": "API source identifier",
+            },
             "endpoint": {"type": "string", "required": True},
             "params_template": {"type": "object", "required": False, "default": {}},
         },
@@ -68,7 +88,11 @@ NODE_TYPES: dict[str, dict[str, Any]] = {
         "label": "Web Scrape",
         "description": "Scrape data from web pages",
         "config_schema": {
-            "url_template": {"type": "string", "required": True, "description": "URL to scrape (supports {{variables}})"},
+            "url_template": {
+                "type": "string",
+                "required": True,
+                "description": "URL to scrape (supports {{variables}})",
+            },
             "selectors": {"type": "object", "required": False, "default": {}},
             "extract_fields": {"type": "array", "required": False, "default": []},
         },
@@ -80,7 +104,12 @@ NODE_TYPES: dict[str, dict[str, Any]] = {
         "label": "Voice Call",
         "description": "Make outbound voice calls to gather information",
         "config_schema": {
-            "target_source": {"type": "string", "required": False, "default": "input", "options": ["input", "google_places"]},
+            "target_source": {
+                "type": "string",
+                "required": False,
+                "default": "input",
+                "options": ["input", "google_places"],
+            },
             "extraction_template_id": {"type": "string", "required": False},
             "questions": {"type": "array", "required": False, "default": []},
         },
@@ -98,7 +127,6 @@ NODE_TYPES: dict[str, dict[str, Any]] = {
         "inputs": ["input"],
         "outputs": ["output"],
     },
-
     # ── Data Nodes ───────────────────────────────────────────────────
     "filter": {
         "category": "data",
@@ -137,7 +165,12 @@ NODE_TYPES: dict[str, dict[str, Any]] = {
         "label": "Merge",
         "description": "Merge multiple data sources",
         "config_schema": {
-            "strategy": {"type": "string", "required": False, "default": "concat", "options": ["concat", "join", "zip"]},
+            "strategy": {
+                "type": "string",
+                "required": False,
+                "default": "concat",
+                "options": ["concat", "join", "zip"],
+            },
             "key_field": {"type": "string", "required": False},
         },
         "inputs": ["input_a", "input_b"],
@@ -149,7 +182,12 @@ NODE_TYPES: dict[str, dict[str, Any]] = {
         "description": "Remove duplicate records",
         "config_schema": {
             "match_fields": {"type": "array", "required": True},
-            "strategy": {"type": "string", "required": False, "default": "exact", "options": ["exact", "fuzzy"]},
+            "strategy": {
+                "type": "string",
+                "required": False,
+                "default": "exact",
+                "options": ["exact", "fuzzy"],
+            },
         },
         "inputs": ["input"],
         "outputs": ["output"],
@@ -160,7 +198,12 @@ NODE_TYPES: dict[str, dict[str, Any]] = {
         "description": "Sort data by field",
         "config_schema": {
             "field": {"type": "string", "required": True},
-            "direction": {"type": "string", "required": False, "default": "asc", "options": ["asc", "desc"]},
+            "direction": {
+                "type": "string",
+                "required": False,
+                "default": "asc",
+                "options": ["asc", "desc"],
+            },
         },
         "inputs": ["input"],
         "outputs": ["output"],
@@ -183,15 +226,23 @@ NODE_TYPES: dict[str, dict[str, Any]] = {
         "inputs": ["input"],
         "outputs": ["output"],
     },
-
     # ── Analysis Nodes ───────────────────────────────────────────────
     "ai_analyze": {
         "category": "analysis",
         "label": "AI Analysis",
         "description": "Analyze data with AI",
         "config_schema": {
-            "prompt_template": {"type": "string", "required": True, "description": "Analysis prompt (supports {{variables}})"},
-            "output_format": {"type": "string", "required": False, "default": "json", "options": ["json", "text"]},
+            "prompt_template": {
+                "type": "string",
+                "required": True,
+                "description": "Analysis prompt (supports {{variables}})",
+            },
+            "output_format": {
+                "type": "string",
+                "required": False,
+                "default": "json",
+                "options": ["json", "text"],
+            },
         },
         "inputs": ["input"],
         "outputs": ["output"],
@@ -201,7 +252,12 @@ NODE_TYPES: dict[str, dict[str, Any]] = {
         "label": "Compare",
         "description": "Compare data sets",
         "config_schema": {
-            "comparison_type": {"type": "string", "required": False, "default": "side_by_side", "options": ["side_by_side", "diff", "ranking"]},
+            "comparison_type": {
+                "type": "string",
+                "required": False,
+                "default": "side_by_side",
+                "options": ["side_by_side", "diff", "ranking"],
+            },
             "metrics": {"type": "array", "required": False, "default": []},
         },
         "inputs": ["input_a", "input_b"],
@@ -218,7 +274,6 @@ NODE_TYPES: dict[str, dict[str, Any]] = {
         "inputs": ["input"],
         "outputs": ["output"],
     },
-
     # ── Output Nodes ─────────────────────────────────────────────────
     "generate_report": {
         "category": "output",
@@ -236,7 +291,11 @@ NODE_TYPES: dict[str, dict[str, Any]] = {
         "label": "Generate Chart",
         "description": "Create a data visualization",
         "config_schema": {
-            "chart_type": {"type": "string", "required": True, "options": ["bar", "line", "pie", "scatter"]},
+            "chart_type": {
+                "type": "string",
+                "required": True,
+                "options": ["bar", "line", "pie", "scatter"],
+            },
             "x_field": {"type": "string", "required": True},
             "y_field": {"type": "string", "required": True},
         },
@@ -248,7 +307,12 @@ NODE_TYPES: dict[str, dict[str, Any]] = {
         "label": "Export Data",
         "description": "Export data in various formats",
         "config_schema": {
-            "format": {"type": "string", "required": False, "default": "json", "options": ["csv", "json", "excel"]},
+            "format": {
+                "type": "string",
+                "required": False,
+                "default": "json",
+                "options": ["csv", "json", "excel"],
+            },
         },
         "inputs": ["input"],
         "outputs": ["output"],
@@ -270,7 +334,12 @@ NODE_TYPES: dict[str, dict[str, Any]] = {
         "label": "Send Alert",
         "description": "Send an alert notification",
         "config_schema": {
-            "channel": {"type": "string", "required": False, "default": "dashboard", "options": ["email", "dashboard"]},
+            "channel": {
+                "type": "string",
+                "required": False,
+                "default": "dashboard",
+                "options": ["email", "dashboard"],
+            },
             "condition": {"type": "string", "required": False},
             "message_template": {"type": "string", "required": True},
         },
@@ -288,14 +357,17 @@ NODE_TYPES: dict[str, dict[str, Any]] = {
         "inputs": ["input"],
         "outputs": ["output"],
     },
-
     # ── Control Flow Nodes ───────────────────────────────────────────
     "condition": {
         "category": "control",
         "label": "Condition",
         "description": "Branch based on a condition",
         "config_schema": {
-            "expression": {"type": "string", "required": True, "description": "JavaScript-like expression"},
+            "expression": {
+                "type": "string",
+                "required": True,
+                "description": "JavaScript-like expression",
+            },
             "true_path": {"type": "string", "required": False},
             "false_path": {"type": "string", "required": False},
         },
@@ -328,7 +400,11 @@ NODE_TYPES: dict[str, dict[str, Any]] = {
         "label": "Human Review",
         "description": "Pause for human approval",
         "config_schema": {
-            "prompt": {"type": "string", "required": True, "description": "Question for the reviewer"},
+            "prompt": {
+                "type": "string",
+                "required": True,
+                "description": "Question for the reviewer",
+            },
             "timeout_hours": {"type": "integer", "required": False, "default": 24},
         },
         "inputs": ["input"],
@@ -354,15 +430,17 @@ def get_all_node_types_summary() -> list[dict[str, Any]]:
     """Return a compact summary for NL builder prompts."""
     result = []
     for type_name, info in NODE_TYPES.items():
-        result.append({
-            "type": type_name,
-            "category": info["category"],
-            "label": info["label"],
-            "description": info["description"],
-            "config_fields": list(info["config_schema"].keys()),
-            "inputs": info["inputs"],
-            "outputs": info["outputs"],
-        })
+        result.append(
+            {
+                "type": type_name,
+                "category": info["category"],
+                "label": info["label"],
+                "description": info["description"],
+                "config_fields": list(info["config_schema"].keys()),
+                "inputs": info["inputs"],
+                "outputs": info["outputs"],
+            }
+        )
     return result
 
 

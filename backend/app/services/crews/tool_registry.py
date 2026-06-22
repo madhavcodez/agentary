@@ -1,4 +1,5 @@
 """Registry of tools available to expert agents."""
+
 from __future__ import annotations
 
 import importlib
@@ -40,7 +41,7 @@ class ToolRegistry:
             self._tools[name] = {
                 "module": mod,
                 "schema": getattr(mod, "TOOL_SCHEMA", {}),
-                "execute": getattr(mod, "execute"),
+                "execute": mod.execute,
             }
 
     def list_tools(self) -> list[dict[str, Any]]:
@@ -49,11 +50,7 @@ class ToolRegistry:
 
     def get_tools_for_expert(self, tool_names: list[str]) -> list[dict[str, Any]]:
         """Return tool schemas for a specific expert's allowed tools."""
-        return [
-            self._tools[name]["schema"]
-            for name in tool_names
-            if name in self._tools
-        ]
+        return [self._tools[name]["schema"] for name in tool_names if name in self._tools]
 
     def get_gemini_tool_declarations(self, tool_names: list[str]) -> list[dict[str, Any]]:
         """Return tool declarations in Gemini function-calling format."""
@@ -62,11 +59,13 @@ class ToolRegistry:
             if name not in self._tools:
                 continue
             schema = self._tools[name]["schema"]
-            declarations.append({
-                "name": schema["name"],
-                "description": schema["description"],
-                "parameters": schema.get("parameters", {}),
-            })
+            declarations.append(
+                {
+                    "name": schema["name"],
+                    "description": schema["description"],
+                    "parameters": schema.get("parameters", {}),
+                }
+            )
         return declarations
 
     async def execute(self, tool_name: str, **kwargs: Any) -> dict[str, Any]:

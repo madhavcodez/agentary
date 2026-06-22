@@ -1,4 +1,5 @@
 """API routes for agent crews and crew runs."""
+
 from __future__ import annotations
 
 import uuid
@@ -15,7 +16,6 @@ from ..models.crew_task import CrewTask
 from ..models.expert_agent import ExpertAgent
 from ..models.mission import Mission
 from ..models.user import User
-from ..services.crews.crew_service import get_crew_status
 
 router = APIRouter(prefix="/api/crews", tags=["crews"])
 
@@ -36,12 +36,7 @@ async def list_crew_runs(
     if not mission:
         raise HTTPException(404, "Crew not found")
 
-    runs = (
-        db.query(CrewRun)
-        .filter_by(crew_id=crew.id)
-        .order_by(CrewRun.created_at.desc())
-        .all()
-    )
+    runs = db.query(CrewRun).filter_by(crew_id=crew.id).order_by(CrewRun.created_at.desc()).all()
 
     return {
         "crew_id": str(crew.id),
@@ -87,23 +82,25 @@ async def get_crew_run(
     task_details = []
     for task in tasks:
         expert = db.query(ExpertAgent).filter_by(id=task.expert_agent_id).first()
-        task_details.append({
-            "id": str(task.id),
-            "expert_name": expert.name if expert else "Unknown",
-            "expert_icon": expert.icon if expert else "\U0001f916",
-            "expert_slug": expert.slug if expert else None,
-            "task_type": task.task_type,
-            "description": task.description,
-            "status": task.status,
-            "thinking_log": task.thinking_log or [],
-            "output_data": task.output_data,
-            "findings_produced": task.findings_produced,
-            "started_at": task.started_at.isoformat() if task.started_at else None,
-            "completed_at": task.completed_at.isoformat() if task.completed_at else None,
-            "duration_seconds": task.duration_seconds,
-            "tokens_used": task.tokens_used,
-            "error_message": task.error_message,
-        })
+        task_details.append(
+            {
+                "id": str(task.id),
+                "expert_name": expert.name if expert else "Unknown",
+                "expert_icon": expert.icon if expert else "\U0001f916",
+                "expert_slug": expert.slug if expert else None,
+                "task_type": task.task_type,
+                "description": task.description,
+                "status": task.status,
+                "thinking_log": task.thinking_log or [],
+                "output_data": task.output_data,
+                "findings_produced": task.findings_produced,
+                "started_at": task.started_at.isoformat() if task.started_at else None,
+                "completed_at": task.completed_at.isoformat() if task.completed_at else None,
+                "duration_seconds": task.duration_seconds,
+                "tokens_used": task.tokens_used,
+                "error_message": task.error_message,
+            }
+        )
 
     return {
         "id": str(run.id),
@@ -145,13 +142,12 @@ async def get_live_status(
 
     # Get recent activities for this run
     query = (
-        db.query(AgentActivity)
-        .filter_by(run_id=run.id)
-        .order_by(AgentActivity.created_at.asc())
+        db.query(AgentActivity).filter_by(run_id=run.id).order_by(AgentActivity.created_at.asc())
     )
 
     if after:
         from datetime import datetime
+
         try:
             after_dt = datetime.fromisoformat(after)
             query = query.filter(AgentActivity.created_at > after_dt)
@@ -165,13 +161,15 @@ async def get_live_status(
     task_statuses = []
     for task in tasks:
         expert = db.query(ExpertAgent).filter_by(id=task.expert_agent_id).first()
-        task_statuses.append({
-            "task_id": str(task.id),
-            "expert_name": expert.name if expert else "Unknown",
-            "expert_icon": expert.icon if expert else "\U0001f916",
-            "status": task.status,
-            "findings_produced": task.findings_produced,
-        })
+        task_statuses.append(
+            {
+                "task_id": str(task.id),
+                "expert_name": expert.name if expert else "Unknown",
+                "expert_icon": expert.icon if expert else "\U0001f916",
+                "status": task.status,
+                "findings_produced": task.findings_produced,
+            }
+        )
 
     return {
         "run_status": run.status,

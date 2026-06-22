@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from datetime import datetime
 from uuid import UUID
@@ -21,6 +22,7 @@ _AUTOPILOT_JOB_PREFIX = "autopilot_user_"
 
 def _run_ingest():
     from .ingest.runner import run_all_connectors
+
     session = SessionLocal()
     try:
         count = asyncio.run(run_all_connectors(session))
@@ -33,6 +35,7 @@ def _run_ingest():
 
 def _run_scoring():
     from .match_engine import score_all_matches
+
     session = SessionLocal()
     try:
         result = asyncio.run(score_all_matches(session))
@@ -78,9 +81,7 @@ def _run_autopilot_for_user(user_id: str):
             logger.info("Autopilot disabled for user %s — skipping", user_id)
             return
 
-        if user.autopilot_business_hours_only and not _is_business_hours(
-            user.autopilot_timezone
-        ):
+        if user.autopilot_business_hours_only and not _is_business_hours(user.autopilot_timezone):
             logger.info(
                 "Outside business hours for user %s (tz=%s) — skipping",
                 user_id,
@@ -151,12 +152,10 @@ def add_autopilot_job(user_id: str | UUID, cron_expr: str, timezone: str) -> Non
 def remove_autopilot_job(user_id: str | UUID) -> None:
     """Remove a user's autopilot job if it exists."""
     job_id = _autopilot_job_id(user_id)
-    try:
+    # Job may not exist; that's fine
+    with contextlib.suppress(Exception):
         scheduler.remove_job(job_id)
         logger.info("Autopilot job removed for user %s", user_id)
-    except Exception:
-        # Job may not exist; that's fine
-        pass
 
 
 def load_all_autopilot_jobs() -> None:
@@ -184,9 +183,7 @@ def load_all_autopilot_jobs() -> None:
                     timezone=user.autopilot_timezone,
                 )
             except Exception as e:
-                logger.error(
-                    "Failed to load autopilot job for user %s: %s", user.id, e
-                )
+                logger.error("Failed to load autopilot job for user %s: %s", user.id, e)
         logger.info("Loaded autopilot jobs for %d users", len(users))
     except Exception as e:
         logger.error("Failed to load autopilot jobs: %s", e)
@@ -213,17 +210,13 @@ def _run_monitor_check(monitor_id: str):
         logger.error("Scheduled monitor check failed for %s: %s", monitor_id, e)
 
 
-def add_monitor_job(
-    monitor_id: str | UUID, cron_expr: str, timezone_name: str = "UTC"
-) -> None:
+def add_monitor_job(monitor_id: str | UUID, cron_expr: str, timezone_name: str = "UTC") -> None:
     """Add (or replace) a scheduled monitor check job."""
     job_id = _monitor_job_id(monitor_id)
 
     parts = cron_expr.strip().split()
     if len(parts) != 5:
-        raise ValueError(
-            f"Invalid cron expression '{cron_expr}': expected 5 fields"
-        )
+        raise ValueError(f"Invalid cron expression '{cron_expr}': expected 5 fields")
 
     try:
         tz = pytz.timezone(timezone_name)
@@ -252,11 +245,9 @@ def add_monitor_job(
 def remove_monitor_job(monitor_id: str | UUID) -> None:
     """Remove a monitor's scheduled job."""
     job_id = _monitor_job_id(monitor_id)
-    try:
+    with contextlib.suppress(Exception):
         scheduler.remove_job(job_id)
         logger.info("Monitor job removed: %s", monitor_id)
-    except Exception:
-        pass
 
 
 def load_all_monitor_jobs() -> None:
@@ -296,8 +287,8 @@ def _workflow_job_id(workflow_id: str | UUID) -> str:
 
 def _run_scheduled_workflow(workflow_id: str):
     """Execute a scheduled workflow run."""
-    from .workflow.service import trigger_run as wf_trigger_run
     from ..models.workflow import Workflow
+    from .workflow.service import trigger_run as wf_trigger_run
 
     session = SessionLocal()
     try:
@@ -332,24 +323,31 @@ def add_workflow_schedule(
         tz = pytz.timezone("America/Los_Angeles")
 
     trigger = CronTrigger(
-        minute=parts[0], hour=parts[1], day=parts[2],
-        month=parts[3], day_of_week=parts[4], timezone=tz,
+        minute=parts[0],
+        hour=parts[1],
+        day=parts[2],
+        month=parts[3],
+        day_of_week=parts[4],
+        timezone=tz,
     )
     scheduler.add_job(
-        _run_scheduled_workflow, trigger,
-        args=[str(workflow_id)], id=job_id, replace_existing=True,
+        _run_scheduled_workflow,
+        trigger,
+        args=[str(workflow_id)],
+        id=job_id,
+        replace_existing=True,
     )
-    logger.info("Workflow job scheduled: id=%s cron=%s tz=%s", workflow_id, cron_expr, timezone_name)
+    logger.info(
+        "Workflow job scheduled: id=%s cron=%s tz=%s", workflow_id, cron_expr, timezone_name
+    )
 
 
 def remove_workflow_schedule(workflow_id: str | UUID) -> None:
     """Remove a workflow's scheduled job."""
     job_id = _workflow_job_id(workflow_id)
-    try:
+    with contextlib.suppress(Exception):
         scheduler.remove_job(job_id)
         logger.info("Workflow job removed: %s", workflow_id)
-    except Exception:
-        pass
 
 
 def load_all_workflow_schedules() -> None:
@@ -385,12 +383,8 @@ def load_all_workflow_schedules() -> None:
 
 
 def start_scheduler():
-    scheduler.add_job(
-        _run_ingest, "interval", hours=6, id="ingest_job", replace_existing=True
-    )
-    scheduler.add_job(
-        _run_scoring, "interval", hours=24, id="scoring_job", replace_existing=True
-    )
+    scheduler.add_job(_run_ingest, "interval", hours=6, id="ingest_job", replace_existing=True)
+    scheduler.add_job(_run_scoring, "interval", hours=24, id="scoring_job", replace_existing=True)
     scheduler.start()
     logger.info("Scheduler started: ingest every 6h, scoring every 24h")
 
@@ -405,6 +399,7 @@ def start_scheduler():
 
     # Seed system workflow templates
     from .workflow.templates import seed_templates
+
     session = SessionLocal()
     try:
         seed_templates(session)

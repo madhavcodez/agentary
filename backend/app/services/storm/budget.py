@@ -3,13 +3,14 @@
 Agentary has already been burned once by uncapped LLM fan-out (DeerFlow was
 pulled out of the politics briefing after a single run consumed >6 Gemini
 calls and triggered free-tier quota failures). STORM multiplies calls by
-perspectives × sections × refinement passes, so every call must pass through
+perspectives x sections x refinement passes, so every call must pass through
 a hard cap.
 
 The counter lives in Redis so concurrent workers synthesizing different
 sections in parallel share the same budget view. If Redis is unreachable
 the counter degrades gracefully to in-process state and logs a warning.
 """
+
 from __future__ import annotations
 
 import logging
@@ -41,9 +42,7 @@ def _get_redis() -> Any | None:
 
         from ...config import settings
 
-        _redis_client = redis.Redis.from_url(
-            settings.redis_url, decode_responses=True
-        )
+        _redis_client = redis.Redis.from_url(settings.redis_url, decode_responses=True)
         _redis_client.ping()
     except Exception as exc:
         logger.warning("StormBudget: Redis unavailable, falling back to in-process (%s)", exc)

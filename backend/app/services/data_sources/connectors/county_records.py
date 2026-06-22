@@ -7,14 +7,12 @@ supports Travis/TX, Maricopa/AZ, and Los Angeles/CA.
 
 from __future__ import annotations
 
-import time
 from typing import Any
 
 import httpx
 from bs4 import BeautifulSoup
 
 from ..base_connector import SourceResult
-
 
 # ---------------------------------------------------------------------------
 # Scraper configs for supported counties
@@ -96,8 +94,7 @@ class CountyRecordsConnector:
             follow_redirects=True,
             headers={
                 "User-Agent": (
-                    "Mozilla/5.0 (compatible; Agentary/1.0; "
-                    "+https://github.com/agentary)"
+                    "Mozilla/5.0 (compatible; Agentary/1.0; " "+https://github.com/agentary)"
                 ),
             },
         )
@@ -136,8 +133,7 @@ class CountyRecordsConnector:
 
         # Only include record if at least one field was populated
         has_data = any(
-            record.get(k) is not None
-            for k in ("owner", "assessed_value", "tax_amount", "parcel")
+            record.get(k) is not None for k in ("owner", "assessed_value", "tax_amount", "parcel")
         )
         return [record] if has_data else []
 
@@ -167,8 +163,7 @@ class CountyRecordsConnector:
                 metadata={
                     "county_supported": False,
                     "message": (
-                        f"County not supported. "
-                        f"Supported counties: {', '.join(supported)}"
+                        f"County not supported. " f"Supported counties: {', '.join(supported)}"
                     ),
                 },
             )

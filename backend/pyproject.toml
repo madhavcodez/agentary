@@ -61,7 +61,6 @@ select = [
     "E",    # pycodestyle errors
     "W",    # pycodestyle warnings
     "F",    # pyflakes
-    "I",    # isort
     "B",    # bugbear
     "C4",   # comprehensions
     "UP",   # pyupgrade
@@ -72,8 +71,16 @@ select = [
     "T20",  # print/pprint detection
     "PIE",  # misc lints
     "RET",  # return statements
-    "TCH",  # type-checking import sorting
 ]
+# Import sorting is owned by the dedicated `isort` step (profile = "black"),
+# which CI also checks, so ruff's overlapping `I` rule is intentionally NOT
+# selected — running both invites a tug-of-war where one tool's ordering
+# fails the other's check.
+# TCH (type-checking-only imports) is intentionally NOT selected: this is a
+# FastAPI + Pydantic + SQLAlchemy codebase that evaluates type annotations at
+# runtime (request/response validation, ORM mapping, DI), so moving those
+# imports into `if TYPE_CHECKING:` blocks breaks model construction at import
+# time. Keeping the imports at runtime is correct for this stack.
 ignore = [
     "E501",   # line too long — black handles this
     "B008",   # function call in default arg — common FastAPI Depends pattern
@@ -82,12 +89,22 @@ ignore = [
     "S105",   # hardcoded password fixture in tests
     "RET504", # unnecessary assignment before return — sometimes clearer
     "UP007",  # X | Y syntax — keep Optional[X] supported for now
+    "UP042",  # str-Enum -> StrEnum changes str() output; values flow into API
+              # responses / DB / logs, so keep the explicit `(str, Enum)` form
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S", "T20", "B"]
 "app/tests/**" = ["S", "T20", "B"]
 "scripts/**" = ["T20"]
+# Package __init__ files re-export their submodules' public names; the
+# imports are the API surface, not dead code (F401), and `import *`
+# aggregation (F403) is intentional there.
+"**/__init__.py" = ["F401", "F403"]
+# main.py deliberately calls setup_logging() before importing modules that
+# log at import time, and registers routers after the app is constructed,
+# so its imports are intentionally not all at the top (E402).
+"app/main.py" = ["E402"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]

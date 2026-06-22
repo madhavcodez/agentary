@@ -55,9 +55,7 @@ async def resend_webhook(
     campaign = None
     if resend_email_id:
         campaign = (
-            db.query(CallCampaign)
-            .filter(CallCampaign.resend_email_id == resend_email_id)
-            .first()
+            db.query(CallCampaign).filter(CallCampaign.resend_email_id == resend_email_id).first()
         )
 
     if campaign:
@@ -92,11 +90,7 @@ async def resend_webhook(
 
 def _add_suppression(db: Session, email: str, reason: str) -> None:
     """Add an email to the suppression list (upsert)."""
-    existing = (
-        db.query(EmailSuppression)
-        .filter(EmailSuppression.email == email)
-        .first()
-    )
+    existing = db.query(EmailSuppression).filter(EmailSuppression.email == email).first()
     if existing:
         existing.reason = reason
     else:

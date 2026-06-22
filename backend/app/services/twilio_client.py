@@ -9,9 +9,7 @@ from ..config import settings
 logger = logging.getLogger(__name__)
 
 
-async def initiate_call(
-    to_number: str, campaign_id: str, webhook_base_url: str
-) -> dict:
+async def initiate_call(to_number: str, campaign_id: str, webhook_base_url: str) -> dict:
     """Initiate an outbound call via Twilio REST API.
 
     Args:
@@ -26,10 +24,7 @@ async def initiate_call(
     Raises:
         httpx.HTTPStatusError: If Twilio returns a non-2xx response.
     """
-    url = (
-        f"https://api.twilio.com/2010-04-01/Accounts/"
-        f"{settings.twilio_account_sid}/Calls.json"
-    )
+    url = f"https://api.twilio.com/2010-04-01/Accounts/" f"{settings.twilio_account_sid}/Calls.json"
     twiml_url = f"{webhook_base_url}/voice/outbound/twiml/{campaign_id}"
     status_url = f"{webhook_base_url}/voice/outbound/status/{campaign_id}"
 

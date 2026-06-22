@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any, Awaitable, Callable, Tuple
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from ..models.enums import FailureCategory
 
@@ -43,7 +44,7 @@ async def with_retry(
     max_retries: int = 3,
     base_delay: float = 1.0,
     max_delay: float = 60.0,
-    retryable_categories: Tuple[FailureCategory, ...] = (
+    retryable_categories: tuple[FailureCategory, ...] = (
         FailureCategory.transient_connector,
         FailureCategory.model_error,
         FailureCategory.rate_limited,
@@ -72,7 +73,7 @@ async def with_retry(
         except RetryableError as exc:
             last_error = exc
             if attempt < max_retries and exc.category in retryable_categories:
-                delay = min(base_delay * (2 ** attempt), max_delay)
+                delay = min(base_delay * (2**attempt), max_delay)
                 if exc.retry_after:
                     delay = max(delay, exc.retry_after)
                 logger.warning(

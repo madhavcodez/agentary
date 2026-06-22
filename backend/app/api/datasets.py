@@ -1,10 +1,13 @@
 from __future__ import annotations
+
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException
+
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from ..deps import get_db, get_current_user
-from ..models.user import User
+
+from ..deps import get_current_user, get_db
 from ..models.dataset import DataSet
+from ..models.user import User
 from ..schemas.dataset import DataSetCreate, DataSetResponse
 
 router = APIRouter(prefix="/api/datasets", tags=["datasets"])

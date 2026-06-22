@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
+import types
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
@@ -42,11 +44,11 @@ async def _broadcast_with_buffer(self, event: Event) -> None:
     await _original_broadcast(self, event)
 
 
-import types
 event_bus.broadcast = types.MethodType(_broadcast_with_buffer, event_bus)
 
 
 # ── WebSocket endpoint ──────────────────────────────────────────────
+
 
 @router.websocket("/ws/live-feed")
 async def live_feed_ws(websocket: WebSocket, token: str = Query(default="")):
@@ -57,19 +59,19 @@ async def live_feed_ws(websocket: WebSocket, token: str = Query(default="")):
     to scope events to a specific project.
     """
     from ..config import settings
+
     user_id = None
 
     if token:
-        try:
+        with contextlib.suppress(Exception):
             user_id = verify_token(token)
-        except Exception:
-            pass
 
     # Dev mode: allow connection without valid token
     if user_id is None:
         if settings.app_env == "dev":
-            from ..deps import _get_or_create_dev_user
             from ..database import get_session
+            from ..deps import _get_or_create_dev_user
+
             db = next(get_session())
             try:
                 dev_user = _get_or_create_dev_user(db)
@@ -80,7 +82,7 @@ async def live_feed_ws(websocket: WebSocket, token: str = Query(default="")):
             await websocket.close(code=4001, reason="Invalid token")
             return
 
-    client = await ws_manager.connect(websocket, str(user_id))
+    await ws_manager.connect(websocket, str(user_id))
 
     try:
         while True:
@@ -92,12 +94,8 @@ async def live_feed_ws(websocket: WebSocket, token: str = Query(default="")):
 
             msg_type = msg.get("type")
             if msg_type == "subscribe" and msg.get("project_id"):
-                await ws_manager.subscribe_project(
-                    websocket, str(user_id), msg["project_id"]
-                )
-                await websocket.send_json(
-                    {"type": "subscribed", "project_id": msg["project_id"]}
-                )
+                await ws_manager.subscribe_project(websocket, str(user_id), msg["project_id"])
+                await websocket.send_json({"type": "subscribed", "project_id": msg["project_id"]})
             elif msg_type == "ping":
                 await websocket.send_json({"type": "pong"})
 
@@ -111,10 +109,11 @@ async def live_feed_ws(websocket: WebSocket, token: str = Query(default="")):
 
 # ── Also keep the project-scoped stub for backward compat ──────────
 
+
 @router.websocket("/api/live-feed/{project_id}")
 async def live_feed_project(websocket: WebSocket, project_id: UUID):
     """Project-scoped WebSocket (no auth required — for internal use)."""
-    client = await ws_manager.connect(websocket, "system", str(project_id))
+    await ws_manager.connect(websocket, "system", str(project_id))
     try:
         while True:
             data = await websocket.receive_text()
@@ -132,6 +131,7 @@ async def live_feed_project(websocket: WebSocket, project_id: UUID):
 
 # ── REST fallbacks ──────────────────────────────────────────────────
 
+
 @router.get("/api/live-feed/recent")
 async def get_recent_events(
     limit: int = Query(50, ge=1, le=200),
@@ -139,10 +139,7 @@ async def get_recent_events(
 ):
     """Polling fallback: return recent events visible to this user."""
     user_id = str(user.id)
-    visible = [
-        e for e in _recent_events
-        if not e.get("user_id") or e.get("user_id") == user_id
-    ]
+    visible = [e for e in _recent_events if not e.get("user_id") or e.get("user_id") == user_id]
     return visible[-limit:]
 
 

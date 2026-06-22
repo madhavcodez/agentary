@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -39,15 +39,13 @@ class InsightGenerator:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    async def generate_for_entity(
-        self, entity_id: UUID, project_id: UUID
-    ) -> list[Insight]:
+    async def generate_for_entity(self, entity_id: UUID, project_id: UUID) -> list[Insight]:
         """Generate insights from an entity's observations."""
         observations = (
             self.db.query(Observation)
             .filter(
                 Observation.entity_id == entity_id,
-                Observation.is_stale == False,
+                Observation.is_stale.is_(False),
             )
             .order_by(Observation.created_at.desc())
             .limit(50)
@@ -59,15 +57,13 @@ class InsightGenerator:
 
         return await self._generate(observations, project_id, entity_id)
 
-    async def generate_for_project(
-        self, project_id: UUID
-    ) -> list[Insight]:
+    async def generate_for_project(self, project_id: UUID) -> list[Insight]:
         """Generate project-level insights from all observations."""
         observations = (
             self.db.query(Observation)
             .filter(
                 Observation.project_id == project_id,
-                Observation.is_stale == False,
+                Observation.is_stale.is_(False),
             )
             .order_by(Observation.created_at.desc())
             .limit(100)
@@ -117,9 +113,7 @@ class InsightGenerator:
         )
 
         try:
-            result = await generate_structured(
-                prompt=prompt, schema_hint=_INSIGHT_SCHEMA_HINT
-            )
+            result = await generate_structured(prompt=prompt, schema_hint=_INSIGHT_SCHEMA_HINT)
         except Exception:
             logger.exception(
                 "Insight generation failed for %s %s",
@@ -147,7 +141,7 @@ class InsightGenerator:
                 title=item.get("title", "Untitled insight")[:500],
                 content=item.get("content", ""),
                 confidence=min(max(float(item.get("confidence", 0.5)), 0.0), 1.0),
-                freshness_at=datetime.now(timezone.utc),
+                freshness_at=datetime.now(UTC),
             )
             self.db.add(insight)
             self.db.flush()
