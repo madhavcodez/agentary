@@ -4,7 +4,7 @@ import enum
 import uuid
 
 from sqlalchemy import Column, DateTime, Enum as SAEnum, ForeignKey, String, Text, func
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from ..database import Base
 

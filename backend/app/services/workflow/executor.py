@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import time
 from collections import defaultdict, deque
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -67,7 +67,7 @@ class WorkflowExecutor:
             raise ValueError(f"Workflow {run.workflow_id} not found")
 
         await self._transition_run(run, RunStatus.running, "Starting workflow execution")
-        run.started_at = datetime.now(timezone.utc)
+        run.started_at = datetime.now(UTC)
         run.node_results = {}
         self.db.commit()
 
@@ -94,7 +94,7 @@ class WorkflowExecutor:
 
                 # Update status
                 node_results = dict(run.node_results)
-                node_results[node_id] = {"status": "running", "started_at": datetime.now(timezone.utc).isoformat()}
+                node_results[node_id] = {"status": "running", "started_at": datetime.now(UTC).isoformat()}
                 run.node_results = node_results
                 self.db.commit()
 
@@ -137,7 +137,7 @@ class WorkflowExecutor:
                         "output": self._truncate_output(output),
                         "duration": round(node_duration, 2),
                         "started_at": node_results[node_id]["started_at"],
-                        "completed_at": datetime.now(timezone.utc).isoformat(),
+                        "completed_at": datetime.now(UTC).isoformat(),
                     }
                     run.node_results = node_results
                     self.db.commit()
@@ -150,7 +150,7 @@ class WorkflowExecutor:
                         "error": str(e),
                         "duration": round(node_duration, 2),
                         "started_at": node_results[node_id]["started_at"],
-                        "completed_at": datetime.now(timezone.utc).isoformat(),
+                        "completed_at": datetime.now(UTC).isoformat(),
                     }
                     run.node_results = node_results
                     self.db.commit()
@@ -183,14 +183,14 @@ class WorkflowExecutor:
             else:
                 await self._transition_run(run, RunStatus.completed, "Workflow completed")
 
-            run.completed_at = datetime.now(timezone.utc)
+            run.completed_at = datetime.now(UTC)
             run.duration_seconds = round(total_duration, 2)
             run.output_data = final_output
 
             # Emit signal for the intelligence pipeline
             try:
-                from ..intelligence.signal_service import SignalService
                 from ...models.signal import SignalSourceType, SignalType
+                from ..intelligence.signal_service import SignalService
 
                 if workflow.project_id:
                     signal_svc = SignalService(self.db)
@@ -207,7 +207,7 @@ class WorkflowExecutor:
                 logger.debug("Signal emission failed for workflow run %s", run.id)
 
             # Update workflow stats
-            workflow.last_run_at = datetime.now(timezone.utc)
+            workflow.last_run_at = datetime.now(UTC)
             workflow.total_runs = (workflow.total_runs or 0) + 1
             if workflow.avg_duration_seconds:
                 workflow.avg_duration_seconds = (
@@ -224,7 +224,7 @@ class WorkflowExecutor:
             err_msg = str(e)
             run.failure_category = FailureCategory.internal
             run.failure_message = err_msg
-            run.completed_at = datetime.now(timezone.utc)
+            run.completed_at = datetime.now(UTC)
             run.duration_seconds = round(time.time() - start_time, 2)
             run.error = {"message": err_msg, "type": type(e).__name__}
             try:
@@ -236,7 +236,7 @@ class WorkflowExecutor:
                 transitions.append({
                     "from": current_status,
                     "to": "failed",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "reason": "InvalidTransition fallback — forced to failed",
                 })
                 run.state_transitions = transitions
@@ -246,7 +246,7 @@ class WorkflowExecutor:
     def _topological_sort(self, nodes: list[dict], edges: list[dict]) -> list[str]:
         """Topological sort of the DAG. Raises ValueError if cycle detected."""
         node_ids = {n["id"] for n in nodes}
-        in_degree: dict[str, int] = {nid: 0 for nid in node_ids}
+        in_degree: dict[str, int] = dict.fromkeys(node_ids, 0)
         adj: dict[str, list[str]] = defaultdict(list)
 
         for edge in edges:

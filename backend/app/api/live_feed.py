@@ -42,7 +42,9 @@ async def _broadcast_with_buffer(self, event: Event) -> None:
     await _original_broadcast(self, event)
 
 
+import contextlib
 import types
+
 event_bus.broadcast = types.MethodType(_broadcast_with_buffer, event_bus)
 
 
@@ -60,16 +62,14 @@ async def live_feed_ws(websocket: WebSocket, token: str = Query(default="")):
     user_id = None
 
     if token:
-        try:
+        with contextlib.suppress(Exception):
             user_id = verify_token(token)
-        except Exception:
-            pass
 
     # Dev mode: allow connection without valid token
     if user_id is None:
         if settings.app_env == "dev":
-            from ..deps import _get_or_create_dev_user
             from ..database import get_session
+            from ..deps import _get_or_create_dev_user
             db = next(get_session())
             try:
                 dev_user = _get_or_create_dev_user(db)
@@ -80,7 +80,7 @@ async def live_feed_ws(websocket: WebSocket, token: str = Query(default="")):
             await websocket.close(code=4001, reason="Invalid token")
             return
 
-    client = await ws_manager.connect(websocket, str(user_id))
+    await ws_manager.connect(websocket, str(user_id))
 
     try:
         while True:
@@ -114,7 +114,7 @@ async def live_feed_ws(websocket: WebSocket, token: str = Query(default="")):
 @router.websocket("/api/live-feed/{project_id}")
 async def live_feed_project(websocket: WebSocket, project_id: UUID):
     """Project-scoped WebSocket (no auth required — for internal use)."""
-    client = await ws_manager.connect(websocket, "system", str(project_id))
+    await ws_manager.connect(websocket, "system", str(project_id))
     try:
         while True:
             data = await websocket.receive_text()

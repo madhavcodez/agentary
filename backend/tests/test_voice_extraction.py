@@ -10,11 +10,11 @@ Covers:
 """
 from __future__ import annotations
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.models.finding import FindingType
-
 
 # ---------------------------------------------------------------------------
 # 1. TranscriptProcessor
@@ -888,7 +888,7 @@ class TestTemplateSchemaValidity:
         from app.services.voice.templates import BUILT_IN_TEMPLATES
 
         for template in BUILT_IN_TEMPLATES:
-            assert template.get("name"), f"Template missing name"
+            assert template.get("name"), "Template missing name"
             assert template.get("description"), (
                 f"Template '{template['name']}' missing description"
             )

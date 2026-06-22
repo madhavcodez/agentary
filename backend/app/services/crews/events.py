@@ -1,9 +1,8 @@
 """Event emission for real-time crew activity tracking."""
 from __future__ import annotations
 
-import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -121,7 +120,7 @@ async def emit_expert_thinking(
             "action": action,
             "tool": tool,
             "result_preview": (result_preview or "")[:200],
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         },
     )
 

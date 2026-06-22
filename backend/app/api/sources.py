@@ -1,9 +1,11 @@
 from __future__ import annotations
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from ..deps import get_db, get_current_user
-from ..models.user import User
+
+from ..deps import get_current_user, get_db
 from ..models.source import Source
+from ..models.user import User
 from ..schemas.source import SourceResponse
 
 router = APIRouter(prefix="/api/sources", tags=["sources"])
@@ -15,5 +17,5 @@ def list_sources(
     user: User = Depends(get_current_user),
 ):
     return db.query(Source).filter(
-        (Source.user_id == user.id) | (Source.is_system == True)
+        (Source.user_id == user.id) | (Source.is_system.is_(True))
     ).all()

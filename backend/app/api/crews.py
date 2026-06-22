@@ -15,7 +15,6 @@ from ..models.crew_task import CrewTask
 from ..models.expert_agent import ExpertAgent
 from ..models.mission import Mission
 from ..models.user import User
-from ..services.crews.crew_service import get_crew_status
 
 router = APIRouter(prefix="/api/crews", tags=["crews"])
 

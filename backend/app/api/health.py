@@ -29,6 +29,7 @@ def _run_expensive_checks() -> dict:
     # Redis
     try:
         import redis as _redis
+
         from ..config import settings
         r = _redis.from_url(settings.redis_url, socket_connect_timeout=1, socket_timeout=1)
         try:
@@ -42,6 +43,7 @@ def _run_expensive_checks() -> dict:
     # Qdrant
     try:
         from qdrant_client import QdrantClient
+
         from ..config import settings
         client = QdrantClient(url=settings.qdrant_url, timeout=2, check_compatibility=False)
         try:

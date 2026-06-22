@@ -13,30 +13,34 @@ Scenarios:
     6. Full Golden Path (lifecycle)
 """
 
-import csv
-import io
 import json
 import uuid
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, datetime
+from unittest.mock import MagicMock
 
 import pytest
 
 from app.core.events import Event, EventBus, EventType
-from app.models.agent_crew import AgentCrew, AgentActivity, ActivityType, CoordinationStrategy
+from app.models.agent_crew import ActivityType, AgentActivity, AgentCrew, CoordinationStrategy
 from app.models.alert import AlertRecord, AlertSeverityLevel, AlertType
 from app.models.crew_task import CrewTask, CrewTaskStatus
 from app.models.expert_agent import AgentSpecialty, ExpertAgent
 from app.models.finding import Finding, FindingType, SourceType
 from app.models.mission import Mission, MissionStatus, MissionType
-from app.models.mission_run import MissionRun, MissionTask, RunStatus, TaskStatus, TaskType, TriggerType
+from app.models.mission_run import (
+    MissionRun,
+    MissionTask,
+    RunStatus,
+    TaskStatus,
+    TaskType,
+    TriggerType,
+)
 from app.models.monitor import Alert, AlertSeverity, Monitor, MonitorStatus, MonitorType
 from app.models.project import Project, ProjectStatus, ProjectType
 from app.models.report import Report
 from app.models.workflow import Workflow
 from app.models.workflow_run import WorkflowRun
 from app.services.change_detector import ChangeResult, detect_text_change, detect_value_change
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -480,7 +484,7 @@ class TestScenario3_ReportGeneration:
         return project_id, mission_id, user_id, findings
 
     def test_report_model_creation_with_sections_and_sources(self):
-        project_id, mission_id, user_id, findings = self._setup_findings()
+        project_id, mission_id, user_id, _findings = self._setup_findings()
 
         sections = [
             {"title": "Executive Summary", "content": "Gas prices surveyed across 5-mile radius."},
@@ -568,7 +572,7 @@ class TestScenario3_ReportGeneration:
             "title", "category", "content", "confidence", "source_type",
             "source_name", "source_url", "expert", "tags", "verified", "created_at",
         ]
-        assert _FINDING_CSV_COLUMNS == expected_columns
+        assert expected_columns == _FINDING_CSV_COLUMNS
 
     def test_data_exporter_class_exists(self):
         from app.services.reports.data_exporter import DataExporter
@@ -600,7 +604,7 @@ class TestScenario3_ReportGeneration:
         """
         from app.services.reports.report_generator import ReportGenerator
 
-        project_id, mission_id, user_id, findings = self._setup_findings()
+        _project_id, _mission_id, user_id, findings = self._setup_findings()
         # The report generator reads `.category` from each finding --
         # set it to the finding_type value so the formatter works.
         for f in findings:
@@ -778,9 +782,9 @@ class TestScenario4_WorkflowExecution:
 
     def test_workflow_node_handler_manual_trigger(self):
         """Test the manual_trigger handler returns expected output."""
-        from app.services.workflow.node_handlers import handle_manual_trigger
-
         import asyncio
+
+        from app.services.workflow.node_handlers import handle_manual_trigger
         result = asyncio.get_event_loop().run_until_complete(
             handle_manual_trigger({}, None, {})
         )
@@ -1025,7 +1029,7 @@ class TestScenario5_MonitorAndAlert:
         new_snapshot = {"regular": 3.45}
         monitor.last_snapshot = new_snapshot
         monitor.total_checks = monitor.total_checks + 1
-        monitor.last_check_at = datetime.now(timezone.utc)
+        monitor.last_check_at = datetime.now(UTC)
 
         assert monitor.total_checks == 6
         assert monitor.last_snapshot["regular"] == 3.45
@@ -1286,7 +1290,6 @@ class TestScenario6_FullGoldenPath:
 
         # --- Phase 9: Export verification ---
         # Verify findings have the fields needed for CSV export
-        from app.services.reports.data_exporter import _FINDING_CSV_COLUMNS
 
         for finding in findings:
             assert hasattr(finding, "title")

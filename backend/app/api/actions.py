@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from ..deps import get_current_user, get_db
 from ..models.user import User
-from ..schemas.actions import ActionRequestCreate, ActionReject
+from ..schemas.actions import ActionReject, ActionRequestCreate
 from ..services.actions.action_service import ActionService
 
 router = APIRouter(prefix="/api/actions", tags=["actions"])

@@ -8,8 +8,8 @@ is returned by the verifier so we don't pay the cost of parsing twice.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
-from typing import Mapping
+from collections.abc import Mapping
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
@@ -72,11 +72,11 @@ async def twilio_voice_status(
         record.status = new_status
 
     if call_status == "in-progress":
-        record.started_at = record.started_at or datetime.now(timezone.utc)
+        record.started_at = record.started_at or datetime.now(UTC)
 
     terminal_statuses = ("completed", "busy", "no-answer", "failed", "canceled")
     if call_status in terminal_statuses:
-        record.ended_at = datetime.now(timezone.utc)
+        record.ended_at = datetime.now(UTC)
         if call_duration:
             try:
                 record.duration_seconds = int(call_duration)

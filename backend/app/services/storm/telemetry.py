@@ -6,6 +6,7 @@ outline + report + crew_run together for post-hoc analysis.
 """
 from __future__ import annotations
 
+import contextlib
 import logging
 from typing import Any
 
@@ -31,9 +32,9 @@ def record_storm_run(
     """Persist a ``StormRun`` row. Never raises — telemetry is best-effort."""
     from ...models.storm_run import StormRun
 
-    perspectives = len((outline.perspectives or [])) if outline else 0
-    questions = len((outline.question_matrix or [])) if outline else 0
-    sections = len((outline.sections or [])) if outline else 0
+    perspectives = len(outline.perspectives or []) if outline else 0
+    questions = len(outline.question_matrix or []) if outline else 0
+    sections = len(outline.sections or []) if outline else 0
     citations = 0
     sections_with_evidence = 0
     if report is not None:
@@ -68,7 +69,5 @@ def record_storm_run(
         db.commit()
     except Exception as exc:  # pragma: no cover — telemetry must not crash runs
         logger.warning("record_storm_run failed: %s", exc)
-        try:
+        with contextlib.suppress(Exception):
             db.rollback()
-        except Exception:
-            pass

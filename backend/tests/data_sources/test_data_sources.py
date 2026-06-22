@@ -9,8 +9,6 @@ All external APIs are mocked -- no database or network access required.
 
 from __future__ import annotations
 
-import asyncio
-import hashlib
 import json
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -34,7 +32,6 @@ from app.services.entities.entity_service import (
     _merge_dicts,
     _normalize_address,
 )
-
 
 # =====================================================================
 # Helpers
@@ -1117,7 +1114,7 @@ class TestEntityServiceUpdateEntity:
         mock_query.first.return_value = existing
         db.query.return_value = mock_query
 
-        result = await service.update_entity(
+        await service.update_entity(
             entity_id,
             {
                 "canonical_data": {"phone": "555-0000", "role": "CEO"},
@@ -1215,7 +1212,7 @@ class TestEntityServiceSearchEntities:
         user_id = uuid4()
 
         entity_a = _make_entity(name="Alice Smith")
-        entity_b = _make_entity(name="Bob Jones")
+        _make_entity(name="Bob Jones")
 
         mock_query = MagicMock()
         mock_query.filter.return_value = mock_query
@@ -1245,7 +1242,7 @@ class TestEntityServiceSearchEntities:
         mock_query.all.return_value = []
         db.query.return_value = mock_query
 
-        results = await service.search_entities(
+        await service.search_entities(
             user_id, entity_type="company", db=db
         )
         # filter() should have been called at least twice (user_id + entity_type)

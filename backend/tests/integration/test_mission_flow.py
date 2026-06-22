@@ -11,17 +11,14 @@ import uuid
 import pytest
 from sqlalchemy.orm import Session
 
+from app.models.enums import RunStatus as LifecycleRunStatus
 from app.models.mission import Mission, MissionStatus, MissionType
 from app.models.mission_run import MissionRun, RunStatus, TriggerType
 from app.models.project import Project, ProjectStatus, ProjectType
 from app.models.user import User
 from app.services.state_machine import (
-    InvalidTransition,
-    can_transition,
     transition,
 )
-from app.models.enums import RunStatus as LifecycleRunStatus
-
 
 # ── Fixtures ──────────────────────────────────────────────────────────
 

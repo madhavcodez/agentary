@@ -2,13 +2,13 @@
 
 import pytest
 
+from app.models.enums import RunStatus
 from app.services.state_machine import (
     InvalidTransition,
     can_transition,
     is_terminal,
     transition,
 )
-from app.models.enums import RunStatus
 
 
 class TestTransition:

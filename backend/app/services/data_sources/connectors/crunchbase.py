@@ -13,7 +13,6 @@ import httpx
 
 from ..base_connector import SourceResult
 
-
 _AUTOCOMPLETE_URL = "https://api.crunchbase.com/api/v4/autocompletes"
 _ENTITY_URL = "https://api.crunchbase.com/api/v4/entities/organizations"
 

@@ -165,7 +165,7 @@ class GeminiSearchConnector:
         client = _get_client()
         start = time.time()
         try:
-            response = client.models.generate_content(
+            client.models.generate_content(
                 model="gemini-2.5-flash",
                 contents="ping",
                 config=types.GenerateContentConfig(

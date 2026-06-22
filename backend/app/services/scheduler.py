@@ -296,8 +296,8 @@ def _workflow_job_id(workflow_id: str | UUID) -> str:
 
 def _run_scheduled_workflow(workflow_id: str):
     """Execute a scheduled workflow run."""
-    from .workflow.service import trigger_run as wf_trigger_run
     from ..models.workflow import Workflow
+    from .workflow.service import trigger_run as wf_trigger_run
 
     session = SessionLocal()
     try:

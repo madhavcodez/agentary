@@ -13,8 +13,8 @@ and ``SectionCitation`` schemas.
 """
 from __future__ import annotations
 
-from typing import Any, Iterable, Sequence
-
+from collections.abc import Iterable, Sequence
+from typing import Any
 
 # ─── Perspective mining ───────────────────────────────────────────────────
 PERSPECTIVE_SCHEMA_HINT: str = (

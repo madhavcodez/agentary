@@ -166,7 +166,7 @@ class ExaConnector:
         exa = _get_exa_client()
         start = time.time()
         try:
-            response = exa.search("test", num_results=1, type="keyword")
+            exa.search("test", num_results=1, type="keyword")
             latency = round((time.time() - start) * 1000, 1)
             return {
                 "status": "healthy",

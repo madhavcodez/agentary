@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ..celery_app import celery_app
 from ..database import SessionLocal
@@ -16,12 +17,12 @@ def dispatch_action(self, action_request_id: str) -> dict:
     """Execute an approved action request."""
     db = SessionLocal()
     try:
-        from ..models.action_request import ActionRequest, ActionRequestStatus
         from ..models.action_execution import (
             ActionExecution,
             ExecutionStatus,
             ExecutorType,
         )
+        from ..models.action_request import ActionRequest, ActionRequestStatus
         from ..services.actions.handlers import get_handler, register_all_handlers
 
         register_all_handlers()
@@ -46,7 +47,7 @@ def dispatch_action(self, action_request_id: str) -> dict:
             {
                 "from": "approved",
                 "to": "executing",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "reason": "dispatched to worker",
             }
         )
@@ -73,13 +74,13 @@ def dispatch_action(self, action_request_id: str) -> dict:
             execution.error = {
                 "message": f"No handler for action type: {action_type}"
             }
-            execution.completed_at = datetime.now(timezone.utc)
+            execution.completed_at = datetime.now(UTC)
             action.status = ActionRequestStatus.failed
             transitions.append(
                 {
                     "from": "executing",
                     "to": "failed",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "reason": f"no handler for {action_type}",
                 }
             )
@@ -94,14 +95,14 @@ def dispatch_action(self, action_request_id: str) -> dict:
             execution.status = ExecutionStatus.completed
             execution.result = result.get("result", {})
             execution.side_effects = result.get("side_effects", [])
-            execution.completed_at = datetime.now(timezone.utc)
+            execution.completed_at = datetime.now(UTC)
 
             action.status = ActionRequestStatus.completed
             transitions.append(
                 {
                     "from": "executing",
                     "to": "completed",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "reason": "handler completed successfully",
                 }
             )
@@ -125,14 +126,14 @@ def dispatch_action(self, action_request_id: str) -> dict:
                 "message": str(handler_error),
                 "type": type(handler_error).__name__,
             }
-            execution.completed_at = datetime.now(timezone.utc)
+            execution.completed_at = datetime.now(UTC)
 
             action.status = ActionRequestStatus.failed
             transitions.append(
                 {
                     "from": "executing",
                     "to": "failed",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "reason": str(handler_error),
                 }
             )
@@ -164,8 +165,8 @@ def _record_outcome(
     """Record action outcome and create feedback signal."""
     try:
         from ..models.action_outcome import ActionOutcome, OutcomeType
-        from ..services.intelligence.signal_service import SignalService
         from ..models.signal import SignalSourceType, SignalType
+        from ..services.intelligence.signal_service import SignalService
 
         action_type_val = (
             action.action_type.value
@@ -229,7 +230,5 @@ def _record_outcome(
         db.commit()
     except Exception as e:
         logger.error("Failed to record outcome for action %s: %s", action.id, e)
-        try:
+        with contextlib.suppress(Exception):
             db.rollback()
-        except Exception:
-            pass

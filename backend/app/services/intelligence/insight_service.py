@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -65,10 +65,10 @@ class InsightService:
         """Get insights for a specific entity."""
         q = (
             self.db.query(Insight)
-            .filter(Insight.entity_id == entity_id, Insight.is_active == True)
+            .filter(Insight.entity_id == entity_id, Insight.is_active.is_(True))
         )
         if not include_stale:
-            q = q.filter(Insight.is_stale == False)
+            q = q.filter(Insight.is_stale.is_(False))
         return q.order_by(Insight.created_at.desc()).offset(offset).limit(limit).all()
 
     def list_for_project(
@@ -82,12 +82,12 @@ class InsightService:
         """List all insights for a project."""
         q = (
             self.db.query(Insight)
-            .filter(Insight.project_id == project_id, Insight.is_active == True)
+            .filter(Insight.project_id == project_id, Insight.is_active.is_(True))
         )
         if insight_type:
             q = q.filter(Insight.insight_type == insight_type)
         if not include_stale:
-            q = q.filter(Insight.is_stale == False)
+            q = q.filter(Insight.is_stale.is_(False))
         return q.order_by(Insight.created_at.desc()).offset(offset).limit(limit).all()
 
     def get_insight(self, insight_id: UUID) -> Insight | None:
@@ -96,10 +96,10 @@ class InsightService:
 
     def mark_stale(self) -> int:
         """Mark insights as stale based on their freshness threshold. Returns count updated."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         insights = (
             self.db.query(Insight)
-            .filter(Insight.is_stale == False, Insight.is_active == True)
+            .filter(Insight.is_stale.is_(False), Insight.is_active.is_(True))
             .all()
         )
         count = 0

@@ -6,7 +6,7 @@ workflows, voice, monitors, reports).
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from ..models.enums import RunStatus
@@ -90,7 +90,7 @@ def call_transition(current: str, target: str, reason: str | None = None) -> dic
     return {
         "from": current_val,
         "to": target_val,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "reason": reason,
     }
 
@@ -131,6 +131,6 @@ def transition(
     return {
         "from": current_state.value,
         "to": target_state.value,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "reason": reason,
     }

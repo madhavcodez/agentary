@@ -7,7 +7,7 @@ import logging
 import uuid
 from typing import Any
 
-from .node_registry import get_all_node_types_summary, validate_node_config
+from .node_registry import get_all_node_types_summary
 from .service import validate_workflow
 
 logger = logging.getLogger(__name__)

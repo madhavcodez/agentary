@@ -10,8 +10,8 @@ from sqlalchemy.orm import Session
 from ..config import settings
 from ..models.project import Project
 from ..prompts.onboarding import (
-    build_questions_prompt,
     QUESTIONS_SCHEMA_HINT,
+    build_questions_prompt,
     get_fallback_questions,
 )
 
@@ -108,8 +108,8 @@ async def synthesize_domain_context(
 
     Falls back to raw Q&A text if Gemini fails.
     """
+    from ..prompts.onboarding import CONTEXT_SYSTEM_INSTRUCTION, build_context_prompt
     from ..services.gemini import generate_text
-    from ..prompts.onboarding import build_context_prompt, CONTEXT_SYSTEM_INSTRUCTION
 
     prompt = build_context_prompt(project_title=project_title, answers=answers)
     try:

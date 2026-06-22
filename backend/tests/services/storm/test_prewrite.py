@@ -148,9 +148,9 @@ async def test_budget_raises_when_cap_hit(fake_mission):
 @pytest.mark.asyncio
 async def test_live_end_to_end_prewrite(fake_mission):
     """Real Gemini end-to-end sanity — expects valid API key in settings."""
+    from app.services.storm.outline_planner import plan_outline
     from app.services.storm.perspective_miner import mine_perspectives
     from app.services.storm.question_generator import generate_questions
-    from app.services.storm.outline_planner import plan_outline
 
     budget = StormBudget(mission_id=str(fake_mission.id))
 

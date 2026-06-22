@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,10 +33,10 @@ class SubsystemReadiness:
         self.state[name] = status
         logger.info("subsystem %s: %s", name, status)
 
-    def required(self, name: str) -> "_SubsystemContext":
+    def required(self, name: str) -> _SubsystemContext:
         return _SubsystemContext(self, name, required=True)
 
-    def optional(self, name: str) -> "_SubsystemContext":
+    def optional(self, name: str) -> _SubsystemContext:
         return _SubsystemContext(self, name, required=False)
 
 
@@ -46,7 +46,7 @@ class _SubsystemContext:
         self._name = name
         self._required = required
 
-    def __enter__(self) -> "_SubsystemContext":
+    def __enter__(self) -> _SubsystemContext:
         return self
 
     def __exit__(self, exc_type, exc, tb) -> bool:
@@ -91,8 +91,7 @@ async def lifespan(app: FastAPI):
     # binding we'd hit UnboundLocalError on the failure path.
     stop_scheduler = lambda: None  # noqa: E731
     with readiness.optional("scheduler"):
-        from .services.scheduler import start_scheduler
-        from .services.scheduler import stop_scheduler as _stop_scheduler
+        from .services.scheduler import start_scheduler, stop_scheduler as _stop_scheduler
 
         start_scheduler()
         stop_scheduler = _stop_scheduler
@@ -102,8 +101,7 @@ async def lifespan(app: FastAPI):
     redis_task: asyncio.Task | None = None
     close_redis = None
     with readiness.optional("redis_bridge"):
-        from .core.redis_bridge import close_redis as _close_redis
-        from .core.redis_bridge import subscribe_and_forward
+        from .core.redis_bridge import close_redis as _close_redis, subscribe_and_forward
         from .core.websocket_manager import ws_manager
 
         redis_task = asyncio.create_task(
@@ -116,10 +114,8 @@ async def lifespan(app: FastAPI):
     # ── Shutdown ──────────────────────────────────────────────────────
     if redis_task is not None:
         redis_task.cancel()
-        try:
+        with suppress(asyncio.CancelledError, Exception):
             await redis_task
-        except (asyncio.CancelledError, Exception):
-            pass
     if close_redis is not None:
         try:
             await close_redis()
@@ -186,47 +182,47 @@ def root():
 
 
 # ── Agentary routes ──────────────────────────────────────────────────
-from .api.auth import router as auth_router
-from .api.health import router as health_router
-from .api.projects import router as projects_router
-from .api.missions import router as missions_router
+from .api.actions import router as actions_router
+from .api.admin import router as admin_router
 from .api.agents import router as agents_router
-from .api.experts import router as experts_router
-from .api.crews import router as crews_router
-from .api.findings import router as findings_router
-from .api.datasets import router as datasets_router
-from .api.workflows import router as workflows_router
-from .api.workflow_templates import router as workflow_templates_router
-from .api.reports import router as reports_router
-from .api.export import router as export_router
-from .api.shared import router as shared_router
-from .api.voice import router as voice_router
-from .api.voice_sessions import router as voice_sessions_router
-from .api.voice_templates import router as voice_templates_router
-from .api.voice_batch import router as voice_batch_router
-from .api.voice_webhooks import router as voice_webhooks_router
-from .api.monitors import router as monitors_router
 from .api.alerts import router as alerts_router
-from .api.entities import router as entities_router
-from .api.entity_collections import router as entity_collections_router
+from .api.analytics import router as analytics_router
+from .api.auth import router as auth_router
+from .api.contacts import router as contacts_router
+from .api.crews import router as crews_router
 from .api.data_sources import router as data_sources_router
-from .api.sources import router as sources_router
+from .api.datasets import router as datasets_router
+from .api.entities import router as entities_router
+from .api.entity_aliases import router as entity_aliases_router
+from .api.entity_collections import router as entity_collections_router
+from .api.entity_relationships import router as entity_relationships_router
+from .api.experts import router as experts_router
+from .api.export import router as export_router
+from .api.findings import router as findings_router
+from .api.health import router as health_router
+from .api.insights import router as insights_router
 from .api.knowledge_base import router as kb_router
 from .api.live_feed import router as live_feed_router
-from .api.analytics import router as analytics_router
-from .api.contacts import router as contacts_router
-from .api.research import router as research_router
+from .api.missions import router as missions_router
+from .api.monitors import router as monitors_router
 from .api.policies import router as policies_router
-from .api.webhooks import router as webhooks_router
-from .voice.outbound.server import router as outbound_router
-from .api.run_steps import router as run_steps_router
-from .api.signals import router as signals_router
-from .api.insights import router as insights_router
+from .api.projects import router as projects_router
 from .api.recommendations import router as recommendations_router
-from .api.entity_aliases import router as entity_aliases_router
-from .api.entity_relationships import router as entity_relationships_router
-from .api.admin import router as admin_router
-from .api.actions import router as actions_router
+from .api.reports import router as reports_router
+from .api.research import router as research_router
+from .api.run_steps import router as run_steps_router
+from .api.shared import router as shared_router
+from .api.signals import router as signals_router
+from .api.sources import router as sources_router
+from .api.voice import router as voice_router
+from .api.voice_batch import router as voice_batch_router
+from .api.voice_sessions import router as voice_sessions_router
+from .api.voice_templates import router as voice_templates_router
+from .api.voice_webhooks import router as voice_webhooks_router
+from .api.webhooks import router as webhooks_router
+from .api.workflow_templates import router as workflow_templates_router
+from .api.workflows import router as workflows_router
+from .voice.outbound.server import router as outbound_router
 
 app.include_router(auth_router)
 app.include_router(health_router)

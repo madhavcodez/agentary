@@ -10,9 +10,9 @@ from sqlalchemy.orm import Session
 from ..deps import get_current_user, get_db
 from ..models.signal import SignalSourceType, SignalType
 from ..models.user import User
-from ..schemas.intelligence import SignalCreate, SignalResponse, ObservationResponse
-from ..services.intelligence.signal_service import SignalService
+from ..schemas.intelligence import ObservationResponse, SignalCreate, SignalResponse
 from ..services.intelligence.observation_service import ObservationService
+from ..services.intelligence.signal_service import SignalService
 
 router = APIRouter(prefix="/api/signals", tags=["signals"])
 

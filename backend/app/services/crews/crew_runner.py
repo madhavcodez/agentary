@@ -15,7 +15,7 @@ import json
 import logging
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from google.genai import types
@@ -30,9 +30,9 @@ from ...models.enums import FailureCategory, RunStatus
 from ...models.expert_agent import ExpertAgent
 from ...models.finding import Finding, FindingType, SourceType
 from ...models.mission import Mission, MissionStatus
-from ...models.signal import SignalSourceType, SignalType
 from ...models.run_step import RunStep, StepType
-from ..gemini import generate_text, get_client
+from ...models.signal import SignalSourceType, SignalType
+from ..gemini import get_client
 from ..intelligence.signal_service import SignalService
 from ..state_machine import InvalidTransition, transition as sm_transition
 from .events import (
@@ -107,7 +107,7 @@ class CrewRunner:
             duration_ms=duration_ms,
             parent_step_id=parent_step_id,
             completed_at=(
-                datetime.now(timezone.utc)
+                datetime.now(UTC)
                 if status in ("completed", "failed")
                 else None
             ),
@@ -178,7 +178,7 @@ class CrewRunner:
                 transitions.append({
                     "from": current_status,
                     "to": "failed",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "reason": "InvalidTransition fallback — forced to failed",
                 })
                 run.state_transitions = transitions
@@ -198,12 +198,12 @@ class CrewRunner:
 
         # Transition: queued -> running
         await self._transition_run(run, RunStatus.running, "Starting crew execution", mission)
-        run.started_at = datetime.now(timezone.utc)
+        run.started_at = datetime.now(UTC)
         self.db.commit()
 
         # Update mission status
         mission.status = MissionStatus.running
-        mission.started_at = datetime.now(timezone.utc)
+        mission.started_at = datetime.now(UTC)
         self.db.commit()
 
         expert_names = [e.name for e in experts]
@@ -253,7 +253,7 @@ class CrewRunner:
                     )
                     storm_step.status = "failed"
                     storm_step.error_message = storm_fallback_reason
-                storm_step.completed_at = datetime.now(timezone.utc)
+                storm_step.completed_at = datetime.now(UTC)
                 self.db.commit()
 
                 # Telemetry — best effort, never raises
@@ -310,7 +310,7 @@ class CrewRunner:
 
                 scout_step.status = "completed"
                 scout_step.duration_ms = int((time.time() - scout_start) * 1000)
-                scout_step.completed_at = datetime.now(timezone.utc)
+                scout_step.completed_at = datetime.now(UTC)
                 self.db.commit()
 
             # ── PARALLEL RESEARCH PHASE (DeerFlow Phase 2) ──────────
@@ -400,7 +400,7 @@ class CrewRunner:
 
                 gap_step.status = "completed"
                 gap_step.duration_ms = int((time.time() - gap_start) * 1000)
-                gap_step.completed_at = datetime.now(timezone.utc)
+                gap_step.completed_at = datetime.now(UTC)
                 self.db.commit()
 
             # ── SYNTHESIS PHASE (DeerFlow Phase 4) ──────────────────
@@ -441,7 +441,7 @@ class CrewRunner:
             if synthesis_tasks:
                 synth_phase_step.status = "completed"
                 synth_phase_step.duration_ms = int((time.time() - synth_start) * 1000)
-                synth_phase_step.completed_at = datetime.now(timezone.utc)
+                synth_phase_step.completed_at = datetime.now(UTC)
                 self.db.commit()
 
             # ── REPORT PHASE ─────────────────────────────────────────
@@ -482,7 +482,7 @@ class CrewRunner:
             if report_tasks:
                 report_phase_step.status = "completed"
                 report_phase_step.duration_ms = int((time.time() - report_phase_start) * 1000)
-                report_phase_step.completed_at = datetime.now(timezone.utc)
+                report_phase_step.completed_at = datetime.now(UTC)
                 self.db.commit()
 
             # ── FINALIZE ─────────────────────────────────────────────
@@ -521,7 +521,7 @@ class CrewRunner:
                     mission,
                 )
 
-            run.completed_at = datetime.now(timezone.utc)
+            run.completed_at = datetime.now(UTC)
             run.duration_seconds = elapsed
             run.summary = f"Completed with {len(all_findings)} findings from {len(experts)} experts"
             run.metrics = {
@@ -534,7 +534,7 @@ class CrewRunner:
 
             run_status_str = run.status.value if hasattr(run.status, "value") else str(run.status)
             mission.status = MissionStatus.completed if run_status_str == "completed" else MissionStatus.failed
-            mission.completed_at = datetime.now(timezone.utc)
+            mission.completed_at = datetime.now(UTC)
             mission.findings_count = len(all_findings)
             mission.confidence_score = (
                 sum(f.confidence for f in all_findings) / len(all_findings)
@@ -562,7 +562,7 @@ class CrewRunner:
             run.failure_category = failure_cat
             run.failure_message = err_msg
             run.error = {"message": err_msg, "type": err_type}
-            run.completed_at = datetime.now(timezone.utc)
+            run.completed_at = datetime.now(UTC)
             run.duration_seconds = time.time() - start_time
 
             try:
@@ -574,7 +574,7 @@ class CrewRunner:
                 transitions.append({
                     "from": current_status,
                     "to": "failed",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "reason": "InvalidTransition fallback — forced to failed",
                 })
                 run.state_transitions = transitions
@@ -606,7 +606,7 @@ class CrewRunner:
                 self._execute_expert_task(task, expert_map, mission, run, crew),
                 timeout=timeout_seconds,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             expert = expert_map.get(str(task.expert_agent_id))
             expert_name = expert.name if expert else "Unknown"
             logger.error(
@@ -647,7 +647,7 @@ class CrewRunner:
 
         # Mark task as running
         task.status = "running"
-        task.started_at = datetime.now(timezone.utc)
+        task.started_at = datetime.now(UTC)
         task.thinking_log = []
         self.db.commit()
 
@@ -782,7 +782,7 @@ class CrewRunner:
 
                             # Add thinking log entry
                             log_entry = {
-                                "timestamp": datetime.now(timezone.utc).isoformat(),
+                                "timestamp": datetime.now(UTC).isoformat(),
                                 "thought": thought,
                                 "action": action,
                                 "tool": tool_name,
@@ -888,7 +888,7 @@ class CrewRunner:
             elapsed = time.time() - start_time
             cost = total_tokens * _TOKEN_COST_PER_TOKEN  # Rough estimate
             task.status = "completed"
-            task.completed_at = datetime.now(timezone.utc)
+            task.completed_at = datetime.now(UTC)
             task.duration_seconds = elapsed
             task.findings_count = len(findings)
             self.db.commit()
@@ -906,7 +906,7 @@ class CrewRunner:
             task_step.output_summary = _truncate(
                 {"findings_count": len(findings)}, 5000,
             )
-            task_step.completed_at = datetime.now(timezone.utc)
+            task_step.completed_at = datetime.now(UTC)
             self.db.commit()
 
             return findings, total_tokens, cost
@@ -915,14 +915,14 @@ class CrewRunner:
             logger.exception("Expert task failed for agent %s", task.expert_agent_id)
             task.status = "failed"
             task.error_message = str(e)
-            task.completed_at = datetime.now(timezone.utc)
+            task.completed_at = datetime.now(UTC)
             task.duration_seconds = time.time() - start_time
 
             # Update RunStep: expert task failed
             task_step.status = "failed"
             task_step.error = {"message": str(e)[:2000], "type": type(e).__name__}
             task_step.duration_ms = int((time.time() - start_time) * 1000)
-            task_step.completed_at = datetime.now(timezone.utc)
+            task_step.completed_at = datetime.now(UTC)
             self.db.commit()
             raise  # Let gather() capture it as an Exception instance
 

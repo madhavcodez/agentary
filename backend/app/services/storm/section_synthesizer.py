@@ -13,8 +13,9 @@ Returns a ``SectionDraft`` dataclass that the caller (typically
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Sequence
+from typing import Any
 
 from ...prompts.storm import (
     SECTION_SCHEMA_HINT,
@@ -65,7 +66,6 @@ async def synthesize_section(
     decides whether to skip or flag for refinement. Raises
     :class:`StormBudgetExceeded` via ``budget.inc("pro")``.
     """
-    from ..gemini import generate_structured
 
     if not bound_findings:
         logger.info(

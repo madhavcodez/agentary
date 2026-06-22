@@ -338,7 +338,7 @@ class DataExporter:
         query = db.query(Finding).filter(Finding.mission_id == mission_id)
 
         if filters:
-            if "category" in filters and filters["category"]:
+            if filters.get("category"):
                 query = query.filter(Finding.finding_type == filters["category"])
             if "confidence_min" in filters and filters["confidence_min"] is not None:
                 try:
@@ -349,7 +349,7 @@ class DataExporter:
                         "Invalid confidence_min filter value: %r",
                         filters["confidence_min"],
                     )
-            if "source_type" in filters and filters["source_type"]:
+            if filters.get("source_type"):
                 query = query.filter(Finding.source_type == filters["source_type"])
 
         return query.order_by(Finding.created_at).all()

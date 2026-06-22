@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -38,7 +38,7 @@ class SignalService:
         content_hash = hashlib.sha256(hash_input.encode()).hexdigest()[:64]
 
         # Check for duplicate within 1 hour
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=1)
+        cutoff = datetime.now(UTC) - timedelta(hours=1)
         existing = (
             self.db.query(Signal)
             .filter(

@@ -14,7 +14,6 @@ import pytest
 
 from app.services.storm.budget import StormBudget
 from app.services.storm.refinement import (
-    DEFAULT_MIN_CITATION_DENSITY,
     evaluate_section,
     refine_report_drafts,
 )

@@ -1,5 +1,4 @@
 """Tests for the expert registry."""
-import pytest
 
 from app.services.crews.expert_registry import BUILTIN_EXPERTS
 

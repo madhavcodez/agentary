@@ -1,11 +1,14 @@
 from __future__ import annotations
+
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from ..deps import get_db, get_current_user
-from ..models.user import User
+
+from ..deps import get_current_user, get_db
 from ..models.knowledge_base import KnowledgeBase
-from ..schemas.knowledge_base import KnowledgeBaseCreate, KnowledgeBaseUpdate, KnowledgeBaseResponse
+from ..models.user import User
+from ..schemas.knowledge_base import KnowledgeBaseCreate, KnowledgeBaseResponse, KnowledgeBaseUpdate
 
 router = APIRouter(prefix="/api/knowledge-base", tags=["knowledge_base"])
 

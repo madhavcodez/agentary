@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -49,7 +49,7 @@ class ObservationService:
             source_type=source_type,
             source_url=source_url,
             source_name=source_name,
-            observed_at=observed_at or datetime.now(timezone.utc),
+            observed_at=observed_at or datetime.now(UTC),
             confidence=confidence,
         )
         self.db.add(observation)

@@ -5,22 +5,22 @@ and streams back transcript entries. Browser mic capture can be layered on top.
 """
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
+
+# Add parent paths for imports
+import sys
+from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
-# Add parent paths for imports
-import sys
-from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from app.config import settings
-from app.voice.conversation.states import CallState
 from app.voice.conversation.state_machine import ConversationContext
+from app.voice.conversation.states import CallState
 from app.voice.policy.engine import PolicyEngine
 
 logger = logging.getLogger(__name__)
@@ -144,7 +144,7 @@ async def websocket_endpoint(ws: WebSocket):
                 })
                 messages.append({"role": "agent", "text": response_text})
             except Exception as e:
-                error_msg = f"Sorry, I had trouble processing that. Could you try again?"
+                error_msg = "Sorry, I had trouble processing that. Could you try again?"
                 logger.error("Gemini error: %s", e)
                 await ws.send_json({
                     "type": "transcript",

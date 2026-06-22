@@ -12,7 +12,6 @@ import httpx
 
 from ..base_connector import SourceResult
 
-
 _RAPIDAPI_HOST = "zillow-com1.p.rapidapi.com"
 _SEARCH_URL = f"https://{_RAPIDAPI_HOST}/propertyExtendedSearch"
 _PROPERTY_URL = f"https://{_RAPIDAPI_HOST}/property"

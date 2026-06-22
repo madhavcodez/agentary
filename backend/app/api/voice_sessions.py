@@ -18,7 +18,7 @@ from ..schemas.voice import (
     VoiceExtractionList,
     VoiceExtractionResponse,
 )
-from ..services.voice import voice_service, extraction_service, templates
+from ..services.voice import templates, voice_service
 
 logger = logging.getLogger(__name__)
 

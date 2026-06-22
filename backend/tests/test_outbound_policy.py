@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import UTC
+
 from app.voice.policy.rules import OUTBOUND_LIMITS
 
 
@@ -26,8 +28,9 @@ class TestOutboundLimits:
 class TestRetryLogic:
     def test_should_retry_no_previous_log(self):
         """First attempt — should always retry."""
-        from app.services.campaign_orchestrator import _should_retry
         from unittest.mock import MagicMock
+
+        from app.services.campaign_orchestrator import _should_retry
 
         campaign = MagicMock()
         campaign.attempt_count = 0
@@ -35,8 +38,9 @@ class TestRetryLogic:
 
     def test_should_not_retry_after_connected(self):
         """After a successful connection, no retry needed."""
-        from app.services.campaign_orchestrator import _should_retry
         from unittest.mock import MagicMock
+
+        from app.services.campaign_orchestrator import _should_retry
 
         campaign = MagicMock()
         campaign.attempt_count = 1
@@ -49,31 +53,33 @@ class TestRetryLogic:
 
     def test_should_retry_after_no_answer_past_backoff(self):
         """After a no-answer with backoff elapsed, should retry."""
-        from app.services.campaign_orchestrator import _should_retry
+        from datetime import datetime, timedelta
         from unittest.mock import MagicMock
-        from datetime import datetime, timedelta, timezone
+
+        from app.services.campaign_orchestrator import _should_retry
 
         campaign = MagicMock()
         campaign.attempt_count = 1
 
         last_log = MagicMock()
         last_log.outcome = "no_answer"
-        last_log.created_at = datetime.now(timezone.utc) - timedelta(hours=3)
+        last_log.created_at = datetime.now(UTC) - timedelta(hours=3)
 
         assert _should_retry(campaign, last_log) is True
 
     def test_should_not_retry_within_backoff(self):
         """Within the backoff window, should not retry."""
-        from app.services.campaign_orchestrator import _should_retry
+        from datetime import datetime, timedelta
         from unittest.mock import MagicMock
-        from datetime import datetime, timedelta, timezone
+
+        from app.services.campaign_orchestrator import _should_retry
 
         campaign = MagicMock()
         campaign.attempt_count = 2  # 2nd attempt => backoff = 2h
 
         last_log = MagicMock()
         last_log.outcome = "no_answer"
-        last_log.created_at = datetime.now(timezone.utc) - timedelta(minutes=30)
+        last_log.created_at = datetime.now(UTC) - timedelta(minutes=30)
 
         assert _should_retry(campaign, last_log) is False
 

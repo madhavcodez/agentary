@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -66,7 +66,7 @@ async def create_outbound_call(
 
     call_record.provider_call_id = result["call_sid"]
     call_record.status = CallStatus.ringing
-    call_record.started_at = datetime.now(timezone.utc)
+    call_record.started_at = datetime.now(UTC)
     db.add(call_record)
     db.flush()
 
@@ -168,8 +168,8 @@ Generate ONLY the transcript, no other text."""
     call_record.provider_call_id = simulated_id
     call_record.status = CallStatus.completed
     call_record.transcript = transcript.strip()
-    call_record.started_at = datetime.now(timezone.utc)
-    call_record.ended_at = datetime.now(timezone.utc)
+    call_record.started_at = datetime.now(UTC)
+    call_record.ended_at = datetime.now(UTC)
     call_record.duration_seconds = 180  # simulated 3 minutes
     db.add(call_record)
     db.flush()

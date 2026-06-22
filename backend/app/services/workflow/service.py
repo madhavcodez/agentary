@@ -54,7 +54,7 @@ def validate_workflow(nodes: list[dict], edges: list[dict]) -> list[str]:
             errors.append(f"Orphan node (no connections): {nid}")
 
     # Check for cycles via topological sort
-    in_degree: dict[str, int] = {nid: 0 for nid in node_ids}
+    in_degree: dict[str, int] = dict.fromkeys(node_ids, 0)
     adj: dict[str, list[str]] = defaultdict(list)
     for edge in edges:
         src = edge.get("source_node_id", edge.get("source", ""))

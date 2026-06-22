@@ -1,15 +1,14 @@
 """Tests for monitor service core logic."""
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 from uuid import uuid4
 
+from app.services.change_detector import ChangeResult
 from app.services.monitor_service import (
     _create_alert,
     _detect_changes,
     _extract_value,
 )
-from app.services.change_detector import ChangeResult
 
 
 class TestExtractValue:

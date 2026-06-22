@@ -1,11 +1,14 @@
 from __future__ import annotations
+
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException
+
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from ..deps import get_db, get_current_user
+
+from ..deps import get_current_user, get_db
+from ..models.monitor import Alert, Monitor
 from ..models.user import User
-from ..models.monitor import Monitor, Alert
-from ..schemas.monitor import MonitorCreate, MonitorUpdate, MonitorResponse, AlertResponse
+from ..schemas.monitor import AlertResponse, MonitorCreate, MonitorResponse
 
 router = APIRouter(prefix="/api/monitors", tags=["monitors"])
 

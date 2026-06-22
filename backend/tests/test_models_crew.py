@@ -1,16 +1,14 @@
 """Tests for all research engine models."""
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-import pytest
-
-from app.models.project import Project, ProjectStatus
-from app.models.expert_agent import ExpertAgent, AgentSpecialty
-from app.models.mission import Mission, MissionStatus, MissionType
-from app.models.agent_crew import AgentCrew, CoordinationStrategy, AgentActivity, ActivityType
-from app.models.mission_run import MissionRun, MissionTask, RunStatus, TriggerType
+from app.models.agent_crew import ActivityType, AgentActivity, AgentCrew, CoordinationStrategy
 from app.models.crew_task import CrewTask, CrewTaskStatus
+from app.models.expert_agent import AgentSpecialty, ExpertAgent
 from app.models.finding import Finding
+from app.models.mission import Mission, MissionStatus, MissionType
+from app.models.mission_run import MissionRun, RunStatus, TriggerType
+from app.models.project import Project, ProjectStatus
 from app.models.report import Report
 
 
@@ -127,7 +125,7 @@ class TestCrewTaskModel:
 
     def test_thinking_log_structure(self):
         log_entry = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "thought": "Searching for pricing data",
             "action": "searching",
             "tool": "gemini_search",

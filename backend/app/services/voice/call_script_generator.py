@@ -6,7 +6,7 @@ import json
 import logging
 from typing import Any
 
-from ..gemini import generate_structured, generate_text
+from ..gemini import generate_structured
 
 logger = logging.getLogger(__name__)
 

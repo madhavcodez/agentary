@@ -1,8 +1,6 @@
 """E2E golden path test: create mission -> assemble crew -> execute -> verify findings."""
 import uuid
 
-import pytest
-
 from app.models.agent_crew import AgentCrew, CoordinationStrategy
 from app.models.crew_task import CrewTask, CrewTaskStatus
 from app.models.expert_agent import AgentSpecialty, ExpertAgent

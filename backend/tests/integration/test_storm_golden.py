@@ -21,7 +21,6 @@ from __future__ import annotations
 import os
 import uuid
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -96,9 +95,8 @@ async def test_storm_golden_path_live():
            FROM section_citations WHERE report_id=... ORDER BY section_index;
       3. Point out that `flash_calls + pro_calls` is bounded.
     """
-    from app.services.storm import run_storm_prewrite
 
-    mission = SimpleNamespace(
+    SimpleNamespace(
         id=uuid.uuid4(),
         project_id=uuid.uuid4(),
         name="Evaluate residential solar leases vs. buying in California",

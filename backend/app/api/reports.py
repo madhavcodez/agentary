@@ -12,12 +12,12 @@ from ..deps import get_current_user, get_db
 from ..models.report import Report
 from ..models.user import User
 from ..schemas.report import (
+    RegenerateSection,
     ReportCreate,
     ReportFull,
     ReportList,
     ReportSummary,
     ReportUpdate,
-    RegenerateSection,
     ShareResponse,
 )
 

@@ -12,7 +12,6 @@ import httpx
 
 from ..base_connector import SourceResult
 
-
 _BASE_URL = "https://api.yelp.com/v3"
 
 

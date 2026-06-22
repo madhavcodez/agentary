@@ -28,15 +28,15 @@ def get_handler(action_type: str) -> ActionHandler | None:
 
 def register_all_handlers() -> None:
     """Register all built-in handlers."""
-    from .update_status import UpdateStatusHandler
-    from .send_alert import SendAlertHandler
-    from .trigger_workflow import TriggerWorkflowHandler
-    from .trigger_monitor import TriggerMonitorHandler
     from .create_task import CreateTaskHandler
-    from .generate_report import GenerateReportHandler
-    from .queue_call import QueueCallHandler
-    from .merge_entities import MergeEntitiesHandler
     from .escalate import EscalateHandler
+    from .generate_report import GenerateReportHandler
+    from .merge_entities import MergeEntitiesHandler
+    from .queue_call import QueueCallHandler
+    from .send_alert import SendAlertHandler
+    from .trigger_monitor import TriggerMonitorHandler
+    from .trigger_workflow import TriggerWorkflowHandler
+    from .update_status import UpdateStatusHandler
 
     register_handler("update_status", UpdateStatusHandler())
     register_handler("send_alert", SendAlertHandler())

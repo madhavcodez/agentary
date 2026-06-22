@@ -12,7 +12,7 @@ import logging
 import re
 import time
 from typing import Any
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urlparse
 
 import httpx
 from bs4 import BeautifulSoup
@@ -106,11 +106,11 @@ def _extract_tables(soup: BeautifulSoup) -> list[dict[str, Any]]:
         for row in rows[1:]:
             cells = [td.get_text(strip=True) for td in row.find_all(["td", "th"])]
             if len(cells) == len(headers):
-                table_data.append(dict(zip(headers, cells)))
+                table_data.append(dict(zip(headers, cells, strict=False)))
             elif cells:
                 # Pad or truncate to match headers
                 padded = cells + [""] * (len(headers) - len(cells))
-                table_data.append(dict(zip(headers, padded[:len(headers)])))
+                table_data.append(dict(zip(headers, padded[:len(headers)], strict=False)))
 
         tables.append({
             "headers": headers,

@@ -18,16 +18,14 @@ import logging
 import time
 import traceback
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Request, WebSocket
 from fastapi.responses import Response
-
 from pipecat.frames.frames import (
     Frame,
-    TTSTextFrame,
     TranscriptionFrame,
+    TTSTextFrame,
 )
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
@@ -221,7 +219,7 @@ async def status_callback(campaign_id: UUID, request: Request) -> dict:
 async def _save_transcript_and_post_process(
     db,
     campaign_id: UUID,
-    call_sid: Optional[str],
+    call_sid: str | None,
     transcript_text: str,
 ) -> None:
     """Persist the transcript to the matching CallLog row and run post-processing.
@@ -289,9 +287,9 @@ async def outbound_ws(ws: WebSocket, campaign_id: UUID) -> None:
     logger.info("=== OUTBOUND WS CONNECTED: campaign=%s ===", campaign_id)
 
     db = SessionLocal()
-    stream_sid: Optional[str] = None
-    call_sid: Optional[str] = None
-    transcript_capture: Optional[TranscriptCaptureProcessor] = None
+    stream_sid: str | None = None
+    call_sid: str | None = None
+    transcript_capture: TranscriptCaptureProcessor | None = None
 
     try:
         # ------------------------------------------------------------------
@@ -317,7 +315,7 @@ async def outbound_ws(ws: WebSocket, campaign_id: UUID) -> None:
 
             if event == "connected":
                 continue
-            elif event == "start":
+            if event == "start":
                 start_data = msg.get("start", {})
                 stream_sid = start_data.get("streamSid")
                 call_sid = start_data.get("callSid")

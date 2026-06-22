@@ -40,7 +40,7 @@ class ToolRegistry:
             self._tools[name] = {
                 "module": mod,
                 "schema": getattr(mod, "TOOL_SCHEMA", {}),
-                "execute": getattr(mod, "execute"),
+                "execute": mod.execute,
             }
 
     def list_tools(self) -> list[dict[str, Any]]:

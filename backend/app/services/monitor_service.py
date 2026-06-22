@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -22,7 +22,7 @@ from .change_detector import (
     detect_text_change,
     detect_value_change,
 )
-from .state_machine import transition as sm_transition, InvalidTransition
+from .state_machine import transition as sm_transition
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +153,7 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
         # Transition: created -> queued -> running
         _transition_monitor_run(monitor_run, RunStatus.queued, "Check queued")
         _transition_monitor_run(monitor_run, RunStatus.running, "Check started")
-        monitor_run.started_at = datetime.now(timezone.utc)
+        monitor_run.started_at = datetime.now(UTC)
         db.flush()
 
         # Emit check start event
@@ -170,19 +170,19 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
                 _fetch_check_data(monitor),
                 timeout=60.0,  # 60-second hard timeout for the fetch
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             error_msg = f"Check timed out after 60s for monitor {monitor.name}"
             logger.warning(error_msg)
             _transition_monitor_run(monitor_run, RunStatus.failed, error_msg)
             monitor_run.failure_category = FailureCategory.timeout
             monitor_run.failure_message = error_msg
-            monitor_run.completed_at = datetime.now(timezone.utc)
+            monitor_run.completed_at = datetime.now(UTC)
             monitor_run.duration_ms = int((time_mod.time() - check_start) * 1000)
             monitor_run.result = {"error": "timeout"}
 
             # Update monitor error tracking without creating a false-positive alert
             monitor.last_error = error_msg
-            monitor.last_error_at = datetime.now(timezone.utc)
+            monitor.last_error_at = datetime.now(UTC)
             monitor.total_checks = (monitor.total_checks or 0) + 1
             db.commit()
             return {"error": error_msg, "monitor_run_id": str(monitor_run.id)}
@@ -193,13 +193,13 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
             _transition_monitor_run(monitor_run, RunStatus.failed, error_msg)
             monitor_run.failure_category = FailureCategory.transient_connector
             monitor_run.failure_message = error_msg
-            monitor_run.completed_at = datetime.now(timezone.utc)
+            monitor_run.completed_at = datetime.now(UTC)
             monitor_run.duration_ms = int((time_mod.time() - check_start) * 1000)
             monitor_run.result = new_data
 
             # Update monitor error tracking — do NOT create a false-positive alert
             monitor.last_error = error_msg
-            monitor.last_error_at = datetime.now(timezone.utc)
+            monitor.last_error_at = datetime.now(UTC)
             monitor.total_checks = (monitor.total_checks or 0) + 1
             db.commit()
             return {"error": error_msg, "monitor_run_id": str(monitor_run.id)}
@@ -208,7 +208,7 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
         changes = _detect_changes(monitor, new_data)
 
         # Update monitor snapshot
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         monitor.last_check_at = now
         monitor.last_snapshot = new_data
         monitor.total_checks = (monitor.total_checks or 0) + 1
@@ -296,8 +296,8 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
 
             # Emit signal for the intelligence pipeline
             try:
-                from .intelligence.signal_service import SignalService
                 from ..models.signal import SignalSourceType, SignalType
+                from .intelligence.signal_service import SignalService
 
                 if monitor.project_id:
                     signal_svc = SignalService(db)
@@ -338,12 +338,12 @@ async def execute_check(monitor_id: str, db: Session | None = None) -> dict[str,
                 monitor_run.status = RunStatus.failed
                 monitor_run.failure_category = FailureCategory.internal
                 monitor_run.failure_message = str(exc)
-                monitor_run.completed_at = datetime.now(timezone.utc)
+                monitor_run.completed_at = datetime.now(UTC)
                 transitions = list(monitor_run.state_transitions or [])
                 transitions.append({
                     "from": "running",
                     "to": "failed",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "reason": str(exc),
                 })
                 monitor_run.state_transitions = transitions
@@ -365,14 +365,11 @@ async def _fetch_check_data(monitor: Monitor) -> dict[str, Any]:
 
     if monitor_type in ("web_content", "competitor_tracker"):
         return await _fetch_web_content(config)
-    elif monitor_type == "api_data":
+    if monitor_type == "api_data":
         return await _fetch_api_data(config)
-    elif monitor_type in ("price_tracker", "listing_watcher"):
+    if monitor_type in ("price_tracker", "listing_watcher") or monitor_type == "custom":
         return await _fetch_web_content(config)
-    elif monitor_type == "custom":
-        return await _fetch_web_content(config)
-    else:
-        return {"error": f"Unknown monitor type: {monitor_type}"}
+    return {"error": f"Unknown monitor type: {monitor_type}"}
 
 
 async def _fetch_web_content(config: dict) -> dict[str, Any]:
@@ -435,7 +432,7 @@ def _detect_changes(monitor: Monitor, new_data: dict[str, Any]) -> ChangeResult:
             old.get("content", ""),
             new_data.get("content", ""),
         )
-    elif monitor_type == "api_data":
+    if monitor_type == "api_data":
         # Compare JSON data
         old_data = old.get("data")
         new_d = new_data.get("data")
@@ -446,19 +443,18 @@ def _detect_changes(monitor: Monitor, new_data: dict[str, Any]) -> ChangeResult:
                 return new_items
             return detect_removed_items(old_data, new_d, key)
         return detect_text_change(str(old_data), str(new_d))
-    elif monitor_type == "price_tracker":
+    if monitor_type == "price_tracker":
         field = config.get("value_field", "price")
         threshold = config.get("threshold", 0)
         old_val = _extract_value(old, field)
         new_val = _extract_value(new_data, field)
         return detect_value_change(old_val, new_val, threshold)
-    elif monitor_type == "listing_watcher":
+    if monitor_type == "listing_watcher":
         key = config.get("list_key", "id")
         old_list = old.get("data", []) if isinstance(old.get("data"), list) else []
         new_list = new_data.get("data", []) if isinstance(new_data.get("data"), list) else []
         return detect_new_items(old_list, new_list, key)
-    else:
-        return detect_text_change(str(old), str(new_data))
+    return detect_text_change(str(old), str(new_data))
 
 
 def _extract_value(data: dict, field: str) -> float | None:
@@ -492,7 +488,7 @@ def _is_duplicate_alert(
     if cooldown_seconds <= 0:
         return False
 
-    cutoff = datetime.now(timezone.utc) - timedelta(seconds=cooldown_seconds)
+    cutoff = datetime.now(UTC) - timedelta(seconds=cooldown_seconds)
     existing = (
         db.query(Alert)
         .filter(

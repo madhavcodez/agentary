@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid as uuid_mod
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -25,7 +25,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(user_id: UUID, expires_delta: timedelta | None = None) -> str:
     """Create a signed JWT access token for the given user ID."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     expire = now + (expires_delta or timedelta(days=settings.jwt_expire_days))
     payload = {
         "sub": str(user_id),

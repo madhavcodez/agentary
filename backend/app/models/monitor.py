@@ -5,8 +5,18 @@ from __future__ import annotations
 import enum
 import uuid
 
-from sqlalchemy import Boolean, Column, DateTime, Enum as SAEnum, ForeignKey, Integer, String, Text, func
-from sqlalchemy.dialects.postgresql import ARRAY, UUID, JSONB
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Enum as SAEnum,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    func,
+)
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import relationship
 
 from ..database import Base

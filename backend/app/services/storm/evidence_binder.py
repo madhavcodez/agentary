@@ -17,7 +17,8 @@ than let the section synthesizer hallucinate citations.
 from __future__ import annotations
 
 import logging
-from typing import Any, Iterable, Sequence
+from collections.abc import Iterable, Sequence
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ DEFAULT_SCORE_THRESHOLD = 0.55
 def _cosine(a: list[float], b: list[float]) -> float:
     if not a or not b or len(a) != len(b):
         return 0.0
-    dot = sum(x * y for x, y in zip(a, b))
+    dot = sum(x * y for x, y in zip(a, b, strict=False))
     na = sum(x * x for x in a) ** 0.5
     nb = sum(y * y for y in b) ** 0.5
     if na == 0.0 or nb == 0.0:
@@ -60,7 +61,7 @@ async def bind_findings_to_sections(
     pairwise cosine similarity in-memory. For the typical Agentary mission
     (≤50 findings × ≤6 sections) this is 300 cosine ops — trivial.
     """
-    findings_list = [f for f in findings]
+    findings_list = list(findings)
     if not sections or not findings_list:
         return {}
 

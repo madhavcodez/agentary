@@ -1,7 +1,7 @@
 """Tests for the tool registry."""
 import pytest
 
-from app.services.crews.tool_registry import ToolRegistry, tool_registry
+from app.services.crews.tool_registry import tool_registry
 
 
 class TestToolRegistry:

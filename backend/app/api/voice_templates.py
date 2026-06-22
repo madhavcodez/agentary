@@ -3,9 +3,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from ..schemas.voice import TemplateListResponse, TemplateResponse
+from ..schemas.voice import TemplateListResponse
 from ..services.voice.templates import (
-    BUILT_IN_TEMPLATES,
     get_template_by_name,
     list_templates,
 )

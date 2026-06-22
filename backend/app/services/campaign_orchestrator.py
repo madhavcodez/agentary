@@ -1,7 +1,7 @@
 """Legacy campaign orchestrator — stub for backward compatibility."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 
 def _should_retry(campaign, last_log) -> bool:
@@ -22,7 +22,7 @@ def _should_retry(campaign, last_log) -> bool:
     backoff_hours = 2 ** campaign.attempt_count
     if last_log.created_at:
         next_attempt = last_log.created_at + timedelta(hours=backoff_hours)
-        if datetime.now(timezone.utc) < next_attempt:
+        if datetime.now(UTC) < next_attempt:
             return False
 
     return True

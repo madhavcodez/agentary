@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from ..deps import get_current_user, get_db
 from ..models.user import User
-from ..schemas.intelligence import InsightResponse, EvidenceResponse
+from ..schemas.intelligence import EvidenceResponse, InsightResponse
 from ..services.intelligence.evidence_service import EvidenceService
 from ..services.intelligence.insight_service import InsightService
 

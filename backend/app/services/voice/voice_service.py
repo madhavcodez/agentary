@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -22,7 +22,6 @@ from ...models.voice_extraction import (
     VoiceExtractionStatus,
 )
 from . import extraction_service, transcript_processor, voice_pipeline_adapter
-from .call_script_generator import generate_script
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +36,7 @@ def _append_call_transition(
 
     Validates the transition using CALL_VALID_TRANSITIONS from the state machine.
     """
-    from ..state_machine import call_transition, InvalidTransition
+    from ..state_machine import InvalidTransition, call_transition
 
     try:
         record = call_transition(from_state, to_state, reason)
@@ -49,7 +48,7 @@ def _append_call_transition(
         record = {
             "from": from_state,
             "to": to_state,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "reason": reason,
         }
     transitions = list(call_record.state_transitions or [])
@@ -294,8 +293,8 @@ async def process_completed_call(
 
     # Emit signal for the intelligence pipeline
     try:
-        from ..intelligence.signal_service import SignalService
         from ...models.signal import SignalSourceType, SignalType
+        from ..intelligence.signal_service import SignalService
 
         if call_record.project_id:
             signal_svc = SignalService(db)

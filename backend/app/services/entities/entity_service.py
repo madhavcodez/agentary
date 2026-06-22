@@ -15,7 +15,6 @@ from ...models.entity import Entity
 from ...models.entity_alias import AliasType, EntityAlias
 from ...models.entity_collection import EntityCollection
 from ...models.entity_relationship import EntityRelationship
-from ...models.evidence import Evidence
 from ...models.insight import Insight
 from ...models.observation import Observation
 from ...models.recommendation import Recommendation
@@ -130,19 +129,18 @@ class EntityService:
 
         if entity_type == "person":
             return self._match_person(base_query, identifiers)
-        elif entity_type == "company":
+        if entity_type == "company":
             return self._match_company(base_query, identifiers)
-        elif entity_type == "property":
+        if entity_type == "property":
             return self._match_property(base_query, identifiers)
-        elif entity_type == "business":
+        if entity_type == "business":
             return self._match_business(base_query, identifiers)
-        elif entity_type == "location":
+        if entity_type == "location":
             return self._match_location(base_query, identifiers)
-        else:
-            # Generic: match by exact name
-            name = identifiers.get("name", "")
-            if name:
-                return base_query.filter(Entity.name == name).first()
+        # Generic: match by exact name
+        name = identifiers.get("name", "")
+        if name:
+            return base_query.filter(Entity.name == name).first()
         return None
 
     def _match_person(self, query, identifiers: dict) -> Entity | None:
@@ -528,7 +526,7 @@ class EntityService:
 
         record = (
             db.query(MergeHistory)
-            .filter(MergeHistory.id == merge_id, MergeHistory.is_undone == False)
+            .filter(MergeHistory.id == merge_id, MergeHistory.is_undone.is_(False))
             .first()
         )
         if not record:
@@ -582,11 +580,11 @@ class EntityService:
         if not entity:
             raise ValueError(f"Entity {entity_id} not found")
 
-        if "name" in data and data["name"]:
+        if data.get("name"):
             entity.name = data["name"]
         if "description" in data:
             entity.description = data["description"]
-        if "canonical_data" in data and data["canonical_data"]:
+        if data.get("canonical_data"):
             entity.canonical_data = _merge_dicts(
                 entity.canonical_data or {}, data["canonical_data"]
             )

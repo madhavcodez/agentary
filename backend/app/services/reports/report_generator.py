@@ -2,20 +2,18 @@ import json
 import logging
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import markdown2
-
 from google import genai
 from sqlalchemy.orm import Session
 
 from ...config import settings
-from ...core.events import Event, EventType, event_bus
+from ...models.crew_run import CrewRun
 from ...models.enums import FailureCategory
 from ...models.finding import Finding
 from ...models.mission import Mission
-from ...models.crew_run import CrewRun
 from ...models.report import Report
 from .chart_generator import ChartGenerator
 
@@ -34,7 +32,7 @@ def _append_report_transition(
     record = {
         "from": from_state,
         "to": to_state,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "reason": reason,
     }
     transitions = list(report.state_transitions or [])
@@ -495,7 +493,7 @@ class ReportGenerator:
             "chart_configs": [],
             "order": max((s["order"] for s in sorted_sections), default=0) + 1,
         }
-        all_sections_json = [exec_section] + sorted_sections + [methodology_section]
+        all_sections_json = [exec_section, *sorted_sections, methodology_section]
 
         # ---- 12. Calculate metadata ----
         generation_time = time.monotonic() - start_time
@@ -513,7 +511,7 @@ class ReportGenerator:
             "word_count": word_count,
             "template_used": report_type,
             "model": _REPORT_MODEL,
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": datetime.now(UTC).isoformat(),
         }
 
         # ---- 13. Create Report record ----
@@ -677,7 +675,7 @@ class ReportGenerator:
         existing_metadata = dict(report.metadata_ or {})
         existing_metadata["word_count"] = len(content_markdown.split())
         existing_metadata["last_section_regenerated"] = section_title
-        existing_metadata["last_regenerated_at"] = datetime.now(timezone.utc).isoformat()
+        existing_metadata["last_regenerated_at"] = datetime.now(UTC).isoformat()
 
         # Collect all charts from updated sections
         all_charts = []

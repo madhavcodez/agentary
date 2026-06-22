@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -59,7 +59,7 @@ class RecommendationService:
             return None
         rec.status = RecommendationStatus.accepted
         rec.reviewed_by = reviewed_by
-        rec.reviewed_at = datetime.now(timezone.utc)
+        rec.reviewed_at = datetime.now(UTC)
         self.db.flush()
         return rec
 
@@ -75,7 +75,7 @@ class RecommendationService:
             return None
         rec.status = RecommendationStatus.rejected
         rec.reviewed_by = reviewed_by
-        rec.reviewed_at = datetime.now(timezone.utc)
+        rec.reviewed_at = datetime.now(UTC)
         rec.rejection_reason = reason
         self.db.flush()
         return rec

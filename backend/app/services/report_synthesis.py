@@ -27,7 +27,7 @@ from ..models.finding import Finding
 from ..models.mission import Mission
 from ..models.report import Report
 from ..models.section_citation import SectionCitation
-from ..prompts.reports import build_report_prompt, REPORT_SCHEMA_HINT
+from ..prompts.reports import REPORT_SCHEMA_HINT, build_report_prompt
 
 logger = logging.getLogger(__name__)
 

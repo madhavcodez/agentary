@@ -4,14 +4,13 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy.orm import Session
 
-from ..gemini import generate_structured
-from ...models.voice_extraction import CallRecord, VoiceExtraction
 from ...models.finding import Finding, FindingType, SourceType
+from ...models.voice_extraction import CallRecord, VoiceExtraction
+from ..gemini import generate_structured
 
 logger = logging.getLogger(__name__)
 

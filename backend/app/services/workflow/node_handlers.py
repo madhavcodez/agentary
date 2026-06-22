@@ -7,7 +7,6 @@ import csv
 import io
 import json
 import logging
-import re
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -149,17 +148,7 @@ async def handle_filter(config: dict, input_data: Any, context: dict) -> Any:
             op = cond.get("op", "eq")
             value = cond.get("value")
             item_val = item.get(field)
-            if op == "eq" and item_val != value:
-                match = False
-            elif op == "ne" and item_val == value:
-                match = False
-            elif op == "gt" and (item_val is None or item_val <= value):
-                match = False
-            elif op == "lt" and (item_val is None or item_val >= value):
-                match = False
-            elif op == "contains" and (item_val is None or str(value) not in str(item_val)):
-                match = False
-            elif op == "in" and item_val not in (value if isinstance(value, list) else [value]):
+            if (op == "eq" and item_val != value) or (op == "ne" and item_val == value) or (op == "gt" and (item_val is None or item_val <= value)) or (op == "lt" and (item_val is None or item_val >= value)) or (op == "contains" and (item_val is None or str(value) not in str(item_val))) or (op == "in" and item_val not in (value if isinstance(value, list) else [value])):
                 match = False
         if match:
             filtered.append(item)
@@ -206,9 +195,9 @@ async def handle_merge(config: dict, input_data: Any, context: dict) -> Any:
 
     if strategy == "concat":
         return a + b
-    elif strategy == "zip":
-        return [{"a": x, "b": y} for x, y in zip(a, b)]
-    elif strategy == "join":
+    if strategy == "zip":
+        return [{"a": x, "b": y} for x, y in zip(a, b, strict=False)]
+    if strategy == "join":
         key = config.get("key_field", "id")
         b_map = {item.get(key): item for item in b if isinstance(item, dict)}
         return [{**item, **b_map.get(item.get(key), {})} for item in a if isinstance(item, dict)]
@@ -393,7 +382,7 @@ async def handle_export_data(config: dict, input_data: Any, context: dict) -> An
     items = input_data if isinstance(input_data, list) else [input_data]
     if fmt == "json":
         return {"format": "json", "data": items}
-    elif fmt == "csv":
+    if fmt == "csv":
         if items and isinstance(items[0], dict):
             output = io.StringIO()
             writer = csv.DictWriter(output, fieldnames=items[0].keys())

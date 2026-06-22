@@ -12,7 +12,8 @@ answer), ``source_question_ids`` (which questions feed it), and
 from __future__ import annotations
 
 import logging
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from ...prompts.storm import OUTLINE_SCHEMA_HINT, build_outline_prompt
 from .budget import StormBudget

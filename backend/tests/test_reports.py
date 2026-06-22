@@ -11,7 +11,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ── ChartGenerator tests ─────────────────────────────────────────────
 
 
@@ -130,15 +129,15 @@ class TestDataExporter:
         finding.category = kwargs.get("category", "data_point")
         finding.title = kwargs.get("title", "Test Finding")
         finding.content = kwargs.get("content", "Test content here")
-        finding.structured_data = kwargs.get("structured_data", None)
+        finding.structured_data = kwargs.get("structured_data")
         finding.source_type = kwargs.get("source_type", "web")
         finding.source_url = kwargs.get("source_url", "https://example.com")
         finding.source_name = kwargs.get("source_name", "Example")
         finding.confidence = kwargs.get("confidence", 0.85)
         finding.verified = kwargs.get("verified", False)
         finding.tags = kwargs.get("tags", ["test"])
-        finding.expert_agent_id = kwargs.get("expert_agent_id", None)
-        finding.project_id = kwargs.get("project_id", None)
+        finding.expert_agent_id = kwargs.get("expert_agent_id")
+        finding.project_id = kwargs.get("project_id")
         finding.created_at = kwargs.get("created_at", datetime(2024, 1, 15))
         return finding
 

@@ -91,7 +91,4 @@ class PolicyEngine:
 
         # priority_in
         priority_in = condition.get("priority_in")
-        if priority_in and action.priority not in priority_in:
-            return False
-
-        return True
+        return not (priority_in and action.priority not in priority_in)

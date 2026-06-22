@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -56,7 +56,7 @@ class ActionService:
 
         if decision.get("auto_approve"):
             action.status = ActionRequestStatus.approved
-            action.approved_at = datetime.now(timezone.utc)
+            action.approved_at = datetime.now(UTC)
             self._append_transition(action, "pending_approval", "approved", "auto-approved by policy")
             self.db.flush()
             # Dispatch execution
@@ -79,7 +79,7 @@ class ActionService:
 
         action.status = ActionRequestStatus.approved
         action.approved_by = approved_by
-        action.approved_at = datetime.now(timezone.utc)
+        action.approved_at = datetime.now(UTC)
         self._append_transition(action, "pending_approval", "approved", f"approved by user {approved_by}")
         self.db.flush()
 
@@ -147,7 +147,7 @@ class ActionService:
         transitions.append({
             "from": from_state,
             "to": to_state,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "reason": reason,
         })
         action.state_transitions = transitions

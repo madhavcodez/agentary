@@ -268,7 +268,7 @@ def _calculate_talk_ratio(segments: list[dict]) -> dict[str, float]:
 
     total = sum(word_counts.values())
     if total == 0:
-        return {speaker: 0.0 for speaker in word_counts}
+        return dict.fromkeys(word_counts, 0.0)
 
     ratios: dict[str, float] = {
         speaker: round(count / total, 4)

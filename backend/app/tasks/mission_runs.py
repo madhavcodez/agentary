@@ -3,10 +3,9 @@ from __future__ import annotations
 import logging
 import uuid
 
-from .celery_app import celery_app
 from ..database import SessionLocal
 from ..models.mission_run import MissionRun
-from ..models.enums import RunStatus
+from .celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 

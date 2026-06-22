@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 from typing import Any
@@ -42,10 +43,8 @@ class RedisBridge:
         """Cancel the subscriber task and close the Redis connection."""
         if self._subscriber_task is not None:
             self._subscriber_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._subscriber_task
-            except asyncio.CancelledError:
-                pass
             self._subscriber_task = None
 
         if self._redis is not None:
@@ -172,7 +171,6 @@ async def subscribe_and_forward(ws_manager) -> None:
     Runs as a long-lived coroutine -- launch via ``asyncio.create_task``
     in the app lifespan.  Delegates to the singleton :data:`redis_bridge`.
     """
-    from .websocket_manager import ws_manager as _ws  # noqa: F811
 
     # Ensure the bridge has a Redis connection
     if redis_bridge._redis is None:

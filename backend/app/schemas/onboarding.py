@@ -5,7 +5,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 
-
 # ── Request schemas ──────────────────────────────────────────────────
 
 class GenerateQuestionsRequest(BaseModel):
@@ -18,7 +17,7 @@ class ConfigureAndStartRequest(BaseModel):
     project_title: str = Field(min_length=1, max_length=500)
 
     @model_validator(mode="after")
-    def _validate_answers(self) -> "ConfigureAndStartRequest":
+    def _validate_answers(self) -> ConfigureAndStartRequest:
         if len(self.answers) > 20:
             raise ValueError("Too many answers (max 20)")
         for key, value in self.answers.items():

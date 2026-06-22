@@ -1,21 +1,24 @@
 from __future__ import annotations
+
 import logging
 from uuid import UUID, uuid4
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from ..core.background_tasks import spawn_background_task as _spawn_background_task
-from ..deps import get_db, get_current_user
 
-logger = logging.getLogger(__name__)
-from ..models.user import User
+from ..core.background_tasks import spawn_background_task as _spawn_background_task
+from ..core.correlation import get_correlation_id
+from ..deps import get_current_user, get_db
+from ..models.enums import RunStatus
 from ..models.mission import Mission
 from ..models.mission_run import MissionRun
-from ..models.enums import RunStatus
-from ..schemas.mission import MissionCreate, MissionUpdate, MissionResponse
+from ..models.user import User
+from ..schemas.mission import MissionCreate, MissionResponse, MissionUpdate
 from ..schemas.mission_run import MissionRunResponse
 from ..schemas.onboarding import SynthesizeReportResponse
-from ..core.correlation import get_correlation_id
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/missions", tags=["missions"])
 
@@ -148,7 +151,7 @@ def list_mission_runs(
 
 # ── Research Engine Endpoints ─────────────────────────────────────────
 
-from ..models.agent_crew import AgentCrew, AgentActivity
+from ..models.agent_crew import AgentActivity, AgentCrew
 from ..models.crew_run import CrewRun
 from ..models.finding import Finding
 
@@ -185,7 +188,6 @@ async def start_mission(
             execute_crew_run.delay(str(run.id), correlation_id=get_correlation_id())
         except Exception as celery_exc:
             logger.warning("Celery unavailable, falling back to inline execution: %s", celery_exc)
-            import asyncio
             from ..services.crews.crew_runner import CrewRunner
 
             async def _run_inline():
@@ -212,7 +214,7 @@ async def start_mission(
             # is held in a module-level set so the GC can't reclaim it mid-
             # flight (a known ensure_future foot-gun).
             _spawn_background_task(_run_inline(), "mission-inline-run")
-    except Exception as e:
+    except Exception:
         db.rollback()
         mission.status = MissionStatus.failed
         db.commit()
@@ -404,7 +406,6 @@ async def rerun_mission(
             execute_crew_run.delay(str(run.id), correlation_id=get_correlation_id())
         except Exception as celery_exc:
             logger.warning("Celery unavailable for rerun, falling back to inline: %s", celery_exc)
-            import asyncio
             from ..services.crews.crew_runner import CrewRunner
 
             async def _run_inline():
@@ -431,7 +432,7 @@ async def rerun_mission(
             # is held in a module-level set so the GC can't reclaim it mid-
             # flight (a known ensure_future foot-gun).
             _spawn_background_task(_run_inline(), "mission-inline-run")
-    except Exception as e:
+    except Exception:
         db.rollback()
         mission.status = MissionStatus.failed
         db.commit()

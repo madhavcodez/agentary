@@ -33,7 +33,7 @@ def get_funnel(
         .group_by(Match.pipeline_stage)
         .all()
     )
-    counts = {stage: count for stage, count in rows}
+    counts = dict(rows)
 
     ordered_stages = [
         "lead", "contacted", "aware", "engaged",

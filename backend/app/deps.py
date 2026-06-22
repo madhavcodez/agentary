@@ -10,14 +10,15 @@ from .database import get_session
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
 
-def get_db() -> Generator[Session, None, None]:
+def get_db() -> Generator[Session]:
     yield from get_session()
 
 
 def _get_or_create_dev_user(db: Session):
     """Get or create a default dev user when running without auth."""
-    from .models.user import User
     import uuid
+
+    from .models.user import User
 
     dev_email = "dev@agentary.local"
     user = db.query(User).filter(User.email == dev_email).first()
@@ -55,7 +56,7 @@ def get_current_user(
     from .models.user import User
 
     user_id = verify_token(token)
-    user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
+    user = db.query(User).filter(User.id == user_id, User.is_active.is_(True)).first()
     if not user:
         raise HTTPException(
             status_code=401,

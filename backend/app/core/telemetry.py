@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator
+from typing import Any
 
 import structlog
 
@@ -28,7 +29,7 @@ logger = structlog.get_logger()
 async def tracked_operation(
     operation: str,
     **context: Any,
-) -> AsyncGenerator[dict[str, Any], None]:
+) -> AsyncGenerator[dict[str, Any]]:
     """Async context manager that logs start/end/duration/errors for any operation."""
     start_time = time.monotonic()
     metrics: dict[str, Any] = {"operation": operation, **context}

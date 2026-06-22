@@ -429,7 +429,7 @@ class ChartGenerator:
                 str(e.get(date_field, "")): e.get(value_field, 0)
                 for e in entries
             }
-            data_values = [date_to_value.get(d, None) for d in labels]
+            data_values = [date_to_value.get(d) for d in labels]
             color = self.COLORS[idx % len(self.COLORS)]
 
             datasets.append({

@@ -594,7 +594,7 @@ class PDFExporter:
         values = ds.get("data", [])
         colors = [self._pick_color({}, i) for i in range(len(values))]
         wedge_props = {"edgecolor": "white", "linewidth": 1.5}
-        wedges, texts, autotexts = ax.pie(
+        _wedges, _texts, autotexts = ax.pie(
             values,
             labels=labels,
             colors=colors,

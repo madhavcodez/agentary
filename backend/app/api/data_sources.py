@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -18,6 +19,8 @@ from ..schemas.data_source import (
     DataSourceResponse,
     DataSourceUpdate,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/data-sources", tags=["data-sources"])
 
@@ -38,8 +41,8 @@ def list_data_sources(
     """List available sources (system + user-created) with health status."""
     sources = (
         db.query(DataSource)
-        .filter((DataSource.user_id == user.id) | (DataSource.is_system == True))
-        .filter(DataSource.is_active == True)
+        .filter((DataSource.user_id == user.id) | (DataSource.is_system.is_(True)))
+        .filter(DataSource.is_active.is_(True))
         .order_by(DataSource.name)
         .all()
     )
@@ -77,7 +80,7 @@ def get_data_source(
         db.query(DataSource)
         .filter(
             DataSource.id == source_id,
-            (DataSource.user_id == user.id) | (DataSource.is_system == True),
+            (DataSource.user_id == user.id) | (DataSource.is_system.is_(True)),
         )
         .first()
     )
@@ -157,7 +160,7 @@ async def test_data_source(
         db.query(DataSource)
         .filter(
             DataSource.id == source_id,
-            (DataSource.user_id == user.id) | (DataSource.is_system == True),
+            (DataSource.user_id == user.id) | (DataSource.is_system.is_(True)),
         )
         .first()
     )
@@ -199,7 +202,7 @@ async def health_check_source(
         db.query(DataSource)
         .filter(
             DataSource.id == source_id,
-            (DataSource.user_id == user.id) | (DataSource.is_system == True),
+            (DataSource.user_id == user.id) | (DataSource.is_system.is_(True)),
         )
         .first()
     )
@@ -236,7 +239,7 @@ async def query_data_source(
         db.query(DataSource)
         .filter(
             DataSource.id == source_id,
-            (DataSource.user_id == user.id) | (DataSource.is_system == True),
+            (DataSource.user_id == user.id) | (DataSource.is_system.is_(True)),
         )
         .first()
     )

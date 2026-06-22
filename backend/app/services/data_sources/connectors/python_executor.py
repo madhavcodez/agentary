@@ -143,7 +143,7 @@ class PythonExecutorConnector:
             "_code_ns = dict(_safe_builtins)\n"
             "_code_ns['data'] = data\n"
             "_code_ns['result'] = result\n"
-            f"_user_code = {repr(code)}\n"
+            f"_user_code = {code!r}\n"
             "_builtins.exec(_user_code, _code_ns)\n"
             "result = _code_ns.get('result')\n"
             "\n"
@@ -163,7 +163,7 @@ class PythonExecutorConnector:
                 proc.communicate(),
                 timeout=timeout,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             proc.kill()
             await proc.wait()
             return SourceResult(

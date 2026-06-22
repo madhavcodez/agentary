@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 import uuid
 
-from sqlalchemy import Column, DateTime, Enum as SAEnum, Float, ForeignKey, String, Text, func
+from sqlalchemy import Column, DateTime, Enum as SAEnum, Float, ForeignKey, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 

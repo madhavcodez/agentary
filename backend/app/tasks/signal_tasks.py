@@ -25,8 +25,8 @@ def process_signal(self, signal_id: str):
     db = SessionLocal()
     try:
         from ..models.signal import Signal
-        from ..services.intelligence.signal_service import SignalService
         from ..services.intelligence.observation_service import ObservationService
+        from ..services.intelligence.signal_service import SignalService
 
         signal = db.query(Signal).filter_by(id=signal_id).first()
         if not signal or signal.is_processed:

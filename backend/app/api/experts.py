@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_session
 from ..deps import get_current_user
-from ..models.expert_agent import AgentSpecialty, ExpertAgent
+from ..models.expert_agent import ExpertAgent
 from ..models.user import User
 from ..services.crews.expert_registry import create_custom_expert, seed_builtin_experts
 
