@@ -30,5 +30,5 @@ celery[redis]==5.4.0
 RestrictedPython>=7.4
 twilio>=9.0.0
 phonenumbers>=8.13.0
-pytest==8.3.5
-pytest-asyncio==0.26.0
+pytest==9.1.1
+pytest-asyncio==1.4.0
