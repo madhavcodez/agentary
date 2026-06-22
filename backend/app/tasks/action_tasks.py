@@ -1,4 +1,5 @@
 """Action execution Celery tasks."""
+
 from __future__ import annotations
 
 import asyncio
@@ -71,9 +72,7 @@ def dispatch_action(self, action_request_id: str) -> dict:
         handler = get_handler(action_type)
         if not handler:
             execution.status = ExecutionStatus.failed
-            execution.error = {
-                "message": f"No handler for action type: {action_type}"
-            }
+            execution.error = {"message": f"No handler for action type: {action_type}"}
             execution.completed_at = datetime.now(UTC)
             action.status = ActionRequestStatus.failed
             transitions.append(
@@ -141,9 +140,7 @@ def dispatch_action(self, action_request_id: str) -> dict:
 
             db.commit()
 
-            _record_outcome(
-                db, action, execution, "failure", {"error": str(handler_error)}
-            )
+            _record_outcome(db, action, execution, "failure", {"error": str(handler_error)})
 
             return {"status": "failed", "error": str(handler_error)}
 
@@ -191,14 +188,10 @@ def _record_outcome(
             user_id=action.user_id,
             source_type=SignalSourceType.action_outcome,
             signal_type=(
-                SignalType.data_extracted
-                if outcome_type == "success"
-                else SignalType.user_flagged
+                SignalType.data_extracted if outcome_type == "success" else SignalType.user_flagged
             ),
             title=f"Action outcome: {action.title} ({outcome_type})",
-            content=(
-                f"Action type: {action_type_val}. Result: {outcome_type}"
-            ),
+            content=(f"Action type: {action_type_val}. Result: {outcome_type}"),
             structured_data=result.get("result", {}),
             source_id=action.id,
             entity_id=action.entity_id,
@@ -209,11 +202,7 @@ def _record_outcome(
         if action.recommendation_id and outcome_type == "success":
             from ..models.recommendation import Recommendation, RecommendationStatus
 
-            rec = (
-                db.query(Recommendation)
-                .filter_by(id=action.recommendation_id)
-                .first()
-            )
+            rec = db.query(Recommendation).filter_by(id=action.recommendation_id).first()
             if rec:
                 rec.status = RecommendationStatus.acted_on
 
@@ -223,9 +212,7 @@ def _record_outcome(
 
             entity = db.query(Entity).filter_by(id=action.entity_id).first()
             if entity and entity.confidence_score is not None:
-                entity.confidence_score = min(
-                    1.0, entity.confidence_score + 0.05
-                )
+                entity.confidence_score = min(1.0, entity.confidence_score + 0.05)
 
         db.commit()
     except Exception as e:

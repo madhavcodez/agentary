@@ -3,6 +3,7 @@
 Connects to Gemini for real-time conversation. Accepts text input over WebSocket
 and streams back transcript entries. Browser mic capture can be layered on top.
 """
+
 from __future__ import annotations
 
 import json
@@ -28,9 +29,7 @@ logger = logging.getLogger(__name__)
 voice_app = FastAPI(title="Agentary Voice Agent")
 # CORS: use the same allowlist as the main API. ``allow_origins=["*"]`` with a
 # credentialed/WebSocket surface allows cross-site hijacking from any origin.
-_voice_allowed_origins = [
-    o.strip() for o in settings.allowed_origins.split(",") if o.strip()
-]
+_voice_allowed_origins = [o.strip() for o in settings.allowed_origins.split(",") if o.strip()]
 voice_app.add_middleware(
     CORSMiddleware,
     allow_origins=_voice_allowed_origins,
@@ -93,11 +92,13 @@ async def websocket_endpoint(ws: WebSocket):
 
     # Send greeting
     greeting = "Hi! I'm Agentary, Madhav's AI assistant. How can I help you today? You can ask me about his skills, projects, or career goals."
-    await ws.send_json({
-        "type": "transcript",
-        "role": "agent",
-        "text": greeting,
-    })
+    await ws.send_json(
+        {
+            "type": "transcript",
+            "role": "agent",
+            "text": greeting,
+        }
+    )
     messages.append({"role": "agent", "text": greeting})
     context = context.transition(CallState.TRIAGE)
 
@@ -115,42 +116,50 @@ async def websocket_endpoint(ws: WebSocket):
                 continue
 
             # Echo user message back for transcript
-            await ws.send_json({
-                "type": "transcript",
-                "role": "user",
-                "text": user_text,
-            })
+            await ws.send_json(
+                {
+                    "type": "transcript",
+                    "role": "user",
+                    "text": user_text,
+                }
+            )
             messages.append({"role": "user", "text": user_text})
 
             # Policy check
             policy_result = policy_engine.evaluate_mid_call(user_text)
             if not policy_result["allowed"]:
                 violation_msg = f"I'm sorry, I can't discuss that topic. ({', '.join(policy_result['violations'])})"
-                await ws.send_json({
-                    "type": "transcript",
-                    "role": "agent",
-                    "text": violation_msg,
-                })
+                await ws.send_json(
+                    {
+                        "type": "transcript",
+                        "role": "agent",
+                        "text": violation_msg,
+                    }
+                )
                 messages.append({"role": "agent", "text": violation_msg})
                 continue
 
             # Get Gemini response
             try:
                 response_text = await get_gemini_response(messages)
-                await ws.send_json({
-                    "type": "transcript",
-                    "role": "agent",
-                    "text": response_text,
-                })
+                await ws.send_json(
+                    {
+                        "type": "transcript",
+                        "role": "agent",
+                        "text": response_text,
+                    }
+                )
                 messages.append({"role": "agent", "text": response_text})
             except Exception as e:
                 error_msg = "Sorry, I had trouble processing that. Could you try again?"
                 logger.error("Gemini error: %s", e)
-                await ws.send_json({
-                    "type": "transcript",
-                    "role": "agent",
-                    "text": error_msg,
-                })
+                await ws.send_json(
+                    {
+                        "type": "transcript",
+                        "role": "agent",
+                        "text": error_msg,
+                    }
+                )
 
     except WebSocketDisconnect:
         logger.info("Voice WebSocket disconnected")

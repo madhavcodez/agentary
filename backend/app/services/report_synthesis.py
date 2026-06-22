@@ -15,6 +15,7 @@ The public contract (``Report`` shape, ``status`` transitions, return
 type) is identical for both paths so downstream consumers (dashboard
 renderers, PDF export, share links) don't need to branch.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -43,12 +44,18 @@ def _compile_sources(findings: list) -> list[dict]:
         if key in seen_urls:
             continue
         seen_urls.add(key)
-        sources.append({
-            "name": f.source_name or "Unknown",
-            "url": f.source_url,
-            "type": f.source_type.value if hasattr(f.source_type, "value") else str(f.source_type) if f.source_type else "unknown",
-            "accessed_at": f.created_at.isoformat() if f.created_at else None,
-        })
+        sources.append(
+            {
+                "name": f.source_name or "Unknown",
+                "url": f.source_url,
+                "type": (
+                    f.source_type.value
+                    if hasattr(f.source_type, "value")
+                    else str(f.source_type) if f.source_type else "unknown"
+                ),
+                "accessed_at": f.created_at.isoformat() if f.created_at else None,
+            }
+        )
     return sources
 
 
@@ -74,6 +81,7 @@ def _render_html(markdown: str) -> str:
         return ""
     try:
         import markdown2
+
         return markdown2.markdown(
             markdown,
             extras=["tables", "fenced-code-blocks", "header-ids", "strike", "task_list"],
@@ -225,9 +233,7 @@ async def synthesize_report_from_outline(
             return await _synth_one(section)
 
     results = await asyncio.gather(*[_bounded(s) for s in sections])
-    drafts: dict[int, SectionDraft] = {
-        idx: d for (idx, d) in results if d is not None
-    }
+    drafts: dict[int, SectionDraft] = {idx: d for (idx, d) in results if d is not None}
 
     if enable_refinement and drafts:
         try:
@@ -254,24 +260,28 @@ async def synthesize_report_from_outline(
         idx = int(section.get("index", 0))
         draft = drafts.get(idx)
         if draft is None:
-            ordered_sections.append({
-                "title": section.get("title", f"Section {idx + 1}"),
-                "content_md": "",
-                "finding_ids_used": [],
+            ordered_sections.append(
+                {
+                    "title": section.get("title", f"Section {idx + 1}"),
+                    "content_md": "",
+                    "finding_ids_used": [],
+                    "chart_configs": [],
+                    "order": idx,
+                    "skipped_no_evidence": True,
+                }
+            )
+            continue
+        ordered_sections.append(
+            {
+                "title": draft.title or section.get("title", f"Section {idx + 1}"),
+                "content_md": draft.content_md,
+                "finding_ids_used": [c.finding_id for c in draft.citations],
                 "chart_configs": [],
                 "order": idx,
-                "skipped_no_evidence": True,
-            })
-            continue
-        ordered_sections.append({
-            "title": draft.title or section.get("title", f"Section {idx + 1}"),
-            "content_md": draft.content_md,
-            "finding_ids_used": [c.finding_id for c in draft.citations],
-            "chart_configs": [],
-            "order": idx,
-            "partial_evidence": draft.partial_evidence,
-            "refinement_passes": draft.refinement_passes,
-        })
+                "partial_evidence": draft.partial_evidence,
+                "refinement_passes": draft.refinement_passes,
+            }
+        )
 
     content_markdown = _compose_markdown(outline.title, ordered_sections)
     content_html = _render_html(content_markdown)

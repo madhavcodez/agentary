@@ -3,7 +3,9 @@ from __future__ import annotations
 import enum
 import uuid
 
-from sqlalchemy import Column, DateTime, Enum as SAEnum, Float, ForeignKey, String, Text, func
+from sqlalchemy import Column, DateTime
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import Float, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
@@ -46,8 +48,12 @@ class Recommendation(Base):
     rationale = Column(Text, nullable=True)
     suggested_action = Column(JSONB, default=dict)
     confidence = Column(Float, nullable=True)
-    priority = Column(SAEnum(RecommendationPriority), default=RecommendationPriority.medium, nullable=False)
-    status = Column(SAEnum(RecommendationStatus), default=RecommendationStatus.pending, nullable=False)
+    priority = Column(
+        SAEnum(RecommendationPriority), default=RecommendationPriority.medium, nullable=False
+    )
+    status = Column(
+        SAEnum(RecommendationStatus), default=RecommendationStatus.pending, nullable=False
+    )
     reviewed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     reviewed_at = Column(DateTime(timezone=True), nullable=True)
     rejection_reason = Column(Text, nullable=True)

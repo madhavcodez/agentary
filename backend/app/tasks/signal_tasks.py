@@ -1,4 +1,5 @@
 """Process signals into observations and trigger insight generation."""
+
 from __future__ import annotations
 
 import asyncio

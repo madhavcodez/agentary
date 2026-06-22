@@ -285,7 +285,9 @@ class ZillowConnector:
         if beds_min is not None:
             filtered = [listing for listing in filtered if (listing.get("beds") or 0) >= beds_min]
         if property_type is not None:
-            filtered = [listing for listing in filtered if listing.get("property_type") == property_type]
+            filtered = [
+                listing for listing in filtered if listing.get("property_type") == property_type
+            ]
 
         return SourceResult(
             data=filtered,

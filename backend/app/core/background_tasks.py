@@ -13,6 +13,7 @@ the API handlers that spawn inline crew runs.
 Also adds a done-callback that logs any uncaught exception. Without it,
 a crashed background task is invisible.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -43,6 +44,4 @@ def _on_done(task: asyncio.Task) -> None:
         return
     exc = task.exception()
     if exc is not None:
-        logger.exception(
-            "Background task %s raised", task.get_name(), exc_info=exc
-        )
+        logger.exception("Background task %s raised", task.get_name(), exc_info=exc)

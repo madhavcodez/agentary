@@ -27,9 +27,7 @@ class ExaConnector:
 
     name: str = "exa_search"
     provider: str = "exa"
-    description: str = (
-        "Semantic search engine. Find relevant web pages using neural search."
-    )
+    description: str = "Semantic search engine. Find relevant web pages using neural search."
 
     async def search(self, query: str, **kwargs: Any) -> SourceResult:
         """Search using Exa's neural/keyword/auto search.
@@ -66,14 +64,16 @@ class ExaConnector:
 
             results: list[dict[str, Any]] = []
             for r in response.results:
-                results.append({
-                    "url": r.url,
-                    "title": r.title or "",
-                    "snippet": (r.text[:500] if r.text else ""),
-                    "score": getattr(r, "score", None),
-                    "published_date": getattr(r, "published_date", None),
-                    "source": "exa",
-                })
+                results.append(
+                    {
+                        "url": r.url,
+                        "title": r.title or "",
+                        "snippet": (r.text[:500] if r.text else ""),
+                        "score": getattr(r, "score", None),
+                        "published_date": getattr(r, "published_date", None),
+                        "source": "exa",
+                    }
+                )
 
             return SourceResult(
                 data=results,
@@ -124,12 +124,14 @@ class ExaConnector:
 
             results: list[dict[str, Any]] = []
             for r in response.results:
-                results.append({
-                    "url": r.url,
-                    "title": r.title or "",
-                    "text": r.text or "",
-                    "source": "exa",
-                })
+                results.append(
+                    {
+                        "url": r.url,
+                        "title": r.title or "",
+                        "text": r.text or "",
+                        "source": "exa",
+                    }
+                )
 
             return SourceResult(
                 data=results,
@@ -186,8 +188,7 @@ class ExaConnector:
         return {
             "name": "exa_search",
             "description": (
-                "Semantic search engine. Find relevant web pages "
-                "using neural search."
+                "Semantic search engine. Find relevant web pages " "using neural search."
             ),
             "parameters": {
                 "type": "object",

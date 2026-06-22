@@ -96,9 +96,7 @@ def _extract_tables(soup: BeautifulSoup) -> list[dict[str, Any]]:
 
         # Try to find headers
         header_row = rows[0]
-        headers = [
-            th.get_text(strip=True) for th in header_row.find_all(["th", "td"])
-        ]
+        headers = [th.get_text(strip=True) for th in header_row.find_all(["th", "td"])]
         if not headers:
             continue
 
@@ -110,20 +108,20 @@ def _extract_tables(soup: BeautifulSoup) -> list[dict[str, Any]]:
             elif cells:
                 # Pad or truncate to match headers
                 padded = cells + [""] * (len(headers) - len(cells))
-                table_data.append(dict(zip(headers, padded[:len(headers)], strict=False)))
+                table_data.append(dict(zip(headers, padded[: len(headers)], strict=False)))
 
-        tables.append({
-            "headers": headers,
-            "rows": table_data,
-            "row_count": len(table_data),
-        })
+        tables.append(
+            {
+                "headers": headers,
+                "rows": table_data,
+                "row_count": len(table_data),
+            }
+        )
 
     return tables
 
 
-def _extract_by_selectors(
-    soup: BeautifulSoup, selectors: list[dict[str, str]]
-) -> dict[str, Any]:
+def _extract_by_selectors(soup: BeautifulSoup, selectors: list[dict[str, str]]) -> dict[str, Any]:
     """Extract data using CSS selectors.
 
     Each selector dict should have ``name`` (field name) and
@@ -145,9 +143,7 @@ def _extract_by_selectors(
     return extracted
 
 
-async def _ai_extract(
-    text: str, fields: list[dict[str, str]]
-) -> dict[str, Any]:
+async def _ai_extract(text: str, fields: list[dict[str, str]]) -> dict[str, Any]:
     """Use Gemini to extract structured fields from page text."""
     if not settings.gemini_api_key:
         logger.warning("Gemini API key not available for AI extraction")
@@ -157,8 +153,7 @@ async def _ai_extract(
     from google.genai import types
 
     field_descriptions = "\n".join(
-        f'- "{f["name"]}": {f.get("description", "extract this field")}'
-        for f in fields
+        f'- "{f["name"]}": {f.get("description", "extract this field")}' for f in fields
     )
 
     prompt = (
@@ -307,13 +302,9 @@ class WebScraperConnector:
                     soup, url, title, extract_fields or []
                 )
             elif extract_type == "ai_extract":
-                extracted = await self._extract_ai_mode(
-                    soup, url, title, extract_fields or []
-                )
+                extracted = await self._extract_ai_mode(soup, url, title, extract_fields or [])
             elif extract_type == "auto":
-                extracted = await self._extract_auto(
-                    soup, url, title, extract_fields
-                )
+                extracted = await self._extract_auto(soup, url, title, extract_fields)
             else:
                 extracted = await self._extract_text(soup, url, title)
 
@@ -360,39 +351,39 @@ class WebScraperConnector:
                 metadata={"error": str(e)},
             )
 
-    async def _extract_text(
-        self, soup: BeautifulSoup, url: str, title: str
-    ) -> SourceResult:
+    async def _extract_text(self, soup: BeautifulSoup, url: str, title: str) -> SourceResult:
         """Extract all text content from the page."""
         text = _clean_text(soup)
         return SourceResult(
-            data=[{
-                "url": url,
-                "title": title,
-                "text": text,
-                "extract_type": "text",
-                "source": "web_scraper",
-            }],
+            data=[
+                {
+                    "url": url,
+                    "title": title,
+                    "text": text,
+                    "extract_type": "text",
+                    "source": "web_scraper",
+                }
+            ],
             raw_response=text,
             total_results=1,
             source_name=self.name,
             source_url=url,
         )
 
-    async def _extract_tables_mode(
-        self, soup: BeautifulSoup, url: str, title: str
-    ) -> SourceResult:
+    async def _extract_tables_mode(self, soup: BeautifulSoup, url: str, title: str) -> SourceResult:
         """Extract HTML tables from the page."""
         tables = _extract_tables(soup)
         return SourceResult(
-            data=[{
-                "url": url,
-                "title": title,
-                "tables": tables,
-                "table_count": len(tables),
-                "extract_type": "tables",
-                "source": "web_scraper",
-            }],
+            data=[
+                {
+                    "url": url,
+                    "title": title,
+                    "tables": tables,
+                    "table_count": len(tables),
+                    "extract_type": "tables",
+                    "source": "web_scraper",
+                }
+            ],
             raw_response=tables,
             total_results=len(tables),
             source_name=self.name,
@@ -409,13 +400,15 @@ class WebScraperConnector:
         """Extract data using CSS selectors."""
         extracted = _extract_by_selectors(soup, selectors)
         return SourceResult(
-            data=[{
-                "url": url,
-                "title": title,
-                "extracted": extracted,
-                "extract_type": "selectors",
-                "source": "web_scraper",
-            }],
+            data=[
+                {
+                    "url": url,
+                    "title": title,
+                    "extracted": extracted,
+                    "extract_type": "selectors",
+                    "source": "web_scraper",
+                }
+            ],
             raw_response=extracted,
             total_results=1,
             source_name=self.name,
@@ -433,13 +426,15 @@ class WebScraperConnector:
         text = _clean_text(soup)
         ai_result = await _ai_extract(text, fields)
         return SourceResult(
-            data=[{
-                "url": url,
-                "title": title,
-                "extracted": ai_result,
-                "extract_type": "ai_extract",
-                "source": "web_scraper",
-            }],
+            data=[
+                {
+                    "url": url,
+                    "title": title,
+                    "extracted": ai_result,
+                    "extract_type": "ai_extract",
+                    "source": "web_scraper",
+                }
+            ],
             raw_response=ai_result,
             total_results=1,
             source_name=self.name,
@@ -474,14 +469,16 @@ class WebScraperConnector:
             ]
             ai_result = await _ai_extract(text, auto_fields)
             return SourceResult(
-                data=[{
-                    "url": url,
-                    "title": title,
-                    "text": text[:2000],
-                    "ai_extracted": ai_result,
-                    "extract_type": "auto",
-                    "source": "web_scraper",
-                }],
+                data=[
+                    {
+                        "url": url,
+                        "title": title,
+                        "text": text[:2000],
+                        "ai_extracted": ai_result,
+                        "extract_type": "auto",
+                        "source": "web_scraper",
+                    }
+                ],
                 raw_response=ai_result,
                 total_results=1,
                 source_name=self.name,
@@ -531,13 +528,15 @@ class WebScraperConnector:
                         end = min(len(page_text), idx + len(query) + 200)
                         snippet = page_text[start:end]
 
-                        results.append({
-                            "url": url,
-                            "title": page_result.data[0].get("title", ""),
-                            "snippet": snippet,
-                            "match_position": idx,
-                            "source": "web_scraper",
-                        })
+                        results.append(
+                            {
+                                "url": url,
+                                "title": page_result.data[0].get("title", ""),
+                                "snippet": snippet,
+                                "match_position": idx,
+                                "source": "web_scraper",
+                            }
+                        )
             except Exception as e:
                 logger.warning("Failed to search URL %s: %s", url, e)
                 continue
@@ -614,9 +613,7 @@ class WebScraperConnector:
                                 "description": {"type": "string"},
                             },
                         },
-                        "description": (
-                            "Fields to extract (for ai_extract mode)"
-                        ),
+                        "description": ("Fields to extract (for ai_extract mode)"),
                     },
                 },
                 "required": ["url"],

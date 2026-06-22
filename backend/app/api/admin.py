@@ -1,4 +1,5 @@
 """Admin API routes for maintenance and migration tasks."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
@@ -18,6 +19,7 @@ def trigger_findings_migration(
     """Trigger async migration of findings to observations. Idempotent."""
     try:
         from ..tasks.migration_tasks import migrate_findings_to_observations
+
         migrate_findings_to_observations.delay()
         return {"status": "migration_started"}
     except Exception:

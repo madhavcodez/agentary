@@ -1,4 +1,5 @@
 """Core action request lifecycle management."""
+
 from __future__ import annotations
 
 import asyncio
@@ -62,13 +63,17 @@ class ActionService:
         if decision.get("auto_approve"):
             action.status = ActionRequestStatus.approved
             action.approved_at = datetime.now(UTC)
-            self._append_transition(action, "pending_approval", "approved", "auto-approved by policy")
+            self._append_transition(
+                action, "pending_approval", "approved", "auto-approved by policy"
+            )
             self.db.flush()
             # Dispatch execution
             self._dispatch_execution(action)
         else:
             action.status = ActionRequestStatus.pending_approval
-            self._append_transition(action, None, "pending_approval", "awaiting approval per policy")
+            self._append_transition(
+                action, None, "pending_approval", "awaiting approval per policy"
+            )
             self.db.flush()
             # Emit pending event
             self._emit_event("action.pending_approval", action)
@@ -85,7 +90,9 @@ class ActionService:
         action.status = ActionRequestStatus.approved
         action.approved_by = approved_by
         action.approved_at = datetime.now(UTC)
-        self._append_transition(action, "pending_approval", "approved", f"approved by user {approved_by}")
+        self._append_transition(
+            action, "pending_approval", "approved", f"approved by user {approved_by}"
+        )
         self.db.flush()
 
         self._dispatch_execution(action)
@@ -109,7 +116,11 @@ class ActionService:
         action = self.db.query(ActionRequest).filter_by(id=action_id).first()
         if not action:
             raise ValueError(f"ActionRequest {action_id} not found")
-        terminal = (ActionRequestStatus.completed, ActionRequestStatus.failed, ActionRequestStatus.cancelled)
+        terminal = (
+            ActionRequestStatus.completed,
+            ActionRequestStatus.failed,
+            ActionRequestStatus.cancelled,
+        )
         if action.status in terminal:
             raise ValueError(f"Cannot cancel action in terminal status {action.status}")
 
@@ -149,12 +160,14 @@ class ActionService:
         self, action: ActionRequest, from_state: str | None, to_state: str, reason: str
     ) -> None:
         transitions = list(action.state_transitions or [])
-        transitions.append({
-            "from": from_state,
-            "to": to_state,
-            "timestamp": datetime.now(UTC).isoformat(),
-            "reason": reason,
-        })
+        transitions.append(
+            {
+                "from": from_state,
+                "to": to_state,
+                "timestamp": datetime.now(UTC).isoformat(),
+                "reason": reason,
+            }
+        )
         action.state_transitions = transitions
 
     def _dispatch_execution(self, action: ActionRequest) -> None:
@@ -163,7 +176,9 @@ class ActionService:
 
             dispatch_action.delay(str(action.id))
         except Exception:
-            logger.warning("Could not dispatch action %s to Celery, will need manual execution", action.id)
+            logger.warning(
+                "Could not dispatch action %s to Celery, will need manual execution", action.id
+            )
 
     def _emit_event(self, event_type_str: str, action: ActionRequest) -> None:
         try:
@@ -172,9 +187,17 @@ class ActionService:
                 event_type=et,
                 data={
                     "action_id": str(action.id),
-                    "action_type": action.action_type.value if hasattr(action.action_type, "value") else str(action.action_type),
+                    "action_type": (
+                        action.action_type.value
+                        if hasattr(action.action_type, "value")
+                        else str(action.action_type)
+                    ),
                     "title": action.title,
-                    "status": action.status.value if hasattr(action.status, "value") else str(action.status),
+                    "status": (
+                        action.status.value
+                        if hasattr(action.status, "value")
+                        else str(action.status)
+                    ),
                     "priority": action.priority,
                 },
                 project_id=action.project_id,

@@ -80,21 +80,25 @@ class GeminiSearchConnector:
                         for chunk in chunks:
                             web = getattr(chunk, "web", None)
                             if web and hasattr(web, "uri") and web.uri:
-                                results.append({
-                                    "url": web.uri,
-                                    "title": getattr(web, "title", "") or "",
-                                    "snippet": "",
-                                    "source": "gemini_search",
-                                })
+                                results.append(
+                                    {
+                                        "url": web.uri,
+                                        "title": getattr(web, "title", "") or "",
+                                        "snippet": "",
+                                        "source": "gemini_search",
+                                    }
+                                )
 
             # If no grounding chunks, return the raw text as a single result
             if not results and raw_text:
-                results.append({
-                    "url": None,
-                    "title": "Gemini Search Result",
-                    "snippet": raw_text[:2000],
-                    "source": "gemini_search",
-                })
+                results.append(
+                    {
+                        "url": None,
+                        "title": "Gemini Search Result",
+                        "snippet": raw_text[:2000],
+                        "source": "gemini_search",
+                    }
+                )
 
             # Trim to requested count
             results = results[:num_results]

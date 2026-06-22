@@ -77,9 +77,7 @@ def _extract_phone(text: str) -> str | None:
     """Extract a phone number from text."""
     if not text:
         return None
-    match = re.search(
-        r"(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}", text
-    )
+    match = re.search(r"(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}", text)
     return match.group(0) if match else None
 
 
@@ -109,9 +107,7 @@ def _deduplicate_contacts(contacts: list[dict[str, Any]]) -> list[dict[str, Any]
 
 
 @exa_breaker
-async def exa_find_contacts(
-    company: str, role: str
-) -> list[dict[str, Any]]:
+async def exa_find_contacts(company: str, role: str) -> list[dict[str, Any]]:
     """Search for recruiters and hiring managers at a company using Exa.
 
     Args:
@@ -149,21 +145,21 @@ async def exa_find_contacts(
                 email = _extract_email(snippet)
                 phone = _extract_phone(snippet)
 
-                contacts.append({
-                    "name": _extract_name_from_title(r.title),
-                    "title": _extract_title_from_result(r.title),
-                    "company": company,
-                    "url": r.url,
-                    "source": "exa",
-                    "snippet": snippet,
-                    "email": email,
-                    "phone": phone,
-                })
+                contacts.append(
+                    {
+                        "name": _extract_name_from_title(r.title),
+                        "title": _extract_title_from_result(r.title),
+                        "company": company,
+                        "url": r.url,
+                        "source": "exa",
+                        "snippet": snippet,
+                        "email": email,
+                        "phone": phone,
+                    }
+                )
 
         except Exception as e:
-            logger.warning(
-                "Exa search failed for query '%s': %s", query, e
-            )
+            logger.warning("Exa search failed for query '%s': %s", query, e)
             continue
 
     # Deduplicate and filter out entries without a name

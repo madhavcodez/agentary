@@ -3,6 +3,7 @@
 Cached for 1 hour via ``core.tool_cache``. Gemini grounding calls are paid;
 two missions on the same topic shouldn't both burn quota.
 """
+
 from __future__ import annotations
 
 from typing import Any

@@ -1,4 +1,5 @@
 """API routes for action requests -- create, list, approve, reject, cancel."""
+
 from __future__ import annotations
 
 from uuid import UUID
@@ -136,7 +137,9 @@ def _serialize(a) -> dict:
         "recommendation_id": str(a.recommendation_id) if a.recommendation_id else None,
         "entity_id": str(a.entity_id) if a.entity_id else None,
         "user_id": str(a.user_id),
-        "action_type": a.action_type.value if hasattr(a.action_type, "value") else str(a.action_type),
+        "action_type": (
+            a.action_type.value if hasattr(a.action_type, "value") else str(a.action_type)
+        ),
         "title": a.title,
         "description": a.description,
         "parameters": a.parameters,

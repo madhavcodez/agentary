@@ -126,6 +126,7 @@ class EventBus:
         await self.publish(event)
         try:
             from .redis_bridge import publish_event
+
             await publish_event(event)
         except Exception:
             logger.debug("Redis publish skipped (not available)")

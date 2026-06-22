@@ -1,4 +1,5 @@
 """Celery tasks for crew execution."""
+
 from __future__ import annotations
 
 import asyncio
@@ -81,7 +82,9 @@ def execute_crew_run(self, run_id: str, correlation_id: str | None = None) -> di
     soft_time_limit=3600,
     time_limit=3900,
 )
-def plan_and_start_mission(self, mission_id: str, run_id: str | None = None, correlation_id: str | None = None) -> dict:
+def plan_and_start_mission(
+    self, mission_id: str, run_id: str | None = None, correlation_id: str | None = None
+) -> dict:
     """Plan a mission, assemble crew, and execute."""
     if correlation_id:
         correlation_id_var.set(correlation_id)
@@ -96,7 +99,11 @@ def plan_and_start_mission(self, mission_id: str, run_id: str | None = None, cor
         if run_id:
             existing_run = db.query(MissionRun).filter_by(id=uuid.UUID(run_id)).first()
             if existing_run:
-                status_val = existing_run.status.value if hasattr(existing_run.status, "value") else str(existing_run.status)
+                status_val = (
+                    existing_run.status.value
+                    if hasattr(existing_run.status, "value")
+                    else str(existing_run.status)
+                )
                 if status_val in ("completed", "failed", "cancelled"):
                     logger.info("MissionRun %s already in terminal state — skipping", run_id)
                     return {"status": "skipped", "reason": "already_completed", "run_id": run_id}
@@ -112,10 +119,18 @@ def plan_and_start_mission(self, mission_id: str, run_id: str | None = None, cor
                 .first()
             )
             if latest_run:
-                status_val = latest_run.status.value if hasattr(latest_run.status, "value") else str(latest_run.status)
+                status_val = (
+                    latest_run.status.value
+                    if hasattr(latest_run.status, "value")
+                    else str(latest_run.status)
+                )
                 if status_val in ("completed", "failed", "cancelled"):
                     logger.info("MissionRun %s already in terminal state — skipping", latest_run.id)
-                    return {"status": "skipped", "reason": "already_completed", "mission_id": mission_id}
+                    return {
+                        "status": "skipped",
+                        "reason": "already_completed",
+                        "mission_id": mission_id,
+                    }
 
         # Assemble crew
         crew = _run_async(assemble_crew(mission, db))
@@ -132,7 +147,9 @@ def plan_and_start_mission(self, mission_id: str, run_id: str | None = None, cor
             "crew_id": str(crew.id),
             "run_id": str(completed_run.id),
             "status": completed_run.status,
-            "findings_count": completed_run.metrics.get("findings_count", 0) if completed_run.metrics else 0,
+            "findings_count": (
+                completed_run.metrics.get("findings_count", 0) if completed_run.metrics else 0
+            ),
         }
     except Exception as exc:
         db.rollback()

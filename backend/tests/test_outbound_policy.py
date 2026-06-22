@@ -100,9 +100,7 @@ class TestPolicyEngineOutbound:
         from app.voice.policy.engine import PolicyEngine
 
         engine = PolicyEngine()
-        result = engine.evaluate_mid_call(
-            "Hi, I am calling about the software engineer position."
-        )
+        result = engine.evaluate_mid_call("Hi, I am calling about the software engineer position.")
         assert result["allowed"] is True
 
     def test_mid_call_check_forbidden_topic(self):
@@ -110,8 +108,6 @@ class TestPolicyEngineOutbound:
         from app.voice.policy.engine import PolicyEngine
 
         engine = PolicyEngine()
-        result = engine.evaluate_mid_call(
-            "Let me share some competitor information with you."
-        )
+        result = engine.evaluate_mid_call("Let me share some competitor information with you.")
         assert result["allowed"] is False
         assert len(result["violations"]) > 0

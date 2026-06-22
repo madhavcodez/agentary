@@ -7,7 +7,9 @@ from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
-    Enum as SAEnum,
+)
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import (
     Float,
     ForeignKey,
     String,

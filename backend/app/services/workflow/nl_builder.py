@@ -65,7 +65,9 @@ Response:
 class NLWorkflowBuilder:
     """Convert natural language descriptions to workflow DAGs using Gemini."""
 
-    async def build_workflow(self, description: str, project_context: dict | None = None) -> dict[str, Any]:
+    async def build_workflow(
+        self, description: str, project_context: dict | None = None
+    ) -> dict[str, Any]:
         from ..gemini import generate_structured
 
         node_types_summary = json.dumps(get_all_node_types_summary(), indent=2)
@@ -138,9 +140,27 @@ class NLWorkflowBuilder:
             "trigger_type": "manual",
             "trigger_config": None,
             "nodes": [
-                {"id": "node_1", "type": "manual_trigger", "label": "Start", "config": {}, "position": {"x": 250, "y": 0}},
-                {"id": "node_2", "type": "ai_analyze", "label": "AI Analysis", "config": {"prompt_template": description, "output_format": "json"}, "position": {"x": 250, "y": 150}},
-                {"id": "node_3", "type": "generate_report", "label": "Report", "config": {"report_type": "summary"}, "position": {"x": 250, "y": 300}},
+                {
+                    "id": "node_1",
+                    "type": "manual_trigger",
+                    "label": "Start",
+                    "config": {},
+                    "position": {"x": 250, "y": 0},
+                },
+                {
+                    "id": "node_2",
+                    "type": "ai_analyze",
+                    "label": "AI Analysis",
+                    "config": {"prompt_template": description, "output_format": "json"},
+                    "position": {"x": 250, "y": 150},
+                },
+                {
+                    "id": "node_3",
+                    "type": "generate_report",
+                    "label": "Report",
+                    "config": {"report_type": "summary"},
+                    "position": {"x": 250, "y": 300},
+                },
             ],
             "edges": [
                 {"source_node_id": "node_1", "target_node_id": "node_2"},

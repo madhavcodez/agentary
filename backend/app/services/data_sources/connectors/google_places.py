@@ -73,9 +73,7 @@ class GooglePlacesConnector:
         place_type = kwargs.get("type")
 
         if not settings.google_places_api_key:
-            logger.warning(
-                "Google Places API key not configured; returning mock data"
-            )
+            logger.warning("Google Places API key not configured; returning mock data")
             mock = _mock_place(query)
             return SourceResult(
                 data=[mock],
@@ -129,19 +127,21 @@ class GooglePlacesConnector:
                 hours_obj = place.get("currentOpeningHours", {})
                 weekday_descriptions = hours_obj.get("weekdayDescriptions", [])
 
-                results.append({
-                    "place_id": place.get("id", ""),
-                    "name": display_name.get("text", ""),
-                    "address": place.get("formattedAddress", ""),
-                    "phone": place.get("internationalPhoneNumber", ""),
-                    "rating": place.get("rating"),
-                    "total_ratings": place.get("userRatingCount", 0),
-                    "types": place.get("types", []),
-                    "business_status": place.get("businessStatus", ""),
-                    "website": place.get("websiteUri", ""),
-                    "hours": weekday_descriptions,
-                    "source": "google_places",
-                })
+                results.append(
+                    {
+                        "place_id": place.get("id", ""),
+                        "name": display_name.get("text", ""),
+                        "address": place.get("formattedAddress", ""),
+                        "phone": place.get("internationalPhoneNumber", ""),
+                        "rating": place.get("rating"),
+                        "total_ratings": place.get("userRatingCount", 0),
+                        "types": place.get("types", []),
+                        "business_status": place.get("businessStatus", ""),
+                        "website": place.get("websiteUri", ""),
+                        "hours": weekday_descriptions,
+                        "source": "google_places",
+                    }
+                )
 
             return SourceResult(
                 data=results,
@@ -188,9 +188,7 @@ class GooglePlacesConnector:
             SourceResult with detailed place data.
         """
         if not settings.google_places_api_key:
-            logger.warning(
-                "Google Places API key not configured; returning mock data"
-            )
+            logger.warning("Google Places API key not configured; returning mock data")
             mock = _mock_place(identifier)
             mock["place_id"] = identifier
             return SourceResult(
@@ -282,9 +280,7 @@ class GooglePlacesConnector:
                 metadata={"error": str(e), "place_id": identifier},
             )
 
-    async def get_reviews(
-        self, place_id: str, max_reviews: int = 5
-    ) -> SourceResult:
+    async def get_reviews(self, place_id: str, max_reviews: int = 5) -> SourceResult:
         """Get reviews for a specific place.
 
         Args:
@@ -295,9 +291,7 @@ class GooglePlacesConnector:
             SourceResult with review data.
         """
         if not settings.google_places_api_key:
-            logger.warning(
-                "Google Places API key not configured; returning mock reviews"
-            )
+            logger.warning("Google Places API key not configured; returning mock reviews")
             mock_review = {
                 "author": "Mock Reviewer",
                 "rating": 4,
@@ -326,14 +320,14 @@ class GooglePlacesConnector:
             raw_reviews = data.get("reviews", [])
             reviews: list[dict[str, Any]] = []
             for rev in raw_reviews[:max_reviews]:
-                reviews.append({
-                    "author": rev.get("authorAttribution", {}).get(
-                        "displayName", ""
-                    ),
-                    "rating": rev.get("rating"),
-                    "text": rev.get("text", {}).get("text", ""),
-                    "time": rev.get("relativePublishTimeDescription", ""),
-                })
+                reviews.append(
+                    {
+                        "author": rev.get("authorAttribution", {}).get("displayName", ""),
+                        "rating": rev.get("rating"),
+                        "text": rev.get("text", {}).get("text", ""),
+                        "time": rev.get("relativePublishTimeDescription", ""),
+                    }
+                )
 
             return SourceResult(
                 data=reviews,
@@ -419,9 +413,7 @@ class GooglePlacesConnector:
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": (
-                            "Search query, e.g. 'gas stations near Austin TX'"
-                        ),
+                        "description": ("Search query, e.g. 'gas stations near Austin TX'"),
                     },
                     "location": {
                         "type": "string",
@@ -434,8 +426,7 @@ class GooglePlacesConnector:
                     "type": {
                         "type": "string",
                         "description": (
-                            "Place type: gas_station, restaurant, "
-                            "real_estate_agency, etc."
+                            "Place type: gas_station, restaurant, " "real_estate_agency, etc."
                         ),
                     },
                 },

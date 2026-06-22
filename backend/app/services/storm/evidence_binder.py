@@ -14,6 +14,7 @@ list rather than silently dropping it — the refinement loop treats that
 as a signal to either request more research or skip the section rather
 than let the section synthesizer hallucinate citations.
 """
+
 from __future__ import annotations
 
 import logging
@@ -39,11 +40,13 @@ def _cosine(a: list[float], b: list[float]) -> float:
 
 async def _embed_scope(scope: str) -> list[float]:
     from ..gemini import embed_text
+
     return await embed_text(scope, task_type="SEMANTIC_SIMILARITY")
 
 
 async def _embed_finding_content(finding: Any) -> list[float]:
     from ..gemini import embed_text
+
     snippet = (finding.title or "") + "\n" + (finding.content or "")
     return await embed_text(snippet[:2000], task_type="RETRIEVAL_DOCUMENT")
 
@@ -82,9 +85,7 @@ async def bind_findings_to_sections(
         try:
             scope_emb = await _embed_scope(scope)
         except Exception as exc:
-            logger.warning(
-                "evidence_binder: scope embed failed for section %d: %s", idx, exc
-            )
+            logger.warning("evidence_binder: scope embed failed for section %d: %s", idx, exc)
             bindings[idx] = []
             continue
 

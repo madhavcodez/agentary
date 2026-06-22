@@ -9,6 +9,7 @@ Coverage targets:
 These run without database or network access. They use ``pytest`` plain
 markers — no fixtures required.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -114,9 +115,7 @@ def test_url_guard_blocks_imds() -> None:
     from app.core.url_guard import UnsafeURLError, assert_safe_url
 
     with pytest.raises(UnsafeURLError):
-        assert_safe_url(
-            "http://169.254.169.254/latest/meta-data/iam/security-credentials/"
-        )
+        assert_safe_url("http://169.254.169.254/latest/meta-data/iam/security-credentials/")
 
 
 @pytest.mark.unit
@@ -221,18 +220,14 @@ def test_resend_signature_verifies(monkeypatch: Any) -> None:
     from app.core import webhook_security
 
     secret = "whsec_" + base64.b64encode(b"my-test-secret").decode()
-    monkeypatch.setattr(
-        webhook_security.settings, "resend_webhook_secret", secret, raising=False
-    )
+    monkeypatch.setattr(webhook_security.settings, "resend_webhook_secret", secret, raising=False)
 
     body = b'{"type":"email.delivered","data":{}}'
     webhook_id = "msg_test_1"
     timestamp = str(int(time.time()))
 
     signed = f"{webhook_id}.{timestamp}.".encode() + body
-    sig = base64.b64encode(
-        hmac.new(b"my-test-secret", signed, hashlib.sha256).digest()
-    ).decode()
+    sig = base64.b64encode(hmac.new(b"my-test-secret", signed, hashlib.sha256).digest()).decode()
 
     webhook_security.verify_resend_signature(
         body,

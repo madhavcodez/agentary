@@ -31,9 +31,7 @@ class TestInitiateCall:
         with patch("httpx.AsyncClient") as MockClient:
             mock_client_instance = AsyncMock()
             mock_client_instance.post = AsyncMock(return_value=mock_response)
-            MockClient.return_value.__aenter__ = AsyncMock(
-                return_value=mock_client_instance
-            )
+            MockClient.return_value.__aenter__ = AsyncMock(return_value=mock_client_instance)
             MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
 
             from app.services.twilio_client import initiate_call
@@ -78,9 +76,7 @@ class TestInitiateCall:
         with patch("httpx.AsyncClient") as MockClient:
             mock_client_instance = AsyncMock()
             mock_client_instance.post = AsyncMock(return_value=mock_response)
-            MockClient.return_value.__aenter__ = AsyncMock(
-                return_value=mock_client_instance
-            )
+            MockClient.return_value.__aenter__ = AsyncMock(return_value=mock_client_instance)
             MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
 
             from app.services.twilio_client import initiate_call
@@ -103,9 +99,7 @@ class TestEndCall:
         with patch("httpx.AsyncClient") as MockClient:
             mock_client_instance = AsyncMock()
             mock_client_instance.post = AsyncMock(return_value=mock_response)
-            MockClient.return_value.__aenter__ = AsyncMock(
-                return_value=mock_client_instance
-            )
+            MockClient.return_value.__aenter__ = AsyncMock(return_value=mock_client_instance)
             MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
 
             from app.services.twilio_client import end_call
@@ -128,9 +122,7 @@ class TestEndCall:
         with patch("httpx.AsyncClient") as MockClient:
             mock_client_instance = AsyncMock()
             mock_client_instance.post = AsyncMock(return_value=mock_response)
-            MockClient.return_value.__aenter__ = AsyncMock(
-                return_value=mock_client_instance
-            )
+            MockClient.return_value.__aenter__ = AsyncMock(return_value=mock_client_instance)
             MockClient.return_value.__aexit__ = AsyncMock(return_value=False)
 
             from app.services.twilio_client import end_call

@@ -6,7 +6,9 @@ import uuid
 from sqlalchemy import (
     Column,
     DateTime,
-    Enum as SAEnum,
+)
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
@@ -52,7 +54,9 @@ class Project(Base):
     total_calls_made = Column(Integer, default=0, nullable=False)
     total_reports_generated = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
 
     # Relationships
     missions = relationship("Mission", back_populates="project", lazy="dynamic")

@@ -1,4 +1,5 @@
 """Tests for all research engine models."""
+
 import uuid
 from datetime import UTC, datetime
 
@@ -47,9 +48,15 @@ class TestExpertAgentModel:
 
     def test_all_specialties_exist(self):
         expected = {
-            "web_researcher", "data_extractor", "voice_caller",
-            "market_analyst", "financial_analyst", "real_estate_expert",
-            "competitive_intel", "due_diligence", "synthesizer",
+            "web_researcher",
+            "data_extractor",
+            "voice_caller",
+            "market_analyst",
+            "financial_analyst",
+            "real_estate_expert",
+            "competitive_intel",
+            "due_diligence",
+            "synthesizer",
             "local_business_intel",
         }
         actual = {s.value for s in AgentSpecialty}
@@ -145,7 +152,9 @@ class TestCrewTaskModel:
 
 class TestFindingModel:
     def test_create_finding(self):
-        from app.models.finding import FindingType, SourceType as FSourceType
+        from app.models.finding import FindingType
+        from app.models.finding import SourceType as FSourceType
+
         finding = Finding(
             id=uuid.uuid4(),
             project_id=uuid.uuid4(),

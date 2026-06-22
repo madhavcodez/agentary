@@ -166,9 +166,7 @@ class TestTransitionMetadata:
     """Tests for transition record metadata."""
 
     def test_transition_includes_reason(self) -> None:
-        result = transition(
-            RunStatus.running, RunStatus.failed, reason="timeout exceeded"
-        )
+        result = transition(RunStatus.running, RunStatus.failed, reason="timeout exceeded")
         assert result["reason"] == "timeout exceeded"
 
     def test_transition_reason_none_by_default(self) -> None:

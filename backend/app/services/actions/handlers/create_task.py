@@ -1,4 +1,5 @@
 """Create an internal task."""
+
 from __future__ import annotations
 
 import logging
@@ -27,7 +28,5 @@ class CreateTaskHandler:
         }
         return {
             "result": task_data,
-            "side_effects": [
-                {"type": "task_created", "task_id": task_data["task_id"]}
-            ],
+            "side_effects": [{"type": "task_created", "task_id": task_data["task_id"]}],
         }

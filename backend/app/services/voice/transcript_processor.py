@@ -1,4 +1,5 @@
 """Transcript processing: cleanup, analysis, and summarization."""
+
 from __future__ import annotations
 
 import logging
@@ -11,9 +12,26 @@ logger = logging.getLogger(__name__)
 
 # Common ASR filler words and verbal tics to strip
 _FILLER_WORDS: set[str] = {
-    "um", "uh", "uhh", "umm", "hmm", "hm", "ah", "er", "err",
-    "like", "you know", "i mean", "sort of", "kind of", "basically",
-    "actually", "literally", "right", "okay so", "so basically",
+    "um",
+    "uh",
+    "uhh",
+    "umm",
+    "hmm",
+    "hm",
+    "ah",
+    "er",
+    "err",
+    "like",
+    "you know",
+    "i mean",
+    "sort of",
+    "kind of",
+    "basically",
+    "actually",
+    "literally",
+    "right",
+    "okay so",
+    "so basically",
 }
 
 # Patterns that signal key moments in a conversation
@@ -154,7 +172,7 @@ def _clean_transcript(text: str) -> str:
         speaker_match = re.match(r"^([A-Za-z0-9_ ]+):\s*", stripped)
         if speaker_match:
             prefix = speaker_match.group(0)
-            content = stripped[len(prefix):]
+            content = stripped[len(prefix) :]
 
         content = _remove_filler_words(content)
         content = _remove_repeated_words(content)
@@ -241,12 +259,14 @@ def _parse_segments(
         else:
             speaker = "Unknown"
             text = stripped
-        segments.append({
-            "speaker": speaker,
-            "text": text,
-            "timestamp": None,
-            "word_count": len(text.split()),
-        })
+        segments.append(
+            {
+                "speaker": speaker,
+                "text": text,
+                "timestamp": None,
+                "word_count": len(text.split()),
+            }
+        )
     return segments
 
 
@@ -271,8 +291,7 @@ def _calculate_talk_ratio(segments: list[dict]) -> dict[str, float]:
         return dict.fromkeys(word_counts, 0.0)
 
     ratios: dict[str, float] = {
-        speaker: round(count / total, 4)
-        for speaker, count in word_counts.items()
+        speaker: round(count / total, 4) for speaker, count in word_counts.items()
     }
 
     # Try to identify agent vs user speakers
@@ -297,11 +316,13 @@ def _calculate_talk_ratio(segments: list[dict]) -> dict[str, float]:
 
     if agent_speakers:
         ratios["agent_ratio"] = round(
-            sum(word_counts[s] for s in agent_speakers) / total, 4,
+            sum(word_counts[s] for s in agent_speakers) / total,
+            4,
         )
     if user_speakers:
         ratios["user_ratio"] = round(
-            sum(word_counts[s] for s in user_speakers) / total, 4,
+            sum(word_counts[s] for s in user_speakers) / total,
+            4,
         )
 
     return ratios
@@ -333,40 +354,48 @@ def _extract_key_moments(transcript: str) -> list[dict]:
 
         # Check for questions
         if _QUESTION_PATTERN.search(content):
-            moments.append({
-                "type": "question",
-                "speaker": speaker,
-                "text": content,
-                "line_number": line_num,
-            })
+            moments.append(
+                {
+                    "type": "question",
+                    "speaker": speaker,
+                    "text": content,
+                    "line_number": line_num,
+                }
+            )
 
         # Check for objections
         # Avoid false positives: require minimum length for objection detection
         if _OBJECTION_INDICATORS.search(content) and len(content.split()) >= 4:
-            moments.append({
-                "type": "objection",
-                "speaker": speaker,
-                "text": content,
-                "line_number": line_num,
-            })
+            moments.append(
+                {
+                    "type": "objection",
+                    "speaker": speaker,
+                    "text": content,
+                    "line_number": line_num,
+                }
+            )
 
         # Check for agreements
         if _AGREEMENT_INDICATORS.search(content):
-            moments.append({
-                "type": "agreement",
-                "speaker": speaker,
-                "text": content,
-                "line_number": line_num,
-            })
+            moments.append(
+                {
+                    "type": "agreement",
+                    "speaker": speaker,
+                    "text": content,
+                    "line_number": line_num,
+                }
+            )
 
         # Check for information exchange
         if _INFO_INDICATORS.search(content):
-            moments.append({
-                "type": "information",
-                "speaker": speaker,
-                "text": content,
-                "line_number": line_num,
-            })
+            moments.append(
+                {
+                    "type": "information",
+                    "speaker": speaker,
+                    "text": content,
+                    "line_number": line_num,
+                }
+            )
 
     # Deduplicate: if a line triggers both question and objection, keep both
     # but remove exact duplicates (same type + same line_number)

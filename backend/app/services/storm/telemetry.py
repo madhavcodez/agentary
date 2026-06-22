@@ -4,6 +4,7 @@ Thin wrapper that writes a ``StormRun`` row at the end of a mission,
 capturing counts, budget use, fallback reason, and the IDs that link
 outline + report + crew_run together for post-hoc analysis.
 """
+
 from __future__ import annotations
 
 import contextlib

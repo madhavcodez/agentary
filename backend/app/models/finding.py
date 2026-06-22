@@ -7,7 +7,9 @@ from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
-    Enum as SAEnum,
+)
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import (
     Float,
     ForeignKey,
     String,
@@ -69,7 +71,9 @@ class Finding(Base):
     contradicts = Column(UUID(as_uuid=True), ForeignKey("findings.id"), nullable=True)
     tags = Column(JSONB, default=list)
     entity_refs = Column(JSONB, default=list)  # [{type, name, id}]
-    observation_id = Column(UUID(as_uuid=True), ForeignKey("observations.id"), nullable=True, index=True)
+    observation_id = Column(
+        UUID(as_uuid=True), ForeignKey("observations.id"), nullable=True, index=True
+    )
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships

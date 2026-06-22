@@ -125,6 +125,7 @@ redis_bridge = RedisBridge()
 
 # ── Convenience function used by EventBus.broadcast ──────────────
 
+
 async def publish_event(event) -> None:
     """Publish an :class:`Event` via the global :data:`redis_bridge`.
 
@@ -165,6 +166,7 @@ async def publish_event(event) -> None:
 
 # ── Backward-compatible helpers used by main.py lifespan ─────────
 
+
 async def subscribe_and_forward(ws_manager) -> None:
     """Subscribe to all agentary event channels and forward to WebSocket clients.
 
@@ -175,7 +177,8 @@ async def subscribe_and_forward(ws_manager) -> None:
     # Ensure the bridge has a Redis connection
     if redis_bridge._redis is None:
         redis_bridge._redis = aioredis.from_url(
-            settings.redis_url, decode_responses=True,
+            settings.redis_url,
+            decode_responses=True,
         )
 
     while True:

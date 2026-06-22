@@ -1,4 +1,5 @@
 """Crew service — assembles crews, starts runs, provides status."""
+
 from __future__ import annotations
 
 import uuid
@@ -48,13 +49,15 @@ async def assemble_crew(
     # Build agents JSONB
     agents_config = []
     for expert in experts:
-        agents_config.append({
-            "agent_id": str(expert.id),
-            "slug": expert.slug,
-            "name": expert.name,
-            "role": expert.specialty.value if expert.specialty else "researcher",
-            "icon": expert.icon,
-        })
+        agents_config.append(
+            {
+                "agent_id": str(expert.id),
+                "slug": expert.slug,
+                "name": expert.name,
+                "role": expert.specialty.value if expert.specialty else "researcher",
+                "icon": expert.icon,
+            }
+        )
 
     crew = AgentCrew(
         id=uuid.uuid4(),
@@ -77,11 +80,7 @@ async def start_crew_run(
     """Create a CrewRun with planned tasks and return it (ready for execution)."""
     # Load experts
     agent_ids = [a.get("agent_id") for a in (crew.agents or []) if a.get("agent_id")]
-    experts = (
-        db.query(ExpertAgent)
-        .filter(ExpertAgent.id.in_(agent_ids))
-        .all()
-    )
+    experts = db.query(ExpertAgent).filter(ExpertAgent.id.in_(agent_ids)).all()
     expert_map = {e.slug: e for e in experts}
 
     # Plan tasks via Gemini
@@ -129,37 +128,46 @@ def get_crew_status(crew_id: uuid.UUID, db: Session) -> dict[str, Any]:
         raise ValueError(f"Crew {crew_id} not found")
 
     latest_run = (
-        db.query(CrewRun)
-        .filter_by(crew_id=crew_id)
-        .order_by(CrewRun.created_at.desc())
-        .first()
+        db.query(CrewRun).filter_by(crew_id=crew_id).order_by(CrewRun.created_at.desc()).first()
     )
 
     tasks_status = []
     if latest_run:
         for task in latest_run.tasks:
             expert = db.query(ExpertAgent).filter_by(id=task.expert_agent_id).first()
-            tasks_status.append({
-                "task_id": str(task.id),
-                "expert_name": expert.name if expert else "Unknown",
-                "expert_icon": expert.icon if expert else "\U0001f916",
-                "task_type": task.task_type,
-                "status": task.status,
-                "thinking_log": task.thinking_log or [],
-                "findings_produced": task.findings_produced,
-                "duration_seconds": task.duration_seconds,
-            })
+            tasks_status.append(
+                {
+                    "task_id": str(task.id),
+                    "expert_name": expert.name if expert else "Unknown",
+                    "expert_icon": expert.icon if expert else "\U0001f916",
+                    "task_type": task.task_type,
+                    "status": task.status,
+                    "thinking_log": task.thinking_log or [],
+                    "findings_produced": task.findings_produced,
+                    "duration_seconds": task.duration_seconds,
+                }
+            )
 
     return {
         "crew_id": str(crew.id),
-        "coordination_strategy": crew.coordination_strategy.value if crew.coordination_strategy else "parallel",
+        "coordination_strategy": (
+            crew.coordination_strategy.value if crew.coordination_strategy else "parallel"
+        ),
         "agents": crew.agents or [],
-        "latest_run": {
-            "run_id": str(latest_run.id) if latest_run else None,
-            "status": latest_run.status if latest_run else None,
-            "started_at": latest_run.started_at.isoformat() if latest_run and latest_run.started_at else None,
-            "duration_seconds": latest_run.duration_seconds,
-            "metrics": latest_run.metrics,
-            "tasks": tasks_status,
-        } if latest_run else None,
+        "latest_run": (
+            {
+                "run_id": str(latest_run.id) if latest_run else None,
+                "status": latest_run.status if latest_run else None,
+                "started_at": (
+                    latest_run.started_at.isoformat()
+                    if latest_run and latest_run.started_at
+                    else None
+                ),
+                "duration_seconds": latest_run.duration_seconds,
+                "metrics": latest_run.metrics,
+                "tasks": tasks_status,
+            }
+            if latest_run
+            else None
+        ),
     }

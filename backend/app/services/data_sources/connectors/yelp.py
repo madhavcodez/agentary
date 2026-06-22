@@ -21,8 +21,7 @@ class YelpConnector:
     name: str = "Yelp"
     provider: str = "yelp"
     description: str = (
-        "Search for local businesses on Yelp. Returns ratings, reviews, "
-        "and contact information."
+        "Search for local businesses on Yelp. Returns ratings, reviews, " "and contact information."
     )
 
     def __init__(self, api_key: str) -> None:
@@ -51,9 +50,7 @@ class YelpConnector:
             "city": location.get("city"),
             "state": location.get("state"),
             "zip_code": location.get("zip_code"),
-            "categories": [
-                c.get("title", "") for c in raw.get("categories", [])
-            ],
+            "categories": [c.get("title", "") for c in raw.get("categories", [])],
             "url": raw.get("url", ""),
             "image_url": raw.get("image_url"),
             "coordinates": raw.get("coordinates"),
@@ -172,8 +169,7 @@ class YelpConnector:
         return {
             "name": "yelp_search",
             "description": (
-                "Search for local businesses on Yelp. Returns ratings, "
-                "reviews, contact info."
+                "Search for local businesses on Yelp. Returns ratings, " "reviews, contact info."
             ),
             "parameters": {
                 "type": "object",

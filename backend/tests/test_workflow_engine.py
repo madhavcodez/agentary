@@ -30,6 +30,7 @@ from app.services.workflow.service import validate_workflow
 
 # ── Node Registry Tests ──────────────────────────────────────────────
 
+
 class TestNodeRegistry:
     def test_all_27_node_types_registered(self):
         assert len(NODE_TYPES) == 27
@@ -86,6 +87,7 @@ class TestNodeRegistry:
 
 # ── Workflow Validation Tests ────────────────────────────────────────
 
+
 class TestWorkflowValidation:
     def test_validate_empty_workflow(self):
         errors = validate_workflow([], [])
@@ -140,11 +142,10 @@ class TestWorkflowValidation:
 
 # ── Node Handler Tests ───────────────────────────────────────────────
 
+
 class TestNodeHandlers:
     def test_manual_trigger(self):
-        result = asyncio.get_event_loop().run_until_complete(
-            handle_manual_trigger({}, None, {})
-        )
+        result = asyncio.get_event_loop().run_until_complete(handle_manual_trigger({}, None, {}))
         assert result["triggered"] is True
         assert result["trigger_type"] == "manual"
 
@@ -155,9 +156,7 @@ class TestNodeHandlers:
             {"name": "Charlie", "age": 35},
         ]
         config = {"conditions": [{"field": "age", "op": "gt", "value": 28}]}
-        result = asyncio.get_event_loop().run_until_complete(
-            handle_filter(config, data, {})
-        )
+        result = asyncio.get_event_loop().run_until_complete(handle_filter(config, data, {}))
         assert len(result) == 2
         assert result[0]["name"] == "Alice"
         assert result[1]["name"] == "Charlie"
@@ -165,26 +164,20 @@ class TestNodeHandlers:
     def test_filter_contains(self):
         data = [{"name": "hello world"}, {"name": "goodbye"}]
         config = {"conditions": [{"field": "name", "op": "contains", "value": "hello"}]}
-        result = asyncio.get_event_loop().run_until_complete(
-            handle_filter(config, data, {})
-        )
+        result = asyncio.get_event_loop().run_until_complete(handle_filter(config, data, {}))
         assert len(result) == 1
 
     def test_transform_rename(self):
         data = [{"first_name": "Alice"}]
         config = {"operations": [{"type": "rename", "from": "first_name", "to": "name"}]}
-        result = asyncio.get_event_loop().run_until_complete(
-            handle_transform(config, data, {})
-        )
+        result = asyncio.get_event_loop().run_until_complete(handle_transform(config, data, {}))
         assert result[0]["name"] == "Alice"
         assert "first_name" not in result[0]
 
     def test_merge_concat(self):
         data = {"input_a": [{"id": 1}], "input_b": [{"id": 2}]}
         config = {"strategy": "concat"}
-        result = asyncio.get_event_loop().run_until_complete(
-            handle_merge(config, data, {})
-        )
+        result = asyncio.get_event_loop().run_until_complete(handle_merge(config, data, {}))
         assert len(result) == 2
 
     def test_merge_join(self):
@@ -193,9 +186,7 @@ class TestNodeHandlers:
             "input_b": [{"id": 1, "score": 100}, {"id": 2, "score": 200}],
         }
         config = {"strategy": "join", "key_field": "id"}
-        result = asyncio.get_event_loop().run_until_complete(
-            handle_merge(config, data, {})
-        )
+        result = asyncio.get_event_loop().run_until_complete(handle_merge(config, data, {}))
         assert len(result) == 2
         assert result[0]["name"] == "A"
         assert result[0]["score"] == 100
@@ -203,33 +194,27 @@ class TestNodeHandlers:
     def test_deduplicate(self):
         data = [{"name": "A"}, {"name": "B"}, {"name": "A"}]
         config = {"match_fields": ["name"]}
-        result = asyncio.get_event_loop().run_until_complete(
-            handle_deduplicate(config, data, {})
-        )
+        result = asyncio.get_event_loop().run_until_complete(handle_deduplicate(config, data, {}))
         assert len(result) == 2
 
     def test_sort_asc(self):
         data = [{"val": 3}, {"val": 1}, {"val": 2}]
         config = {"field": "val", "direction": "asc"}
-        result = asyncio.get_event_loop().run_until_complete(
-            handle_sort(config, data, {})
-        )
+        result = asyncio.get_event_loop().run_until_complete(handle_sort(config, data, {}))
         assert [r["val"] for r in result] == [1, 2, 3]
 
     def test_sort_desc(self):
         data = [{"val": 1}, {"val": 3}, {"val": 2}]
         config = {"field": "val", "direction": "desc"}
-        result = asyncio.get_event_loop().run_until_complete(
-            handle_sort(config, data, {})
-        )
+        result = asyncio.get_event_loop().run_until_complete(handle_sort(config, data, {}))
         assert [r["val"] for r in result] == [3, 2, 1]
 
     def test_aggregate_no_group(self):
         data = [{"val": 10}, {"val": 20}, {"val": 30}]
-        config = {"aggregations": [{"field": "val", "func": "sum"}, {"field": "val", "func": "avg"}]}
-        result = asyncio.get_event_loop().run_until_complete(
-            handle_aggregate(config, data, {})
-        )
+        config = {
+            "aggregations": [{"field": "val", "func": "sum"}, {"field": "val", "func": "avg"}]
+        }
+        result = asyncio.get_event_loop().run_until_complete(handle_aggregate(config, data, {}))
         assert result["val_sum"] == 60
         assert result["val_avg"] == 20.0
 
@@ -240,9 +225,7 @@ class TestNodeHandlers:
             {"cat": "B", "val": 5},
         ]
         config = {"group_by": "cat", "aggregations": [{"field": "val", "func": "sum"}]}
-        result = asyncio.get_event_loop().run_until_complete(
-            handle_aggregate(config, data, {})
-        )
+        result = asyncio.get_event_loop().run_until_complete(handle_aggregate(config, data, {}))
         assert len(result) == 2
         a_group = next(r for r in result if r["cat"] == "A")
         assert a_group["val_sum"] == 30
@@ -264,18 +247,14 @@ class TestNodeHandlers:
     def test_export_data_json(self):
         data = [{"a": 1}, {"a": 2}]
         config = {"format": "json"}
-        result = asyncio.get_event_loop().run_until_complete(
-            handle_export_data(config, data, {})
-        )
+        result = asyncio.get_event_loop().run_until_complete(handle_export_data(config, data, {}))
         assert result["format"] == "json"
         assert len(result["data"]) == 2
 
     def test_export_data_csv(self):
         data = [{"name": "A", "value": 1}, {"name": "B", "value": 2}]
         config = {"format": "csv"}
-        result = asyncio.get_event_loop().run_until_complete(
-            handle_export_data(config, data, {})
-        )
+        result = asyncio.get_event_loop().run_until_complete(handle_export_data(config, data, {}))
         assert result["format"] == "csv"
         assert "name,value" in result["data"]
 
@@ -296,19 +275,23 @@ class TestNodeHandlers:
 
     def test_all_handlers_registered(self):
         from app.services.workflow.node_handlers import HANDLERS
+
         for node_type in NODE_TYPES:
             assert node_type in HANDLERS, f"Missing handler for {node_type}"
 
 
 # ── Template Tests ───────────────────────────────────────────────────
 
+
 class TestTemplates:
     def test_system_templates_defined(self):
         from app.services.workflow.templates import SYSTEM_TEMPLATES
+
         assert len(SYSTEM_TEMPLATES) == 6
 
     def test_template_structure(self):
         from app.services.workflow.templates import SYSTEM_TEMPLATES
+
         for tmpl in SYSTEM_TEMPLATES:
             assert "name" in tmpl
             assert "category" in tmpl
@@ -319,12 +302,21 @@ class TestTemplates:
 
     def test_template_categories(self):
         from app.services.workflow.templates import SYSTEM_TEMPLATES
+
         categories = {t["category"] for t in SYSTEM_TEMPLATES}
-        expected = {"real_estate", "competitive_intel", "local_business", "due_diligence", "price_monitoring", "people_research"}
+        expected = {
+            "real_estate",
+            "competitive_intel",
+            "local_business",
+            "due_diligence",
+            "price_monitoring",
+            "people_research",
+        }
         assert categories == expected
 
     def test_template_variables_have_names(self):
         from app.services.workflow.templates import SYSTEM_TEMPLATES
+
         for tmpl in SYSTEM_TEMPLATES:
             for var in tmpl["variables_schema"]:
                 assert "name" in var, f"Variable missing name in {tmpl['name']}"
@@ -333,9 +325,11 @@ class TestTemplates:
 
 # ── NL Builder Tests ─────────────────────────────────────────────────
 
+
 class TestNLBuilder:
     def test_fallback_workflow(self):
         from app.services.workflow.nl_builder import NLWorkflowBuilder
+
         builder = NLWorkflowBuilder()
         result = builder._fallback_workflow("search for restaurants")
         assert "nodes" in result
@@ -345,6 +339,7 @@ class TestNLBuilder:
 
     def test_validate_result_valid(self):
         from app.services.workflow.nl_builder import NLWorkflowBuilder
+
         builder = NLWorkflowBuilder()
         result = {
             "nodes": [
@@ -358,12 +353,14 @@ class TestNLBuilder:
 
     def test_validate_result_empty(self):
         from app.services.workflow.nl_builder import NLWorkflowBuilder
+
         builder = NLWorkflowBuilder()
         errors = builder._validate_result({"nodes": [], "edges": []})
         assert len(errors) > 0
 
     def test_ensure_ids(self):
         from app.services.workflow.nl_builder import NLWorkflowBuilder
+
         builder = NLWorkflowBuilder()
         result = {"nodes": [{"id": "", "type": "manual_trigger"}]}
         fixed = builder._ensure_ids(result)

@@ -30,6 +30,7 @@ class PolicyEngine:
                 violations.append(f"Forbidden topic detected: {topic}")
 
         import re
+
         for pattern_name, pattern in PII_PATTERNS.items():
             if re.search(pattern, transcript):
                 violations.append(f"PII detected: {pattern_name}")

@@ -116,9 +116,7 @@ class RecommendationService:
         offset: int = 0,
     ) -> list[Recommendation]:
         """List all recommendations for a project."""
-        q = self.db.query(Recommendation).filter(
-            Recommendation.project_id == project_id
-        )
+        q = self.db.query(Recommendation).filter(Recommendation.project_id == project_id)
         if status:
             q = q.filter(Recommendation.status == status)
         return q.order_by(Recommendation.created_at.desc()).offset(offset).limit(limit).all()

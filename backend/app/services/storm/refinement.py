@@ -10,6 +10,7 @@ bounded (default 2). Even if 5 sections fail the gate, only the 2
 lowest-scoring are refined; the rest carry their partial_evidence flag
 into the final report.
 """
+
 from __future__ import annotations
 
 import logging

@@ -46,12 +46,14 @@ async def create_bot():
 
         register_all_tools(llm)
 
-        pipeline = Pipeline([
-            transport.input(),
-            SileroVADAnalyzer(),
-            llm,
-            transport.output(),
-        ])
+        pipeline = Pipeline(
+            [
+                transport.input(),
+                SileroVADAnalyzer(),
+                llm,
+                transport.output(),
+            ]
+        )
 
         task = PipelineTask(pipeline, PipelineParams(allow_interruptions=True))
         return task, transport

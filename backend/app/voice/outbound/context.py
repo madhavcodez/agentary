@@ -25,9 +25,7 @@ class OutboundCallContext:
     history: tuple[str, ...] = field(default_factory=tuple)
     started_at: datetime = field(default_factory=datetime.utcnow)
 
-    def transition(
-        self, new_state: OutboundCallState, **updates
-    ) -> OutboundCallContext:
+    def transition(self, new_state: OutboundCallState, **updates) -> OutboundCallContext:
         """Return a new context with the state changed and optional field updates."""
         return replace(self, state=new_state, **updates)
 

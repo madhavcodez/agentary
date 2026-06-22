@@ -46,7 +46,7 @@ class InsightService:
         self.db.add(insight)
         self.db.flush()
 
-        for obs_id in (observation_ids or []):
+        for obs_id in observation_ids or []:
             self._evidence.link_evidence(
                 observation_id=obs_id,
                 insight_id=insight.id,
@@ -63,9 +63,8 @@ class InsightService:
         offset: int = 0,
     ) -> list[Insight]:
         """Get insights for a specific entity."""
-        q = (
-            self.db.query(Insight)
-            .filter(Insight.entity_id == entity_id, Insight.is_active.is_(True))
+        q = self.db.query(Insight).filter(
+            Insight.entity_id == entity_id, Insight.is_active.is_(True)
         )
         if not include_stale:
             q = q.filter(Insight.is_stale.is_(False))
@@ -80,9 +79,8 @@ class InsightService:
         offset: int = 0,
     ) -> list[Insight]:
         """List all insights for a project."""
-        q = (
-            self.db.query(Insight)
-            .filter(Insight.project_id == project_id, Insight.is_active.is_(True))
+        q = self.db.query(Insight).filter(
+            Insight.project_id == project_id, Insight.is_active.is_(True)
         )
         if insight_type:
             q = q.filter(Insight.insight_type == insight_type)

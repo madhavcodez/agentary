@@ -73,21 +73,26 @@ class SignalService:
         # Dispatch async processing via Celery (suppressed: Celery may not be running in dev)
         with contextlib.suppress(Exception):
             from ...tasks.signal_tasks import process_signal
+
             process_signal.delay(str(signal.id))
 
         # Emit WebSocket event (suppressed: no running event loop outside async context)
         with contextlib.suppress(Exception):
             loop = asyncio.get_event_loop()
             if loop.is_running():
-                task = loop.create_task(event_bus.broadcast(Event(
-                    event_type=EventType.signal_created,
-                    data={
-                        "signal_id": str(signal.id),
-                        "title": signal.title,
-                        "signal_type": signal.signal_type.value,
-                    },
-                    project_id=signal.project_id,
-                )))
+                task = loop.create_task(
+                    event_bus.broadcast(
+                        Event(
+                            event_type=EventType.signal_created,
+                            data={
+                                "signal_id": str(signal.id),
+                                "title": signal.title,
+                                "signal_type": signal.signal_type.value,
+                            },
+                            project_id=signal.project_id,
+                        )
+                    )
+                )
                 self._broadcast_tasks.add(task)
                 task.add_done_callback(self._broadcast_tasks.discard)
 

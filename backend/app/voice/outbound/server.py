@@ -11,6 +11,7 @@ The TranscriptCaptureProcessor sits inline and records both user speech
 (TranscriptionFrame) and agent output (TTSTextFrame) so that a full
 transcript is available when the pipeline finishes.
 """
+
 from __future__ import annotations
 
 import json
@@ -54,6 +55,7 @@ router = APIRouter(prefix="/voice/outbound", tags=["outbound"])
 # Transcript capture processor
 # ---------------------------------------------------------------------------
 
+
 class TranscriptCaptureProcessor(FrameProcessor):
     """Captures user and agent text flowing through the pipeline.
 
@@ -79,18 +81,22 @@ class TranscriptCaptureProcessor(FrameProcessor):
         await super().process_frame(frame, direction)
 
         if isinstance(frame, TranscriptionFrame):
-            self._entries.append({
-                "role": "user",
-                "text": frame.text,
-                "timestamp": time.time(),
-            })
+            self._entries.append(
+                {
+                    "role": "user",
+                    "text": frame.text,
+                    "timestamp": time.time(),
+                }
+            )
             logger.debug("Transcript [user]: %s", frame.text)
         elif isinstance(frame, TTSTextFrame):
-            self._entries.append({
-                "role": "agent",
-                "text": frame.text,
-                "timestamp": time.time(),
-            })
+            self._entries.append(
+                {
+                    "role": "agent",
+                    "text": frame.text,
+                    "timestamp": time.time(),
+                }
+            )
             logger.debug("Transcript [agent]: %s", frame.text)
 
         await self.push_frame(frame, direction)
@@ -113,6 +119,7 @@ class TranscriptCaptureProcessor(FrameProcessor):
 # TwiML endpoint — called by Twilio when the call connects
 # ---------------------------------------------------------------------------
 
+
 @router.api_route("/twiml/{campaign_id}", methods=["GET", "POST"])
 def twiml_endpoint(campaign_id: UUID) -> Response:
     """Return TwiML that connects directly to the WebSocket stream.
@@ -122,14 +129,12 @@ def twiml_endpoint(campaign_id: UUID) -> Response:
     as the rest of the conversation and avoids a collision between Twilio
     TTS playback and the Media Stream connection.
     """
-    webhook_host = (
-        settings.twilio_webhook_base_url
-        .replace("https://", "")
-        .replace("http://", "")
-    )
+    webhook_host = settings.twilio_webhook_base_url.replace("https://", "").replace("http://", "")
 
     logger.info(
-        "TwiML requested: campaign=%s host=%s", campaign_id, webhook_host,
+        "TwiML requested: campaign=%s host=%s",
+        campaign_id,
+        webhook_host,
     )
 
     xml = (
@@ -147,6 +152,7 @@ def twiml_endpoint(campaign_id: UUID) -> Response:
 # Status callback — called by Twilio on call state transitions
 # ---------------------------------------------------------------------------
 
+
 @router.api_route("/status/{campaign_id}", methods=["POST"])
 async def status_callback(campaign_id: UUID, request: Request) -> dict:
     """Handle Twilio status-change webhooks and update CallLog / CallCampaign."""
@@ -157,14 +163,20 @@ async def status_callback(campaign_id: UUID, request: Request) -> dict:
 
     logger.info(
         "Status callback: campaign=%s status=%s sid=%s",
-        campaign_id, call_status, call_sid,
+        campaign_id,
+        call_status,
+        call_sid,
     )
 
     db = SessionLocal()
     try:
-        campaign = db.query(CallCampaign).filter(
-            CallCampaign.id == campaign_id,
-        ).first()
+        campaign = (
+            db.query(CallCampaign)
+            .filter(
+                CallCampaign.id == campaign_id,
+            )
+            .first()
+        )
         if not campaign:
             return {"status": "ignored"}
 
@@ -190,9 +202,7 @@ async def status_callback(campaign_id: UUID, request: Request) -> dict:
                     "no-answer": "no_answer",
                     "canceled": "failed",
                 }
-                call_log.outcome = (
-                    call_log.outcome or outcome_map.get(call_status, call_status)
-                )
+                call_log.outcome = call_log.outcome or outcome_map.get(call_status, call_status)
 
             if call_status in ("failed", "busy", "no-answer", "canceled"):
                 if campaign.attempt_count >= campaign.max_attempts:
@@ -215,6 +225,7 @@ async def status_callback(campaign_id: UUID, request: Request) -> dict:
 # ---------------------------------------------------------------------------
 # WebSocket endpoint — receives the Twilio Media Stream
 # ---------------------------------------------------------------------------
+
 
 async def _save_transcript_and_post_process(
     db,
@@ -295,9 +306,13 @@ async def outbound_ws(ws: WebSocket, campaign_id: UUID) -> None:
         # ------------------------------------------------------------------
         # 1. Load campaign
         # ------------------------------------------------------------------
-        campaign = db.query(CallCampaign).filter(
-            CallCampaign.id == campaign_id,
-        ).first()
+        campaign = (
+            db.query(CallCampaign)
+            .filter(
+                CallCampaign.id == campaign_id,
+            )
+            .first()
+        )
         if not campaign:
             logger.error("Campaign %s not found", campaign_id)
             await ws.close(code=1008)
@@ -321,7 +336,8 @@ async def outbound_ws(ws: WebSocket, campaign_id: UUID) -> None:
                 call_sid = start_data.get("callSid")
                 logger.info(
                     "Stream started: stream_sid=%s call_sid=%s",
-                    stream_sid, call_sid,
+                    stream_sid,
+                    call_sid,
                 )
             elif event == "stop":
                 logger.info("Stream stopped before start — aborting")
@@ -368,12 +384,14 @@ async def outbound_ws(ws: WebSocket, campaign_id: UUID) -> None:
 
         transcript_capture = TranscriptCaptureProcessor()
 
-        pipeline = Pipeline([
-            transport.input(),
-            transcript_capture,
-            llm,
-            transport.output(),
-        ])
+        pipeline = Pipeline(
+            [
+                transport.input(),
+                transcript_capture,
+                llm,
+                transport.output(),
+            ]
+        )
 
         task = PipelineTask(
             pipeline,
@@ -406,7 +424,10 @@ async def outbound_ws(ws: WebSocket, campaign_id: UUID) -> None:
                 call_sid,
             )
             await _save_transcript_and_post_process(
-                db, campaign_id, call_sid, transcript_text,
+                db,
+                campaign_id,
+                call_sid,
+                transcript_text,
             )
         else:
             logger.info(

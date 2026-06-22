@@ -3,7 +3,9 @@ from __future__ import annotations
 import enum
 import uuid
 
-from sqlalchemy import Column, DateTime, Enum as SAEnum, Float, ForeignKey, Text, func
+from sqlalchemy import Column, DateTime
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import Float, ForeignKey, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
@@ -36,7 +38,9 @@ class AgentCrew(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     mission_id = Column(UUID(as_uuid=True), ForeignKey("missions.id"), nullable=False, index=True)
     agents = Column(JSONB, default=list)  # [{agent_id, role, config_overrides}]
-    coordination_strategy = Column(SAEnum(CoordinationStrategy), default=CoordinationStrategy.parallel)
+    coordination_strategy = Column(
+        SAEnum(CoordinationStrategy), default=CoordinationStrategy.parallel
+    )
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships

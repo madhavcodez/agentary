@@ -1,6 +1,5 @@
 """Tests for the WebSocket connection manager."""
 
-
 from unittest.mock import AsyncMock
 
 import pytest

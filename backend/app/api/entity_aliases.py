@@ -24,11 +24,7 @@ def add_alias(
     user: User = Depends(get_current_user),
 ):
     """Add an alias to an entity."""
-    entity = (
-        db.query(Entity)
-        .filter(Entity.id == entity_id, Entity.user_id == user.id)
-        .first()
-    )
+    entity = db.query(Entity).filter(Entity.id == entity_id, Entity.user_id == user.id).first()
     if not entity:
         raise HTTPException(status_code=404, detail="Entity not found")
 
@@ -52,11 +48,7 @@ def list_aliases(
     user: User = Depends(get_current_user),
 ):
     """List all aliases for an entity."""
-    entity = (
-        db.query(Entity)
-        .filter(Entity.id == entity_id, Entity.user_id == user.id)
-        .first()
-    )
+    entity = db.query(Entity).filter(Entity.id == entity_id, Entity.user_id == user.id).first()
     if not entity:
         raise HTTPException(status_code=404, detail="Entity not found")
 
@@ -76,11 +68,7 @@ def remove_alias(
     user: User = Depends(get_current_user),
 ):
     """Remove an alias from an entity."""
-    entity = (
-        db.query(Entity)
-        .filter(Entity.id == entity_id, Entity.user_id == user.id)
-        .first()
-    )
+    entity = db.query(Entity).filter(Entity.id == entity_id, Entity.user_id == user.id).first()
     if not entity:
         raise HTTPException(status_code=404, detail="Entity not found")
 

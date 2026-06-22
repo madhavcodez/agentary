@@ -5,6 +5,7 @@ All three endpoints validate ``X-Twilio-Signature`` via
 signature are rejected with 403 before any DB access. The parsed form body
 is returned by the verifier so we don't pay the cost of parsing twice.
 """
+
 from __future__ import annotations
 
 import logging
@@ -24,11 +25,7 @@ router = APIRouter(tags=["voice-webhooks"])
 
 
 def _lookup_call_record(db: Session, call_sid: str) -> CallRecord | None:
-    return (
-        db.query(CallRecord)
-        .filter(CallRecord.provider_call_id == call_sid)
-        .first()
-    )
+    return db.query(CallRecord).filter(CallRecord.provider_call_id == call_sid).first()
 
 
 @router.post("/webhooks/twilio/voice-status")
@@ -89,9 +86,7 @@ async def twilio_voice_status(
             try:
                 await voice_service.process_completed_call(record.id, db)
             except Exception:
-                logger.exception(
-                    "Post-processing failed for call_record %s", record.id
-                )
+                logger.exception("Post-processing failed for call_record %s", record.id)
 
     db.add(record)
     db.commit()
@@ -159,8 +154,6 @@ async def twilio_voice_transcription(
     try:
         await voice_service.process_completed_call(record.id, db)
     except Exception:
-        logger.exception(
-            "Post-processing failed for call_record %s", record.id
-        )
+        logger.exception("Post-processing failed for call_record %s", record.id)
 
     return {"status": "ok"}

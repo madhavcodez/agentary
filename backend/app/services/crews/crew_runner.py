@@ -7,6 +7,7 @@ Execution follows the DeerFlow 5-phase research methodology:
   Phase 4 (synthesis): Combine findings, resolve contradictions
   Phase 5 (report):    Generate structured output
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -34,7 +35,8 @@ from ...models.run_step import RunStep, StepType
 from ...models.signal import SignalSourceType, SignalType
 from ..gemini import get_client
 from ..intelligence.signal_service import SignalService
-from ..state_machine import InvalidTransition, transition as sm_transition
+from ..state_machine import InvalidTransition
+from ..state_machine import transition as sm_transition
 from .events import (
     emit_crew_run_completed,
     emit_crew_run_started,
@@ -106,11 +108,7 @@ class CrewRunner:
             tokens_used=tokens_used,
             duration_ms=duration_ms,
             parent_step_id=parent_step_id,
-            completed_at=(
-                datetime.now(UTC)
-                if status in ("completed", "failed")
-                else None
-            ),
+            completed_at=(datetime.now(UTC) if status in ("completed", "failed") else None),
         )
         self.db.add(step)
         self.db.flush()
@@ -134,18 +132,20 @@ class CrewRunner:
         self.db.commit()
 
         # Emit lifecycle event
-        await event_bus.broadcast(Event(
-            event_type=EventType.run_state_changed,
-            data={
-                "run_type": "crew",
-                "run_id": str(run.id),
-                "from_state": record["from"],
-                "to_state": record["to"],
-                "reason": reason,
-            },
-            project_id=str(mission.project_id) if mission else None,
-            mission_id=str(mission.id) if mission else None,
-        ))
+        await event_bus.broadcast(
+            Event(
+                event_type=EventType.run_state_changed,
+                data={
+                    "run_type": "crew",
+                    "run_id": str(run.id),
+                    "from_state": record["from"],
+                    "to_state": record["to"],
+                    "reason": reason,
+                },
+                project_id=str(mission.project_id) if mission else None,
+                mission_id=str(mission.id) if mission else None,
+            )
+        )
 
     async def execute_run(self, run_id: uuid.UUID) -> CrewRun:
         """Main execution entry point — DeerFlow 5-phase methodology.
@@ -170,17 +170,21 @@ class CrewRunner:
             run.failure_category = FailureCategory.validation
             run.failure_message = "Crew or mission not found"
             try:
-                await self._transition_run(run, RunStatus.failed, "Crew or mission not found", mission)
+                await self._transition_run(
+                    run, RunStatus.failed, "Crew or mission not found", mission
+                )
             except InvalidTransition:
                 current_status = run.status if isinstance(run.status, str) else run.status.value
                 run.status = "failed"
                 transitions = list(run.state_transitions or [])
-                transitions.append({
-                    "from": current_status,
-                    "to": "failed",
-                    "timestamp": datetime.now(UTC).isoformat(),
-                    "reason": "InvalidTransition fallback — forced to failed",
-                })
+                transitions.append(
+                    {
+                        "from": current_status,
+                        "to": "failed",
+                        "timestamp": datetime.now(UTC).isoformat(),
+                        "reason": "InvalidTransition fallback — forced to failed",
+                    }
+                )
                 run.state_transitions = transitions
                 self.db.commit()
             run.error = {"message": "Crew or mission not found"}
@@ -189,11 +193,7 @@ class CrewRunner:
 
         # Load experts from crew.agents JSONB
         agent_ids = [a.get("agent_id") for a in (crew.agents or []) if a.get("agent_id")]
-        experts = (
-            self.db.query(ExpertAgent)
-            .filter(ExpertAgent.id.in_(agent_ids))
-            .all()
-        )
+        experts = self.db.query(ExpertAgent).filter(ExpertAgent.id.in_(agent_ids)).all()
         expert_map = {str(e.id): e for e in experts}
 
         # Transition: queued -> running
@@ -207,9 +207,7 @@ class CrewRunner:
         self.db.commit()
 
         expert_names = [e.name for e in experts]
-        await emit_crew_run_started(
-            self.db, mission.id, run.id, crew.id, expert_names
-        )
+        await emit_crew_run_started(self.db, mission.id, run.id, crew.id, expert_names)
         self.db.commit()
 
         start_time = time.time()
@@ -230,7 +228,8 @@ class CrewRunner:
 
             if should_run_storm(mission):
                 storm_step = self._record_step(
-                    run_id=run.id, run_type="crew",
+                    run_id=run.id,
+                    run_type="crew",
                     step_type=StepType.synthesis,
                     step_name="STORM Phase 0: outline-first pre-writing",
                     status="running",
@@ -248,9 +247,7 @@ class CrewRunner:
                 except Exception as exc:
                     storm_status = "error"
                     storm_fallback_reason = f"{type(exc).__name__}: {exc}"[:200]
-                    logger.warning(
-                        "STORM pre-write failed for mission %s: %s", mission.id, exc
-                    )
+                    logger.warning("STORM pre-write failed for mission %s: %s", mission.id, exc)
                     storm_step.status = "failed"
                     storm_step.error_message = storm_fallback_reason
                 storm_step.completed_at = datetime.now(UTC)
@@ -280,7 +277,8 @@ class CrewRunner:
             # Separate phases (DeerFlow methodology)
             scout_tasks = [t for t in run.tasks if t.task_type == "scout"]
             research_tasks = [
-                t for t in run.tasks
+                t
+                for t in run.tasks
                 if t.task_type not in ("scout", "synthesis", "report_writing", "gap_check")
             ]
             gap_check_tasks = [t for t in run.tasks if t.task_type == "gap_check"]
@@ -290,7 +288,8 @@ class CrewRunner:
             # ── SCOUT PHASE (DeerFlow Phase 1) ──────────────────────
             if scout_tasks:
                 scout_step = self._record_step(
-                    run_id=run.id, run_type="crew",
+                    run_id=run.id,
+                    run_type="crew",
                     step_type=StepType.searching,
                     step_name="DeerFlow Scout: broad exploration",
                     status="running",
@@ -344,9 +343,15 @@ class CrewRunner:
                         self.db.commit()
 
                         await emit_expert_thinking(
-                            self.db, mission.id, run.id, crew.id,
-                            None, "System", "\u26a0\ufe0f",
-                            f"Research task failed: {error_msg[:200]}", "error",
+                            self.db,
+                            mission.id,
+                            run.id,
+                            crew.id,
+                            None,
+                            "System",
+                            "\u26a0\ufe0f",
+                            f"Research task failed: {error_msg[:200]}",
+                            "error",
                         )
                         self.db.commit()
 
@@ -359,7 +364,8 @@ class CrewRunner:
             # ── GAP CHECK PHASE (DeerFlow Phase 3) ─────────────────
             if gap_check_tasks and all_findings:
                 gap_step = self._record_step(
-                    run_id=run.id, run_type="crew",
+                    run_id=run.id,
+                    run_type="crew",
                     step_type=StepType.analyzing,
                     step_name="DeerFlow Gap Check: audit completeness",
                     status="running",
@@ -406,7 +412,8 @@ class CrewRunner:
             # ── SYNTHESIS PHASE (DeerFlow Phase 4) ──────────────────
             if synthesis_tasks:
                 synth_phase_step = self._record_step(
-                    run_id=run.id, run_type="crew",
+                    run_id=run.id,
+                    run_type="crew",
                     step_type=StepType.synthesis,
                     step_name="Synthesis phase",
                     status="running",
@@ -429,9 +436,7 @@ class CrewRunner:
                 }
                 self.db.commit()
 
-                result = await self._execute_expert_task(
-                    task, expert_map, mission, run, crew
-                )
+                result = await self._execute_expert_task(task, expert_map, mission, run, crew)
                 if isinstance(result, tuple):
                     findings, tokens, cost = result
                     all_findings.extend(findings)
@@ -447,7 +452,8 @@ class CrewRunner:
             # ── REPORT PHASE ─────────────────────────────────────────
             if report_tasks:
                 report_phase_step = self._record_step(
-                    run_id=run.id, run_type="crew",
+                    run_id=run.id,
+                    run_type="crew",
                     step_type=StepType.synthesis,
                     step_name="Report phase",
                     status="running",
@@ -469,9 +475,7 @@ class CrewRunner:
                 }
                 self.db.commit()
 
-                result = await self._execute_expert_task(
-                    task, expert_map, mission, run, crew
-                )
+                result = await self._execute_expert_task(task, expert_map, mission, run, crew)
                 if isinstance(result, tuple):
                     findings, tokens, cost = result
                     total_tokens += tokens
@@ -490,33 +494,38 @@ class CrewRunner:
 
             # Determine if we should use partially_failed
             failed_task_count = sum(
-                1 for t in run.tasks
-                if (t.status.value if hasattr(t.status, 'value') else str(t.status)) == "failed"
+                1
+                for t in run.tasks
+                if (t.status.value if hasattr(t.status, "value") else str(t.status)) == "failed"
             )
             total_task_count = len(run.tasks) if run.tasks else 0
 
             if failed_task_count > 0 and failed_task_count < total_task_count:
                 await self._transition_run(
-                    run, RunStatus.partially_failed,
+                    run,
+                    RunStatus.partially_failed,
                     f"{failed_task_count}/{total_task_count} tasks failed",
                     mission,
                 )
                 # Resolve partial failure to completed since we do have findings
                 if all_findings:
                     await self._transition_run(
-                        run, RunStatus.completed,
+                        run,
+                        RunStatus.completed,
                         "Resolved: partial results available",
                         mission,
                     )
                 else:
                     await self._transition_run(
-                        run, RunStatus.failed,
+                        run,
+                        RunStatus.failed,
                         "Resolved: no findings despite partial execution",
                         mission,
                     )
             else:
                 await self._transition_run(
-                    run, RunStatus.completed,
+                    run,
+                    RunStatus.completed,
                     f"Completed with {len(all_findings)} findings",
                     mission,
                 )
@@ -533,18 +542,17 @@ class CrewRunner:
             }
 
             run_status_str = run.status.value if hasattr(run.status, "value") else str(run.status)
-            mission.status = MissionStatus.completed if run_status_str == "completed" else MissionStatus.failed
+            mission.status = (
+                MissionStatus.completed if run_status_str == "completed" else MissionStatus.failed
+            )
             mission.completed_at = datetime.now(UTC)
             mission.findings_count = len(all_findings)
             mission.confidence_score = (
-                sum(f.confidence for f in all_findings) / len(all_findings)
-                if all_findings else 0.0
+                sum(f.confidence for f in all_findings) / len(all_findings) if all_findings else 0.0
             )
             mission.summary = run.summary
 
-            await emit_crew_run_completed(
-                self.db, mission.id, run.id, crew.id, len(all_findings)
-            )
+            await emit_crew_run_completed(self.db, mission.id, run.id, crew.id, len(all_findings))
             self.db.commit()
 
         except Exception as e:
@@ -571,12 +579,14 @@ class CrewRunner:
                 current_status = run.status if isinstance(run.status, str) else run.status.value
                 run.status = "failed"
                 transitions = list(run.state_transitions or [])
-                transitions.append({
-                    "from": current_status,
-                    "to": "failed",
-                    "timestamp": datetime.now(UTC).isoformat(),
-                    "reason": "InvalidTransition fallback — forced to failed",
-                })
+                transitions.append(
+                    {
+                        "from": current_status,
+                        "to": "failed",
+                        "timestamp": datetime.now(UTC).isoformat(),
+                        "reason": "InvalidTransition fallback — forced to failed",
+                    }
+                )
                 run.state_transitions = transitions
                 self.db.commit()
 
@@ -611,7 +621,9 @@ class CrewRunner:
             expert_name = expert.name if expert else "Unknown"
             logger.error(
                 "Expert task timed out after %.0fs: expert=%s task_type=%s",
-                timeout_seconds, expert_name, task.task_type,
+                timeout_seconds,
+                expert_name,
+                task.task_type,
             )
             task.status = "failed"
             task.error_message = f"Task timed out after {timeout_seconds}s"
@@ -619,7 +631,9 @@ class CrewRunner:
             raise
         except Exception as exc:
             logger.error(
-                "Expert task failed with unexpected error: %s", exc, exc_info=True,
+                "Expert task failed with unexpected error: %s",
+                exc,
+                exc_info=True,
             )
             raise
 
@@ -652,8 +666,13 @@ class CrewRunner:
         self.db.commit()
 
         await emit_task_started(
-            self.db, mission.id, run.id, crew.id,
-            expert.id, expert.name, task.task_type,
+            self.db,
+            mission.id,
+            run.id,
+            crew.id,
+            expert.id,
+            expert.name,
+            task.task_type,
         )
         self.db.commit()
 
@@ -701,14 +720,18 @@ class CrewRunner:
 
                 tools_param = None
                 if tool_declarations:
-                    tools_param = [types.Tool(function_declarations=[
-                        types.FunctionDeclaration(
-                            name=td["name"],
-                            description=td["description"],
-                            parameters=td.get("parameters"),
+                    tools_param = [
+                        types.Tool(
+                            function_declarations=[
+                                types.FunctionDeclaration(
+                                    name=td["name"],
+                                    description=td["description"],
+                                    parameters=td.get("parameters"),
+                                )
+                                for td in tool_declarations
+                            ]
                         )
-                        for td in tool_declarations
-                    ])]
+                    ]
                     config_kwargs["tools"] = tools_param
 
                 loop = asyncio.get_event_loop()
@@ -752,9 +775,16 @@ class CrewRunner:
                                 action = "calling"
 
                             await emit_expert_thinking(
-                                self.db, mission.id, run.id, crew.id,
-                                expert.id, expert.name, expert_icon,
-                                thought, action, tool_name,
+                                self.db,
+                                mission.id,
+                                run.id,
+                                crew.id,
+                                expert.id,
+                                expert.name,
+                                expert_icon,
+                                thought,
+                                action,
+                                tool_name,
                             )
                             self.db.commit()
 
@@ -772,7 +802,11 @@ class CrewRunner:
                                 status="completed",
                                 input_summary=_truncate(tool_args, 2000),
                                 output_summary=_truncate(
-                                    tool_result if isinstance(tool_result, dict) else {"result": str(tool_result)[:2000]},
+                                    (
+                                        tool_result
+                                        if isinstance(tool_result, dict)
+                                        else {"result": str(tool_result)[:2000]}
+                                    ),
                                     5000,
                                 ),
                                 duration_ms=tool_elapsed_ms,
@@ -795,13 +829,17 @@ class CrewRunner:
 
                             # Append tool result to messages
                             messages.append({"role": "model", "parts": [part]})
-                            messages.append({
-                                "role": "user",
-                                "parts": [types.Part.from_function_response(
-                                    name=tool_name,
-                                    response={"result": json.dumps(tool_result)[:4000]},
-                                )],
-                            })
+                            messages.append(
+                                {
+                                    "role": "user",
+                                    "parts": [
+                                        types.Part.from_function_response(
+                                            name=tool_name,
+                                            response={"result": json.dumps(tool_result)[:4000]},
+                                        )
+                                    ],
+                                }
+                            )
                             break  # Process one function call at a time
 
                 if not has_function_call:
@@ -809,9 +847,15 @@ class CrewRunner:
                     response_text = response.text if response.text else ""
 
                     await emit_expert_thinking(
-                        self.db, mission.id, run.id, crew.id,
-                        expert.id, expert.name, expert_icon,
-                        "Compiling findings...", "writing",
+                        self.db,
+                        mission.id,
+                        run.id,
+                        crew.id,
+                        expert.id,
+                        expert.name,
+                        expert_icon,
+                        "Compiling findings...",
+                        "writing",
                     )
                     self.db.commit()
 
@@ -852,8 +896,12 @@ class CrewRunner:
                         findings.append(finding)
 
                         await emit_finding_added(
-                            self.db, mission.id, run.id,
-                            finding.title, finding.confidence, finding.source_name,
+                            self.db,
+                            mission.id,
+                            run.id,
+                            finding.title,
+                            finding.confidence,
+                            finding.source_name,
                         )
 
                         # Emit signal for the intelligence pipeline
@@ -894,8 +942,14 @@ class CrewRunner:
             self.db.commit()
 
             await emit_task_completed(
-                self.db, mission.id, run.id, crew.id,
-                expert.id, expert.name, task.task_type, len(findings),
+                self.db,
+                mission.id,
+                run.id,
+                crew.id,
+                expert.id,
+                expert.name,
+                task.task_type,
+                len(findings),
             )
 
             # Update RunStep: expert task completed
@@ -904,7 +958,8 @@ class CrewRunner:
             task_step.cost_usd = cost
             task_step.duration_ms = int(elapsed * 1000)
             task_step.output_summary = _truncate(
-                {"findings_count": len(findings)}, 5000,
+                {"findings_count": len(findings)},
+                5000,
             )
             task_step.completed_at = datetime.now(UTC)
             self.db.commit()
@@ -990,14 +1045,16 @@ class CrewRunner:
 
         # Fallback: create a single finding from the text
         if text:
-            return [{
-                "title": f"{expert.name} analysis",
-                "content": text[:2000],
-                "category": "insight",
-                "confidence": 0.5,
-                "source_type": "inference",
-                "tags": [],
-            }]
+            return [
+                {
+                    "title": f"{expert.name} analysis",
+                    "content": text[:2000],
+                    "category": "insight",
+                    "confidence": 0.5,
+                    "source_type": "inference",
+                    "tags": [],
+                }
+            ]
 
         return []
 
@@ -1005,7 +1062,9 @@ class CrewRunner:
         """Create a text summary of all findings for synthesizer/report writer."""
         parts = []
         for i, f in enumerate(findings, 1):
-            finding_kind = f.finding_type.value if hasattr(f.finding_type, "value") else str(f.finding_type)
+            finding_kind = (
+                f.finding_type.value if hasattr(f.finding_type, "value") else str(f.finding_type)
+            )
             parts.append(
                 f"{i}. [{finding_kind}] {f.title} (confidence: {(f.confidence or 0):.0%})\n"
                 f"   {f.content[:300]}\n"

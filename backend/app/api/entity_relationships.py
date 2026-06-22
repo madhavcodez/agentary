@@ -17,7 +17,9 @@ from ..schemas.intelligence import EntityRelationshipCreate, EntityRelationshipR
 router = APIRouter(tags=["entity-relationships"])
 
 
-@router.post("/api/entity-relationships", response_model=EntityRelationshipResponse, status_code=201)
+@router.post(
+    "/api/entity-relationships", response_model=EntityRelationshipResponse, status_code=201
+)
 def create_relationship(
     body: EntityRelationshipCreate,
     db: Session = Depends(get_db),
@@ -25,17 +27,13 @@ def create_relationship(
 ):
     """Create a relationship between two entities."""
     from_entity = (
-        db.query(Entity)
-        .filter(Entity.id == body.from_entity_id, Entity.user_id == user.id)
-        .first()
+        db.query(Entity).filter(Entity.id == body.from_entity_id, Entity.user_id == user.id).first()
     )
     if not from_entity:
         raise HTTPException(status_code=404, detail="Source entity not found")
 
     to_entity = (
-        db.query(Entity)
-        .filter(Entity.id == body.to_entity_id, Entity.user_id == user.id)
-        .first()
+        db.query(Entity).filter(Entity.id == body.to_entity_id, Entity.user_id == user.id).first()
     )
     if not to_entity:
         raise HTTPException(status_code=404, detail="Target entity not found")

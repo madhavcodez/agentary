@@ -1,4 +1,5 @@
 """Event emission for real-time crew activity tracking."""
+
 from __future__ import annotations
 
 import uuid

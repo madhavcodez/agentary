@@ -29,7 +29,9 @@ class Workflow(Base):
     total_runs = Column(Integer, nullable=False, default=0)
     avg_duration_seconds = Column(Float, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
 
     runs = relationship("WorkflowRun", back_populates="workflow", cascade="all, delete-orphan")
     template = relationship("WorkflowTemplate", foreign_keys=[template_id])

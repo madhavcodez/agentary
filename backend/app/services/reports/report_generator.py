@@ -39,6 +39,7 @@ def _append_report_transition(
     transitions.append(record)
     report.state_transitions = transitions
 
+
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 MARKDOWN2_EXTRAS = [
@@ -190,7 +191,11 @@ class ReportGenerator:
         )
 
         finding_ids_used = [str(f.id) for f in relevant]
-        findings_text = self._format_findings_for_prompt(relevant) if relevant else "No findings available for this section."
+        findings_text = (
+            self._format_findings_for_prompt(relevant)
+            if relevant
+            else "No findings available for this section."
+        )
 
         structured_snippet = ""
         if structured_data:
@@ -261,9 +266,7 @@ class ReportGenerator:
     def _generate_executive_summary(self, sections: list[dict], mission: Mission) -> str:
         """Generate a concise executive summary from completed sections."""
         section_summaries = "\n\n".join(
-            f"### {s['title']}\n{s['content_md'][:800]}"
-            for s in sections
-            if s.get("content_md")
+            f"### {s['title']}\n{s['content_md'][:800]}" for s in sections if s.get("content_md")
         )
 
         prompt = (
@@ -299,9 +302,7 @@ class ReportGenerator:
         if crew_runs:
             parts: list[str] = []
             for run in crew_runs:
-                duration = (
-                    f"{run.duration_seconds:.0f}s" if run.duration_seconds else "N/A"
-                )
+                duration = f"{run.duration_seconds:.0f}s" if run.duration_seconds else "N/A"
                 metrics_str = json.dumps(run.metrics, default=str) if run.metrics else "{}"
                 parts.append(
                     f"- Run {run.iteration} | Status: {run.status} | "
@@ -385,9 +386,7 @@ class ReportGenerator:
             .order_by(Finding.category, Finding.confidence.desc())
             .all()
         )
-        logger.info(
-            "Loaded %d findings for mission %s", len(findings), mission_id
-        )
+        logger.info("Loaded %d findings for mission %s", len(findings), mission_id)
 
         # ---- 3. Load crew runs ----
         crew_runs: list[CrewRun] = (
@@ -439,9 +438,7 @@ class ReportGenerator:
 
         # ---- 7. Executive summary ----
         logger.info("Generating executive summary")
-        executive_summary_text = self._generate_executive_summary(
-            generated_sections, mission
-        )
+        executive_summary_text = self._generate_executive_summary(generated_sections, mission)
 
         # ---- 8. Methodology ----
         logger.info("Generating methodology section")
@@ -469,7 +466,9 @@ class ReportGenerator:
             md_parts.append("## Sources & References\n")
             for src in sources:
                 url_part = f" - [{src['url']}]({src['url']})" if src.get("url") else ""
-                accessed = f" (accessed {src['accessed_at'][:10]})" if src.get("accessed_at") else ""
+                accessed = (
+                    f" (accessed {src['accessed_at'][:10]})" if src.get("accessed_at") else ""
+                )
                 md_parts.append(f"- **{src['name']}**{url_part}{accessed}")
             md_parts.append("")
 
@@ -578,9 +577,7 @@ class ReportGenerator:
 
         sections: list[dict] = list(report.sections or [])
         if section_index < 0 or section_index >= len(sections):
-            raise IndexError(
-                f"Section index {section_index} out of range (0-{len(sections) - 1})"
-            )
+            raise IndexError(f"Section index {section_index} out of range (0-{len(sections) - 1})")
 
         target_section = dict(sections[section_index])
         section_title = target_section["title"]
@@ -660,8 +657,7 @@ class ReportGenerator:
 
         # Update the sections list immutably
         updated_sections = [
-            target_section if i == section_index else dict(s)
-            for i, s in enumerate(sections)
+            target_section if i == section_index else dict(s) for i, s in enumerate(sections)
         ]
 
         # Rebuild full markdown

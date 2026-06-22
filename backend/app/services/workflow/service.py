@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 # ── Validation ───────────────────────────────────────────────────────
 
+
 def validate_workflow(nodes: list[dict], edges: list[dict]) -> list[str]:
     """Validate workflow structure. Returns list of errors."""
     errors = []
@@ -89,6 +90,7 @@ def validate_workflow(nodes: list[dict], edges: list[dict]) -> list[str]:
 
 # ── CRUD ─────────────────────────────────────────────────────────────
 
+
 def create_workflow(db: Session, user_id: UUID, data: dict[str, Any]) -> Workflow:
     workflow = Workflow(
         user_id=user_id,
@@ -111,7 +113,16 @@ def create_workflow(db: Session, user_id: UUID, data: dict[str, Any]) -> Workflo
 
 
 def update_workflow(db: Session, workflow: Workflow, data: dict[str, Any]) -> Workflow:
-    for field in ["name", "description", "status", "trigger_type", "trigger_config", "nodes", "edges", "variables"]:
+    for field in [
+        "name",
+        "description",
+        "status",
+        "trigger_type",
+        "trigger_config",
+        "nodes",
+        "edges",
+        "variables",
+    ]:
         if field in data and data[field] is not None:
             setattr(workflow, field, data[field])
     db.commit()
@@ -126,16 +137,21 @@ def delete_workflow(db: Session, workflow: Workflow) -> None:
 
 # ── Template Instantiation ──────────────────────────────────────────
 
+
 def create_from_template(
-    db: Session, user_id: UUID, template_id: UUID, variables: dict[str, Any],
-    project_id: UUID | None = None, name: str | None = None,
+    db: Session,
+    user_id: UUID,
+    template_id: UUID,
+    variables: dict[str, Any],
+    project_id: UUID | None = None,
+    name: str | None = None,
 ) -> Workflow:
     template = db.query(WorkflowTemplate).filter(WorkflowTemplate.id == template_id).first()
     if not template:
         raise ValueError(f"Template {template_id} not found")
 
     # Validate required variables
-    for var_def in (template.variables_schema or []):
+    for var_def in template.variables_schema or []:
         if var_def.get("required") and var_def["name"] not in variables:
             if "default" not in var_def:
                 raise ValueError(f"Missing required variable: {var_def['name']}")
@@ -165,8 +181,12 @@ def create_from_template(
 
 # ── NL Creation ──────────────────────────────────────────────────────
 
+
 async def create_from_natural_language(
-    db: Session, user_id: UUID, description: str, project_id: UUID | None = None,
+    db: Session,
+    user_id: UUID,
+    description: str,
+    project_id: UUID | None = None,
 ) -> Workflow:
     from .nl_builder import NLWorkflowBuilder
 
@@ -193,6 +213,7 @@ async def create_from_natural_language(
 
 
 # ── Run Orchestration ────────────────────────────────────────────────
+
 
 async def trigger_run(db: Session, workflow: Workflow, trigger: str = "manual") -> WorkflowRun:
     from .executor import WorkflowExecutor
@@ -224,6 +245,7 @@ def activate_workflow(db: Session, workflow: Workflow) -> Workflow:
     # Register schedule if applicable
     if workflow.trigger_type == "scheduled" and workflow.trigger_config:
         from ..scheduler import add_workflow_schedule
+
         cron = workflow.trigger_config.get("cron", "0 9 * * *")
         tz = workflow.trigger_config.get("timezone", "America/Los_Angeles")
         add_workflow_schedule(str(workflow.id), cron, tz)
@@ -238,6 +260,7 @@ def pause_workflow(db: Session, workflow: Workflow) -> Workflow:
 
     if workflow.trigger_type == "scheduled":
         from ..scheduler import remove_workflow_schedule
+
         remove_workflow_schedule(str(workflow.id))
 
     return workflow

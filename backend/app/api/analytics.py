@@ -36,8 +36,12 @@ def get_funnel(
     counts = dict(rows)
 
     ordered_stages = [
-        "lead", "contacted", "aware", "engaged",
-        "meeting", "closed_won",
+        "lead",
+        "contacted",
+        "aware",
+        "engaged",
+        "meeting",
+        "closed_won",
     ]
 
     funnel = []
@@ -101,9 +105,7 @@ def channel_performance(
         email_opened = (
             db.query(func.count(func.distinct(EmailEvent.campaign_id)))
             .filter(
-                EmailEvent.campaign_id.in_(
-                    db.query(campaign_ids.c.id)
-                ),
+                EmailEvent.campaign_id.in_(db.query(campaign_ids.c.id)),
                 EmailEvent.event_type == "email.opened",
             )
             .scalar()
@@ -111,9 +113,7 @@ def channel_performance(
         email_replied = (
             db.query(func.count(func.distinct(EmailEvent.campaign_id)))
             .filter(
-                EmailEvent.campaign_id.in_(
-                    db.query(campaign_ids.c.id)
-                ),
+                EmailEvent.campaign_id.in_(db.query(campaign_ids.c.id)),
                 EmailEvent.event_type == "email.replied",
             )
             .scalar()
@@ -264,7 +264,9 @@ def score_distribution(
 
 # ── Helpers ─────────────────────────────────────────────────────────
 
+
 def sa_date_type():
     """Return SQLAlchemy Date type for casting."""
     from sqlalchemy import Date
+
     return Date

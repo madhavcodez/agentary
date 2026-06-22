@@ -46,6 +46,7 @@ from app.services.change_detector import ChangeResult, detect_text_change, detec
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _user_id() -> uuid.UUID:
     return uuid.uuid4()
 
@@ -72,14 +73,19 @@ def _make_mission(
         user_id=project.user_id,
         name=name,
         description=kwargs.get("description", "Survey nearby gas stations for current fuel prices"),
-        objective=kwargs.get("objective", "Collect current gas prices from stations within 5 miles"),
+        objective=kwargs.get(
+            "objective", "Collect current gas prices from stations within 5 miles"
+        ),
         status=kwargs.get("status", MissionStatus.draft),
         mission_type=kwargs.get("mission_type", MissionType.data_collection),
-        parameters=kwargs.get("parameters", {
-            "geography": "30.2672, -97.7431",
-            "radius_miles": 5,
-            "target": "gas stations",
-        }),
+        parameters=kwargs.get(
+            "parameters",
+            {
+                "geography": "30.2672, -97.7431",
+                "radius_miles": 5,
+                "target": "gas stations",
+            },
+        ),
     )
 
 
@@ -125,6 +131,7 @@ def _make_finding(
 # ===========================================================================
 # Scenario 1: Create Project and Mission
 # ===========================================================================
+
 
 class TestScenario1_ProjectAndMission:
     """Verify project + mission creation with correct fields and relationships."""
@@ -206,22 +213,44 @@ class TestScenario1_ProjectAndMission:
 # Scenario 2: Research Execution
 # ===========================================================================
 
+
 class TestScenario2_ResearchExecution:
     """Crew assembly, mission run, task creation, finding generation, event system."""
 
     def test_assemble_crew_with_experts(self):
-        web_researcher = _make_expert("web-researcher", "Web Researcher", AgentSpecialty.web_researcher)
-        data_extractor = _make_expert("data-extractor", "Data Extractor", AgentSpecialty.data_extractor)
-        local_intel = _make_expert("local-intel", "Local Business Intel", AgentSpecialty.local_business_intel)
+        web_researcher = _make_expert(
+            "web-researcher", "Web Researcher", AgentSpecialty.web_researcher
+        )
+        data_extractor = _make_expert(
+            "data-extractor", "Data Extractor", AgentSpecialty.data_extractor
+        )
+        local_intel = _make_expert(
+            "local-intel", "Local Business Intel", AgentSpecialty.local_business_intel
+        )
 
         mission_id = uuid.uuid4()
         crew = AgentCrew(
             id=uuid.uuid4(),
             mission_id=mission_id,
             agents=[
-                {"agent_id": str(web_researcher.id), "slug": "web-researcher", "name": "Web Researcher", "role": "web_researcher"},
-                {"agent_id": str(data_extractor.id), "slug": "data-extractor", "name": "Data Extractor", "role": "data_extractor"},
-                {"agent_id": str(local_intel.id), "slug": "local-intel", "name": "Local Business Intel", "role": "local_business_intel"},
+                {
+                    "agent_id": str(web_researcher.id),
+                    "slug": "web-researcher",
+                    "name": "Web Researcher",
+                    "role": "web_researcher",
+                },
+                {
+                    "agent_id": str(data_extractor.id),
+                    "slug": "data-extractor",
+                    "name": "Data Extractor",
+                    "role": "data_extractor",
+                },
+                {
+                    "agent_id": str(local_intel.id),
+                    "slug": "local-intel",
+                    "name": "Local Business Intel",
+                    "role": "local_business_intel",
+                },
             ],
             coordination_strategy=CoordinationStrategy.parallel,
         )
@@ -298,7 +327,8 @@ class TestScenario2_ResearchExecution:
 
         findings = [
             _make_finding(
-                project_id, mission_id,
+                project_id,
+                mission_id,
                 title="Shell Station - Regular $3.19/gal",
                 finding_type=FindingType.price,
                 content="Shell at 1234 S Lamar Blvd: Regular $3.19, Mid $3.49, Premium $3.79",
@@ -309,7 +339,8 @@ class TestScenario2_ResearchExecution:
                 structured_data={"regular": 3.19, "mid": 3.49, "premium": 3.79},
             ),
             _make_finding(
-                project_id, mission_id,
+                project_id,
+                mission_id,
                 title="Exxon Station - Regular $3.25/gal",
                 finding_type=FindingType.price,
                 content="Exxon at 5678 Congress Ave: Regular $3.25, Mid $3.55, Premium $3.85",
@@ -320,7 +351,8 @@ class TestScenario2_ResearchExecution:
                 structured_data={"regular": 3.25, "mid": 3.55, "premium": 3.85},
             ),
             _make_finding(
-                project_id, mission_id,
+                project_id,
+                mission_id,
                 title="Average gas price trend: down 2% week-over-week",
                 finding_type=FindingType.trend,
                 content="Gas prices in the 78704 area decreased by 2% compared to last week",
@@ -444,6 +476,7 @@ class TestScenario2_ResearchExecution:
 # Scenario 3: Report Generation
 # ===========================================================================
 
+
 class TestScenario3_ReportGeneration:
     """Test report creation, sections, sources, data export, and share service."""
 
@@ -453,7 +486,8 @@ class TestScenario3_ReportGeneration:
         user_id = _user_id()
         findings = [
             _make_finding(
-                project_id, mission_id,
+                project_id,
+                mission_id,
                 title="Shell Station - Regular $3.19/gal",
                 finding_type=FindingType.price,
                 source_url="https://gasbuddy.com/station/12345",
@@ -463,7 +497,8 @@ class TestScenario3_ReportGeneration:
                 structured_data={"regular": 3.19},
             ),
             _make_finding(
-                project_id, mission_id,
+                project_id,
+                mission_id,
                 title="Exxon Station - Regular $3.25/gal",
                 finding_type=FindingType.price,
                 source_url="https://gasbuddy.com/station/67890",
@@ -473,7 +508,8 @@ class TestScenario3_ReportGeneration:
                 structured_data={"regular": 3.25},
             ),
             _make_finding(
-                project_id, mission_id,
+                project_id,
+                mission_id,
                 title="Prices trending down 2% WoW",
                 finding_type=FindingType.trend,
                 source_type=SourceType.inferred,
@@ -558,6 +594,7 @@ class TestScenario3_ReportGeneration:
 
         # Simulate enabling share
         import secrets
+
         token = secrets.token_urlsafe(32)
         report.share_token = token
         report.share_enabled = True
@@ -569,8 +606,17 @@ class TestScenario3_ReportGeneration:
         from app.services.reports.data_exporter import _FINDING_CSV_COLUMNS
 
         expected_columns = [
-            "title", "category", "content", "confidence", "source_type",
-            "source_name", "source_url", "expert", "tags", "verified", "created_at",
+            "title",
+            "category",
+            "content",
+            "confidence",
+            "source_type",
+            "source_name",
+            "source_url",
+            "expert",
+            "tags",
+            "verified",
+            "created_at",
         ]
         assert expected_columns == _FINDING_CSV_COLUMNS
 
@@ -626,8 +672,16 @@ class TestScenario3_ReportGeneration:
             report_type="research_report",
             status="completed",
             charts=[
-                {"type": "bar", "title": "Price Comparison", "data": {"labels": ["Shell", "Exxon"], "values": [3.19, 3.25]}},
-                {"type": "line", "title": "Price Trend", "data": {"dates": ["2026-03-14", "2026-03-21"], "values": [3.30, 3.22]}},
+                {
+                    "type": "bar",
+                    "title": "Price Comparison",
+                    "data": {"labels": ["Shell", "Exxon"], "values": [3.19, 3.25]},
+                },
+                {
+                    "type": "line",
+                    "title": "Price Trend",
+                    "data": {"dates": ["2026-03-14", "2026-03-21"], "values": [3.30, 3.22]},
+                },
             ],
         )
         assert len(report.charts) == 2
@@ -639,6 +693,7 @@ class TestScenario3_ReportGeneration:
 # Scenario 4: Workflow Execution
 # ===========================================================================
 
+
 class TestScenario4_WorkflowExecution:
     """Create workflow with nodes/edges, test executor topological sort, verify node execution."""
 
@@ -646,10 +701,30 @@ class TestScenario4_WorkflowExecution:
         user_id = _user_id()
         project_id = uuid.uuid4()
         nodes = [
-            {"id": "trigger_1", "type": "manual_trigger", "config": {}, "position": {"x": 0, "y": 0}},
-            {"id": "search_1", "type": "web_search", "config": {"query_template": "gas prices Austin TX"}, "position": {"x": 200, "y": 0}},
-            {"id": "extract_1", "type": "data_extraction", "config": {"fields": ["price", "station_name"]}, "position": {"x": 400, "y": 0}},
-            {"id": "report_1", "type": "generate_report", "config": {"report_type": "research_report"}, "position": {"x": 600, "y": 0}},
+            {
+                "id": "trigger_1",
+                "type": "manual_trigger",
+                "config": {},
+                "position": {"x": 0, "y": 0},
+            },
+            {
+                "id": "search_1",
+                "type": "web_search",
+                "config": {"query_template": "gas prices Austin TX"},
+                "position": {"x": 200, "y": 0},
+            },
+            {
+                "id": "extract_1",
+                "type": "data_extraction",
+                "config": {"fields": ["price", "station_name"]},
+                "position": {"x": 400, "y": 0},
+            },
+            {
+                "id": "report_1",
+                "type": "generate_report",
+                "config": {"report_type": "research_report"},
+                "position": {"x": 600, "y": 0},
+            },
         ]
         edges = [
             {"id": "e1", "source_node_id": "trigger_1", "target_node_id": "search_1"},
@@ -764,7 +839,12 @@ class TestScenario4_WorkflowExecution:
         executor = WorkflowExecutor(db=mock_db)
 
         edges = [
-            {"source_node_id": "a", "target_node_id": "b", "source_port": "output", "target_port": "input"},
+            {
+                "source_node_id": "a",
+                "target_node_id": "b",
+                "source_port": "output",
+                "target_port": "input",
+            },
         ]
         outputs = {"a": {"results": ["data1", "data2"]}}
 
@@ -785,9 +865,8 @@ class TestScenario4_WorkflowExecution:
         import asyncio
 
         from app.services.workflow.node_handlers import handle_manual_trigger
-        result = asyncio.get_event_loop().run_until_complete(
-            handle_manual_trigger({}, None, {})
-        )
+
+        result = asyncio.get_event_loop().run_until_complete(handle_manual_trigger({}, None, {}))
         assert result["triggered"] is True
         assert result["trigger_type"] == "manual"
 
@@ -854,6 +933,7 @@ class TestScenario4_WorkflowExecution:
 # ===========================================================================
 # Scenario 5: Monitor and Alert
 # ===========================================================================
+
 
 class TestScenario5_MonitorAndAlert:
     """Monitor creation, change detection, alert generation, notification channels."""
@@ -1058,6 +1138,7 @@ class TestScenario5_MonitorAndAlert:
 # Scenario 6: Full Golden Path (Lifecycle)
 # ===========================================================================
 
+
 class TestScenario6_FullGoldenPath:
     """Full lifecycle: user -> project -> mission -> crew -> findings -> report -> monitor -> export."""
 
@@ -1083,17 +1164,36 @@ class TestScenario6_FullGoldenPath:
         assert mission.project_id == project.id
 
         # --- Phase 3: Crew Assembly ---
-        web_researcher = _make_expert("web-researcher", "Web Researcher", AgentSpecialty.web_researcher)
-        data_extractor = _make_expert("data-extractor", "Data Extractor", AgentSpecialty.data_extractor)
+        web_researcher = _make_expert(
+            "web-researcher", "Web Researcher", AgentSpecialty.web_researcher
+        )
+        data_extractor = _make_expert(
+            "data-extractor", "Data Extractor", AgentSpecialty.data_extractor
+        )
         synthesizer = _make_expert("synthesizer", "Synthesizer", AgentSpecialty.synthesizer)
 
         crew = AgentCrew(
             id=uuid.uuid4(),
             mission_id=mission.id,
             agents=[
-                {"agent_id": str(web_researcher.id), "slug": "web-researcher", "name": "Web Researcher", "role": "web_researcher"},
-                {"agent_id": str(data_extractor.id), "slug": "data-extractor", "name": "Data Extractor", "role": "data_extractor"},
-                {"agent_id": str(synthesizer.id), "slug": "synthesizer", "name": "Synthesizer", "role": "synthesizer"},
+                {
+                    "agent_id": str(web_researcher.id),
+                    "slug": "web-researcher",
+                    "name": "Web Researcher",
+                    "role": "web_researcher",
+                },
+                {
+                    "agent_id": str(data_extractor.id),
+                    "slug": "data-extractor",
+                    "name": "Data Extractor",
+                    "role": "data_extractor",
+                },
+                {
+                    "agent_id": str(synthesizer.id),
+                    "slug": "synthesizer",
+                    "name": "Synthesizer",
+                    "role": "synthesizer",
+                },
             ],
             coordination_strategy=CoordinationStrategy.parallel,
         )
@@ -1140,7 +1240,8 @@ class TestScenario6_FullGoldenPath:
         # --- Phase 6: Findings ---
         findings = [
             _make_finding(
-                project.id, mission.id,
+                project.id,
+                mission.id,
                 title="Shell - Regular $3.19/gal",
                 finding_type=FindingType.price,
                 source_url="https://gasbuddy.com/12345",
@@ -1150,7 +1251,8 @@ class TestScenario6_FullGoldenPath:
                 structured_data={"regular": 3.19, "mid": 3.49, "premium": 3.79},
             ),
             _make_finding(
-                project.id, mission.id,
+                project.id,
+                mission.id,
                 title="Exxon - Regular $3.25/gal",
                 finding_type=FindingType.price,
                 source_url="https://gasbuddy.com/67890",
@@ -1160,7 +1262,8 @@ class TestScenario6_FullGoldenPath:
                 structured_data={"regular": 3.25, "mid": 3.55, "premium": 3.85},
             ),
             _make_finding(
-                project.id, mission.id,
+                project.id,
+                mission.id,
                 title="Chevron - Regular $3.29/gal",
                 finding_type=FindingType.price,
                 source_name="Google Maps",
@@ -1170,7 +1273,8 @@ class TestScenario6_FullGoldenPath:
                 structured_data={"regular": 3.29},
             ),
             _make_finding(
-                project.id, mission.id,
+                project.id,
+                mission.id,
                 title="Average regular gas: $3.24/gal in 5-mile radius",
                 finding_type=FindingType.statistic,
                 source_type=SourceType.inferred,
@@ -1179,7 +1283,8 @@ class TestScenario6_FullGoldenPath:
                 structured_data={"avg_regular": 3.24, "station_count": 3},
             ),
             _make_finding(
-                project.id, mission.id,
+                project.id,
+                mission.id,
                 title="Prices trending down 2% week-over-week",
                 finding_type=FindingType.trend,
                 source_type=SourceType.inferred,
@@ -1216,8 +1321,14 @@ class TestScenario6_FullGoldenPath:
             status="completed",
             content_markdown="# Gas Price Survey\n\n## Summary\nSurveyed 3 stations...",
             sections=[
-                {"title": "Executive Summary", "content": "Surveyed 3 gas stations within 5 miles."},
-                {"title": "Price Comparison", "content": "Shell $3.19, Exxon $3.25, Chevron $3.29."},
+                {
+                    "title": "Executive Summary",
+                    "content": "Surveyed 3 gas stations within 5 miles.",
+                },
+                {
+                    "title": "Price Comparison",
+                    "content": "Shell $3.19, Exxon $3.25, Chevron $3.29.",
+                },
                 {"title": "Trends", "content": "Prices down 2% WoW."},
             ],
             executive_summary="Surveyed 3 gas stations within 5 miles of downtown Austin.",

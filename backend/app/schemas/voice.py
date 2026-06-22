@@ -1,4 +1,5 @@
 """Pydantic schemas for voice extraction API routes."""
+
 from __future__ import annotations
 
 from datetime import datetime

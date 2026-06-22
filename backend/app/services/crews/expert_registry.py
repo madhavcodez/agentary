@@ -1,4 +1,5 @@
 """Built-in expert agents and registry operations."""
+
 from __future__ import annotations
 
 import json
@@ -459,7 +460,7 @@ async def select_experts_for_mission(
         f"Available experts:\n" + "\n".join(expert_descriptions) + "\n\n"
         f"Select the {max_experts} most relevant experts for this mission. "
         f"ALWAYS include 'synthesizer' and 'report-writer' as the last two. "
-        f"Return JSON: {{\"expert_slugs\": [\"slug1\", \"slug2\", ...]}}"
+        f'Return JSON: {{"expert_slugs": ["slug1", "slug2", ...]}}'
     )
 
     result = await generate_structured(prompt)
@@ -495,7 +496,9 @@ async def create_custom_expert(
         specialty=AgentSpecialty(data.get("specialty", "web_researcher")),
         system_prompt=data["system_prompt"],
         tools=data.get("tools", []),
-        model_config_json=data.get("model_config", {"model": "gemini-2.5-flash", "temperature": 0.3, "max_tokens": 8192}),
+        model_config_json=data.get(
+            "model_config", {"model": "gemini-2.5-flash", "temperature": 0.3, "max_tokens": 8192}
+        ),
         icon=data.get("icon", "\U0001f916"),
         color=data.get("color", "#6B7280"),
         is_system=False,

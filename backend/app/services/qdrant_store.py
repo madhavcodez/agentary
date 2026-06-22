@@ -30,7 +30,9 @@ def ensure_collection(name: str) -> None:
 
 
 @qdrant_breaker
-def upsert_embedding(collection: str, point_id: str, vector: list[float], payload: dict | None = None) -> None:
+def upsert_embedding(
+    collection: str, point_id: str, vector: list[float], payload: dict | None = None
+) -> None:
     ensure_collection(collection)
     client = get_client()
     client.upsert(
@@ -54,7 +56,4 @@ def search_similar(collection: str, vector: list[float], limit: int = 20) -> lis
         query=vector,
         limit=limit,
     )
-    return [
-        {"id": str(r.id), "score": r.score, "payload": r.payload}
-        for r in results.points
-    ]
+    return [{"id": str(r.id), "score": r.score, "payload": r.payload} for r in results.points]

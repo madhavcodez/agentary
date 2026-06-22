@@ -3,7 +3,9 @@ from __future__ import annotations
 import enum
 import uuid
 
-from sqlalchemy import Column, DateTime, Enum as SAEnum, ForeignKey, String, Text, func
+from sqlalchemy import Column, DateTime
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from ..database import Base
@@ -33,4 +35,6 @@ class KnowledgeBase(Base):
     documents = Column(JSONB, default=list)
     qdrant_collection = Column(String(255))
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )

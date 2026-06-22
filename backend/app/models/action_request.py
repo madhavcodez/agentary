@@ -7,7 +7,9 @@ from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
-    Enum as SAEnum,
+)
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import (
     Float,
     ForeignKey,
     String,
@@ -50,7 +52,9 @@ class ActionRequest(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False, index=True)
-    recommendation_id = Column(UUID(as_uuid=True), ForeignKey("recommendations.id"), nullable=True, index=True)
+    recommendation_id = Column(
+        UUID(as_uuid=True), ForeignKey("recommendations.id"), nullable=True, index=True
+    )
     entity_id = Column(UUID(as_uuid=True), ForeignKey("entities.id"), nullable=True, index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     action_type = Column(SAEnum(ActionType), nullable=False)
@@ -60,7 +64,9 @@ class ActionRequest(Base):
     confidence = Column(Float, default=1.0, nullable=False)
     priority = Column(String(20), default="medium", nullable=False)
     requires_approval = Column(Boolean, default=True, nullable=False)
-    status = Column(SAEnum(ActionRequestStatus), default=ActionRequestStatus.pending_approval, nullable=False)
+    status = Column(
+        SAEnum(ActionRequestStatus), default=ActionRequestStatus.pending_approval, nullable=False
+    )
     state_transitions = Column(JSONB, default=list)
     policy_id = Column(UUID(as_uuid=True), ForeignKey("action_policies.id"), nullable=True)
     approved_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)

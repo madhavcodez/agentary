@@ -22,7 +22,9 @@ class DataSet(Base):
     data = Column(JSONB)  # For small datasets
     file_path = Column(String(1024))  # For large datasets
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
 
     # Relationships
     project = relationship("Project", back_populates="datasets")

@@ -1,4 +1,5 @@
 """Report generation, management, and export API routes."""
+
 from __future__ import annotations
 
 import logging
@@ -102,10 +103,14 @@ def create_report(
 ):
     from ..models.mission import Mission
 
-    mission = db.query(Mission).filter(
-        Mission.id == UUID(body.mission_id),
-        Mission.user_id == user.id,
-    ).first()
+    mission = (
+        db.query(Mission)
+        .filter(
+            Mission.id == UUID(body.mission_id),
+            Mission.user_id == user.id,
+        )
+        .first()
+    )
     if not mission:
         raise HTTPException(404, "Mission not found")
 
@@ -123,7 +128,11 @@ def create_report(
     db.refresh(report)
 
     background_tasks.add_task(
-        _run_report_generation, str(report.id), str(mission.id), body.report_type, body.config,
+        _run_report_generation,
+        str(report.id),
+        str(mission.id),
+        body.report_type,
+        body.config,
     )
     return ReportFull(**_report_to_full(report))
 
@@ -143,21 +152,34 @@ def list_reports(
     reports = query.order_by(Report.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
     return ReportList(
         items=[ReportSummary(**_report_to_summary(r)) for r in reports],
-        total=total, page=page, limit=limit,
+        total=total,
+        page=page,
+        limit=limit,
     )
 
 
 @router.get("/{report_id}", response_model=ReportFull)
-def get_report(report_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    report = db.query(Report).filter(Report.id == UUID(report_id), Report.user_id == user.id).first()
+def get_report(
+    report_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    report = (
+        db.query(Report).filter(Report.id == UUID(report_id), Report.user_id == user.id).first()
+    )
     if not report:
         raise HTTPException(404, "Report not found")
     return ReportFull(**_report_to_full(report))
 
 
 @router.put("/{report_id}", response_model=ReportFull)
-def update_report(report_id: str, body: ReportUpdate, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    report = db.query(Report).filter(Report.id == UUID(report_id), Report.user_id == user.id).first()
+def update_report(
+    report_id: str,
+    body: ReportUpdate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    report = (
+        db.query(Report).filter(Report.id == UUID(report_id), Report.user_id == user.id).first()
+    )
     if not report:
         raise HTTPException(404, "Report not found")
     if body.title is not None:
@@ -170,8 +192,12 @@ def update_report(report_id: str, body: ReportUpdate, user: User = Depends(get_c
 
 
 @router.delete("/{report_id}")
-def delete_report(report_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    report = db.query(Report).filter(Report.id == UUID(report_id), Report.user_id == user.id).first()
+def delete_report(
+    report_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    report = (
+        db.query(Report).filter(Report.id == UUID(report_id), Report.user_id == user.id).first()
+    )
     if not report:
         raise HTTPException(404, "Report not found")
     db.delete(report)
@@ -180,34 +206,63 @@ def delete_report(report_id: str, user: User = Depends(get_current_user), db: Se
 
 
 @router.post("/{report_id}/regenerate", response_model=ReportFull)
-def regenerate_report(report_id: str, background_tasks: BackgroundTasks, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    report = db.query(Report).filter(Report.id == UUID(report_id), Report.user_id == user.id).first()
+def regenerate_report(
+    report_id: str,
+    background_tasks: BackgroundTasks,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    report = (
+        db.query(Report).filter(Report.id == UUID(report_id), Report.user_id == user.id).first()
+    )
     if not report:
         raise HTTPException(404, "Report not found")
     report.status = "generating"
     db.commit()
-    background_tasks.add_task(_run_report_generation, str(report.id), str(report.mission_id), report.report_type, report.format_config)
+    background_tasks.add_task(
+        _run_report_generation,
+        str(report.id),
+        str(report.mission_id),
+        report.report_type,
+        report.format_config,
+    )
     db.refresh(report)
     return ReportFull(**_report_to_full(report))
 
 
 @router.post("/{report_id}/regenerate-section", response_model=ReportFull)
-def regenerate_section(report_id: str, body: RegenerateSection, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def regenerate_section(
+    report_id: str,
+    body: RegenerateSection,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     from ..services.reports.report_generator import ReportGenerator
 
-    report = db.query(Report).filter(Report.id == UUID(report_id), Report.user_id == user.id).first()
+    report = (
+        db.query(Report).filter(Report.id == UUID(report_id), Report.user_id == user.id).first()
+    )
     if not report:
         raise HTTPException(404, "Report not found")
     generator = ReportGenerator()
-    updated = generator.regenerate_section(report_id=UUID(report_id), section_index=body.section_index, instructions=body.instructions, db=db)
+    updated = generator.regenerate_section(
+        report_id=UUID(report_id),
+        section_index=body.section_index,
+        instructions=body.instructions,
+        db=db,
+    )
     return ReportFull(**_report_to_full(updated))
 
 
 @router.get("/{report_id}/pdf")
-def download_pdf(report_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def download_pdf(
+    report_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
     from ..services.reports.pdf_exporter import PDFExporter
 
-    report = db.query(Report).filter(Report.id == UUID(report_id), Report.user_id == user.id).first()
+    report = (
+        db.query(Report).filter(Report.id == UUID(report_id), Report.user_id == user.id).first()
+    )
     if not report:
         raise HTTPException(404, "Report not found")
     if report.status != "ready":
@@ -215,14 +270,22 @@ def download_pdf(report_id: str, user: User = Depends(get_current_user), db: Ses
     exporter = PDFExporter()
     pdf_bytes = exporter.export_to_pdf(report)
     filename = f"{report.title[:60].replace(' ', '_')}.pdf"
-    return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get("/{report_id}/html")
-def download_html(report_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def download_html(
+    report_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
     from ..services.reports.pdf_exporter import PDFExporter
 
-    report = db.query(Report).filter(Report.id == UUID(report_id), Report.user_id == user.id).first()
+    report = (
+        db.query(Report).filter(Report.id == UUID(report_id), Report.user_id == user.id).first()
+    )
     if not report:
         raise HTTPException(404, "Report not found")
     exporter = PDFExporter()
@@ -231,20 +294,30 @@ def download_html(report_id: str, user: User = Depends(get_current_user), db: Se
 
 
 @router.get("/{report_id}/markdown")
-def download_markdown(report_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def download_markdown(
+    report_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
     from ..services.reports.pdf_exporter import PDFExporter
 
-    report = db.query(Report).filter(Report.id == UUID(report_id), Report.user_id == user.id).first()
+    report = (
+        db.query(Report).filter(Report.id == UUID(report_id), Report.user_id == user.id).first()
+    )
     if not report:
         raise HTTPException(404, "Report not found")
     exporter = PDFExporter()
     md = exporter.export_to_markdown(report)
     filename = f"{report.title[:60].replace(' ', '_')}.md"
-    return Response(content=md, media_type="text/markdown", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+    return Response(
+        content=md,
+        media_type="text/markdown",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.post("/{report_id}/share", response_model=ShareResponse)
-def create_share_link(report_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def create_share_link(
+    report_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
     from ..services.reports.share_service import ShareService
 
     svc = ShareService()
@@ -253,7 +326,9 @@ def create_share_link(report_id: str, user: User = Depends(get_current_user), db
 
 
 @router.delete("/{report_id}/share")
-def revoke_share(report_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def revoke_share(
+    report_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
     from ..services.reports.share_service import ShareService
 
     svc = ShareService()

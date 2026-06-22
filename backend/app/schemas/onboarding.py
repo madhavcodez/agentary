@@ -1,4 +1,5 @@
 """Schemas for project onboarding and question generation endpoints."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -6,6 +7,7 @@ from typing import Any
 from pydantic import BaseModel, Field, model_validator
 
 # ── Request schemas ──────────────────────────────────────────────────
+
 
 class GenerateQuestionsRequest(BaseModel):
     title: str = Field(min_length=1, max_length=500)
@@ -33,6 +35,7 @@ class ConfigureAndStartRequest(BaseModel):
 
 
 # ── Response schemas ─────────────────────────────────────────────────
+
 
 class OnboardingQuestion(BaseModel):
     id: str

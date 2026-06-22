@@ -60,7 +60,9 @@ def detect_value_change(
     pct = (diff / old_val * 100) if old_val != 0 else float("inf")
 
     if abs(diff) <= threshold:
-        return ChangeResult(changed=False, change_type="value", summary="Within threshold", details={})
+        return ChangeResult(
+            changed=False, change_type="value", summary="Within threshold", details={}
+        )
 
     direction = "increased" if diff > 0 else "decreased"
     return ChangeResult(
@@ -89,7 +91,9 @@ def detect_new_items(
     new_entries = [item for item in new_items if item.get(key) not in old_keys]
 
     if not new_entries:
-        return ChangeResult(changed=False, change_type="new_items", summary="No new items", details={})
+        return ChangeResult(
+            changed=False, change_type="new_items", summary="No new items", details={}
+        )
 
     return ChangeResult(
         changed=True,
@@ -115,7 +119,9 @@ def detect_removed_items(
     removed = [item for item in old_items if item.get(key) not in new_keys]
 
     if not removed:
-        return ChangeResult(changed=False, change_type="removed_items", summary="No removed items", details={})
+        return ChangeResult(
+            changed=False, change_type="removed_items", summary="No removed items", details={}
+        )
 
     return ChangeResult(
         changed=True,

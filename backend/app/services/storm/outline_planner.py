@@ -9,6 +9,7 @@ The output is a list of sections with ``scope`` (what this section must
 answer), ``source_question_ids`` (which questions feed it), and
 ``expected_evidence_types`` (used by the refinement loop to judge quality).
 """
+
 from __future__ import annotations
 
 import logging
@@ -108,11 +109,13 @@ def _normalise_sections(
                 if t_str in _VALID_EVIDENCE_TYPES:
                     types_.append(t_str)
 
-        out.append({
-            "index": idx,
-            "title": title[:300],
-            "scope": scope[:800],
-            "source_question_ids": qids,
-            "expected_evidence_types": types_ or ["fact"],
-        })
+        out.append(
+            {
+                "index": idx,
+                "title": title[:300],
+                "scope": scope[:800],
+                "source_question_ids": qids,
+                "expected_evidence_types": types_ or ["fact"],
+            }
+        )
     return out

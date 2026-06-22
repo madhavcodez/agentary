@@ -1,4 +1,5 @@
 """Evaluate action policies to determine approval requirements."""
+
 from __future__ import annotations
 
 import logging
@@ -32,7 +33,11 @@ class PolicyEngine:
 
     def evaluate(self, action: ActionRequest) -> dict:
         """Evaluate policies for an action request. Returns PolicyDecision dict."""
-        action_type = action.action_type.value if hasattr(action.action_type, "value") else str(action.action_type)
+        action_type = (
+            action.action_type.value
+            if hasattr(action.action_type, "value")
+            else str(action.action_type)
+        )
 
         # 1. Check DB policies (user/project specific, sorted by priority desc)
         policies = (
@@ -55,7 +60,9 @@ class PolicyEngine:
 
                 if self._matches_condition(condition, action, action_type):
                     return {
-                        "requires_approval": result.get("require_approval", not result.get("auto_approve", False)),
+                        "requires_approval": result.get(
+                            "require_approval", not result.get("auto_approve", False)
+                        ),
                         "auto_approve": result.get("auto_approve", False),
                         "policy_id": str(policy.id),
                         "timeout_hours": result.get("timeout_hours"),

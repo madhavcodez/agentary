@@ -95,13 +95,13 @@ class ChartGenerator:
             '  - "params": an object with the parameters needed for the chart method '
             "(see descriptions below)\n\n"
             "Chart method signatures and their params:\n"
-            '  bar      → items (list of dicts), value_field (str), label_field (str)\n'
-            '  line     → timeseries (list of dicts with date & value), date_field, value_field\n'
-            '  histogram→ values (list of numbers), bins (int, optional)\n'
-            '  pie      → categories (object mapping category name → number)\n'
-            '  scatter  → points (list of dicts), x_field, y_field, label_field\n'
-            '  multi_line → series (object mapping series name → list of dicts), date_field, value_field\n'
-            '  map      → locations (list of dicts with lat, lng, label)\n\n'
+            "  bar      → items (list of dicts), value_field (str), label_field (str)\n"
+            "  line     → timeseries (list of dicts with date & value), date_field, value_field\n"
+            "  histogram→ values (list of numbers), bins (int, optional)\n"
+            "  pie      → categories (object mapping category name → number)\n"
+            "  scatter  → points (list of dicts), x_field, y_field, label_field\n"
+            "  multi_line → series (object mapping series name → list of dicts), date_field, value_field\n"
+            "  map      → locations (list of dicts with lat, lng, label)\n\n"
             f"Context: {context}\n\n"
             f"Data:\n{json.dumps(structured_data, default=str)}\n"
         )
@@ -272,7 +272,18 @@ class ChartGenerator:
                 "id": self._slugify(title),
                 "type": "bar",
                 "title": title,
-                "data": {"labels": [], "datasets": [{"label": title, "data": [], "backgroundColor": [], "borderColor": [], "borderWidth": 1}]},
+                "data": {
+                    "labels": [],
+                    "datasets": [
+                        {
+                            "label": title,
+                            "data": [],
+                            "backgroundColor": [],
+                            "borderColor": [],
+                            "borderWidth": 1,
+                        }
+                    ],
+                },
                 "options": self._base_options(title, legend=False),
             }
 
@@ -366,10 +377,7 @@ class ChartGenerator:
         title: str,
     ) -> dict:
         """Create a scatter plot (e.g., price vs sqft for properties)."""
-        data_points = [
-            {"x": pt.get(x_field, 0), "y": pt.get(y_field, 0)}
-            for pt in points
-        ]
+        data_points = [{"x": pt.get(x_field, 0), "y": pt.get(y_field, 0)} for pt in points]
         point_labels = [pt.get(label_field, "") for pt in points]
 
         return {
@@ -425,22 +433,21 @@ class ChartGenerator:
         datasets: list[dict[str, Any]] = []
         for idx, (name, entries) in enumerate(sorted_series_data.items()):
             # Build a lookup so each series aligns to the shared labels
-            date_to_value = {
-                str(e.get(date_field, "")): e.get(value_field, 0)
-                for e in entries
-            }
+            date_to_value = {str(e.get(date_field, "")): e.get(value_field, 0) for e in entries}
             data_values = [date_to_value.get(d) for d in labels]
             color = self.COLORS[idx % len(self.COLORS)]
 
-            datasets.append({
-                "label": name,
-                "data": data_values,
-                "backgroundColor": self.BG_COLORS_ALPHA[idx % len(self.BG_COLORS_ALPHA)],
-                "borderColor": color,
-                "borderWidth": 2,
-                "fill": False,
-                "tension": 0.3,
-            })
+            datasets.append(
+                {
+                    "label": name,
+                    "data": data_values,
+                    "backgroundColor": self.BG_COLORS_ALPHA[idx % len(self.BG_COLORS_ALPHA)],
+                    "borderColor": color,
+                    "borderWidth": 2,
+                    "fill": False,
+                    "tension": 0.3,
+                }
+            )
 
         return {
             "id": self._slugify(title),

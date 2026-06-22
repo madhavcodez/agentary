@@ -73,7 +73,7 @@ async def with_retry(
         except RetryableError as exc:
             last_error = exc
             if attempt < max_retries and exc.category in retryable_categories:
-                delay = min(base_delay * (2 ** attempt), max_delay)
+                delay = min(base_delay * (2**attempt), max_delay)
                 if exc.retry_after:
                     delay = max(delay, exc.retry_after)
                 logger.warning(

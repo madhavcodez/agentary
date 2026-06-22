@@ -5,6 +5,7 @@ Used to answer operational questions — "how many calls did that mission
 cost?", "which missions fell back to legacy?" — without having to
 reconstruct them from logs.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -65,8 +66,6 @@ class StormRun(Base):
     # Free-form metadata
     meta = Column(JSONB, nullable=False, default=dict)
 
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     mission = relationship("Mission")

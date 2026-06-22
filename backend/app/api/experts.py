@@ -1,4 +1,5 @@
 """API routes for expert agents."""
+
 from __future__ import annotations
 
 import uuid
@@ -108,7 +109,8 @@ async def create_expert(
         "specialty": body.specialty,
         "system_prompt": body.system_prompt,
         "tools": body.tools,
-        "model_config": body.model_config_data or {"model": "gemini-2.5-flash", "temperature": 0.3, "max_tokens": 8192},
+        "model_config": body.model_config_data
+        or {"model": "gemini-2.5-flash", "temperature": 0.3, "max_tokens": 8192},
         "icon": body.icon,
         "color": body.color,
     }

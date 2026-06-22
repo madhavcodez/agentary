@@ -73,9 +73,7 @@ def _format_extraction_goals(goals: list[dict[str, Any]]) -> str:
         field_type = goal.get("type", "text")
         required = goal.get("required", False)
         priority = "REQUIRED" if required else "optional"
-        lines.append(
-            f"  {i}. [{priority}] {field} ({field_type}): {question}"
-        )
+        lines.append(f"  {i}. [{priority}] {field} ({field_type}): {question}")
     return "\n".join(lines)
 
 
@@ -109,16 +107,12 @@ async def generate_script(session_data: dict[str, Any]) -> dict[str, Any]:
     persona = session_data.get("persona_config") or dict(_DEFAULT_PERSONA)
     session_type = session_data.get("session_type", "research_extraction")
 
-    type_guidance = _SESSION_TYPE_GUIDANCE.get(
-        session_type, _SESSION_TYPE_GUIDANCE["custom"]
-    )
+    type_guidance = _SESSION_TYPE_GUIDANCE.get(session_type, _SESSION_TYPE_GUIDANCE["custom"])
     persona_desc = _build_persona_description(persona)
     goals_text = _format_extraction_goals(extraction_goals)
     context_text = _format_context(target_context)
 
-    business_clause = (
-        f" at {target_business}" if target_business else ""
-    )
+    business_clause = f" at {target_business}" if target_business else ""
 
     prompt = f"""Generate a natural, conversational call script for an outbound phone call.
 
@@ -219,9 +213,7 @@ something a real person would say — no corporate jargon, no robotic phrasing."
     return validated
 
 
-async def build_system_prompt(
-    session_data: dict[str, Any], script: dict[str, Any]
-) -> str:
+async def build_system_prompt(session_data: dict[str, Any], script: dict[str, Any]) -> str:
     """Build a dynamic system prompt for Gemini Live during the call.
 
     Combines persona, target context, extraction goals, and the generated
@@ -242,28 +234,20 @@ async def build_system_prompt(
     session_type = session_data.get("session_type", "research_extraction")
 
     persona_desc = _build_persona_description(persona)
-    type_guidance = _SESSION_TYPE_GUIDANCE.get(
-        session_type, _SESSION_TYPE_GUIDANCE["custom"]
-    )
+    type_guidance = _SESSION_TYPE_GUIDANCE.get(session_type, _SESSION_TYPE_GUIDANCE["custom"])
     context_text = _format_context(target_context)
     goals_text = _format_extraction_goals(extraction_goals)
 
     # Build required-fields list for the extraction checklist
     required_fields = [
-        g.get("field", "unknown")
-        for g in extraction_goals
-        if g.get("required", False)
+        g.get("field", "unknown") for g in extraction_goals if g.get("required", False)
     ]
     optional_fields = [
-        g.get("field", "unknown")
-        for g in extraction_goals
-        if not g.get("required", False)
+        g.get("field", "unknown") for g in extraction_goals if not g.get("required", False)
     ]
 
     questions_block = _format_questions_for_prompt(script.get("questions", []))
-    objections_block = _format_objections_for_prompt(
-        script.get("objection_handlers", {})
-    )
+    objections_block = _format_objections_for_prompt(script.get("objection_handlers", {}))
 
     prompt = f"""You are conducting a live outbound phone call. You must speak naturally, \
 listen actively, and adapt in real time. Everything below is your preparation — use it \
@@ -385,11 +369,11 @@ def _format_questions_for_prompt(questions: list[dict[str, Any]]) -> str:
         probes = q.get("probes", [])
 
         lines.append(f"{i}. [{field}]")
-        lines.append(f"   Ask: \"{primary}\"")
+        lines.append(f'   Ask: "{primary}"')
         if follow_up:
-            lines.append(f"   If vague: \"{follow_up}\"")
+            lines.append(f'   If vague: "{follow_up}"')
         if probes:
-            probes_text = " / ".join(f"\"{p}\"" for p in probes)
+            probes_text = " / ".join(f'"{p}"' for p in probes)
             lines.append(f"   Dig deeper: {probes_text}")
         lines.append("")
     return "\n".join(lines)
@@ -408,6 +392,6 @@ def _format_objections_for_prompt(handlers: dict[str, str]) -> str:
 
     lines: list[str] = []
     for key, response in handlers.items():
-        label = label_map.get(key, f"If they say \"{key}\"")
-        lines.append(f"- {label}: \"{response}\"")
+        label = label_map.get(key, f'If they say "{key}"')
+        lines.append(f'- {label}: "{response}"')
     return "\n".join(lines)

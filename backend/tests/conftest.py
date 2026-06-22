@@ -38,6 +38,7 @@ def client(db):
 
     app.dependency_overrides[get_db] = override_get_db
     from fastapi.testclient import TestClient
+
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()

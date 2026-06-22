@@ -44,4 +44,9 @@ def list_alerts(
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
-    return db.query(Alert).filter(Alert.monitor_id == monitor_id).order_by(Alert.created_at.desc()).all()
+    return (
+        db.query(Alert)
+        .filter(Alert.monitor_id == monitor_id)
+        .order_by(Alert.created_at.desc())
+        .all()
+    )

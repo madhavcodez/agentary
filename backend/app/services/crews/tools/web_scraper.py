@@ -6,6 +6,7 @@ strategy. Without this, prompt injection in scraped content could direct
 the LLM to fetch ``http://169.254.169.254/...`` (AWS IMDS) or other
 internal endpoints.
 """
+
 from __future__ import annotations
 
 from typing import Any

@@ -1,4 +1,5 @@
 """One-time migration tasks."""
+
 from __future__ import annotations
 
 import logging
@@ -22,10 +23,7 @@ def migrate_findings_to_observations(self, batch_size: int = 100):
 
         while True:
             findings = (
-                db.query(Finding)
-                .filter(Finding.observation_id.is_(None))
-                .limit(batch_size)
-                .all()
+                db.query(Finding).filter(Finding.observation_id.is_(None)).limit(batch_size).all()
             )
             if not findings:
                 break

@@ -39,10 +39,14 @@ async def tracked_operation(
         yield metrics
         duration = time.monotonic() - start_time
         metrics["duration_seconds"] = round(duration, 3)
-        await logger.ainfo(f"{operation}.completed", duration=metrics["duration_seconds"], **context)
+        await logger.ainfo(
+            f"{operation}.completed", duration=metrics["duration_seconds"], **context
+        )
     except Exception as exc:
         duration = time.monotonic() - start_time
         metrics["duration_seconds"] = round(duration, 3)
         metrics["error"] = str(exc)
-        await logger.aerror(f"{operation}.failed", error=str(exc), duration=metrics["duration_seconds"], **context)
+        await logger.aerror(
+            f"{operation}.failed", error=str(exc), duration=metrics["duration_seconds"], **context
+        )
         raise

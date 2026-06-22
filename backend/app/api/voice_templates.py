@@ -1,4 +1,5 @@
 """API routes for voice extraction templates."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException

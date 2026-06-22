@@ -1,4 +1,5 @@
 """Redis caching for expensive data source queries."""
+
 from __future__ import annotations
 
 import hashlib
@@ -22,7 +23,8 @@ class SourceCache:
     async def connect(self):
         try:
             self._redis = aioredis.from_url(
-                settings.redis_url, decode_responses=True,
+                settings.redis_url,
+                decode_responses=True,
             )
             await self._redis.ping()
             self._available = True
@@ -33,7 +35,8 @@ class SourceCache:
 
     def make_key(self, provider: str, method: str, params: dict) -> str:
         raw = json.dumps(
-            {"provider": provider, "method": method, **params}, sort_keys=True,
+            {"provider": provider, "method": method, **params},
+            sort_keys=True,
         )
         return f"source_cache:{hashlib.sha256(raw.encode()).hexdigest()[:16]}"
 

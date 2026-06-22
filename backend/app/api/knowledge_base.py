@@ -41,7 +41,11 @@ def update_kb(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    kb = db.query(KnowledgeBase).filter(KnowledgeBase.id == kb_id, KnowledgeBase.user_id == user.id).first()
+    kb = (
+        db.query(KnowledgeBase)
+        .filter(KnowledgeBase.id == kb_id, KnowledgeBase.user_id == user.id)
+        .first()
+    )
     if not kb:
         raise HTTPException(status_code=404, detail="Knowledge base not found")
     for key, value in body.model_dump(exclude_unset=True).items():

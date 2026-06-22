@@ -39,9 +39,7 @@ class InsightGenerator:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    async def generate_for_entity(
-        self, entity_id: UUID, project_id: UUID
-    ) -> list[Insight]:
+    async def generate_for_entity(self, entity_id: UUID, project_id: UUID) -> list[Insight]:
         """Generate insights from an entity's observations."""
         observations = (
             self.db.query(Observation)
@@ -59,9 +57,7 @@ class InsightGenerator:
 
         return await self._generate(observations, project_id, entity_id)
 
-    async def generate_for_project(
-        self, project_id: UUID
-    ) -> list[Insight]:
+    async def generate_for_project(self, project_id: UUID) -> list[Insight]:
         """Generate project-level insights from all observations."""
         observations = (
             self.db.query(Observation)
@@ -117,9 +113,7 @@ class InsightGenerator:
         )
 
         try:
-            result = await generate_structured(
-                prompt=prompt, schema_hint=_INSIGHT_SCHEMA_HINT
-            )
+            result = await generate_structured(prompt=prompt, schema_hint=_INSIGHT_SCHEMA_HINT)
         except Exception:
             logger.exception(
                 "Insight generation failed for %s %s",

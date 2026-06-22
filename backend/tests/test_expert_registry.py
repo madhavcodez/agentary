@@ -8,7 +8,16 @@ class TestBuiltinExperts:
         assert len(BUILTIN_EXPERTS) == 8
 
     def test_all_experts_have_required_fields(self):
-        required_fields = {"name", "slug", "description", "icon", "specialty", "tools", "system_prompt", "model_config_json"}
+        required_fields = {
+            "name",
+            "slug",
+            "description",
+            "icon",
+            "specialty",
+            "tools",
+            "system_prompt",
+            "model_config_json",
+        }
         for expert in BUILTIN_EXPERTS:
             missing = required_fields - set(expert.keys())
             assert not missing, f"Expert {expert.get('slug', '?')} missing fields: {missing}"
@@ -27,8 +36,14 @@ class TestBuiltinExperts:
 
     def test_expected_slugs(self):
         expected = {
-            "web-researcher", "data-analyst", "voice-caller", "synthesizer",
-            "report-writer", "market-analyst", "property-researcher", "local-scout",
+            "web-researcher",
+            "data-analyst",
+            "voice-caller",
+            "synthesizer",
+            "report-writer",
+            "market-analyst",
+            "property-researcher",
+            "local-scout",
         }
         actual = {e["slug"] for e in BUILTIN_EXPERTS}
         assert expected == actual

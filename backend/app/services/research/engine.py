@@ -35,9 +35,14 @@ def _calculate_quality(
     if isinstance(company_intel, dict):
         # +0.1 for each non-empty, non-"Unknown" field
         fields = [
-            "company_overview", "recent_news", "funding",
-            "leadership", "culture", "hiring_activity",
-            "company_size", "tech_stack",
+            "company_overview",
+            "recent_news",
+            "funding",
+            "leadership",
+            "culture",
+            "hiring_activity",
+            "company_size",
+            "tech_stack",
         ]
         for field in fields:
             val = company_intel.get(field)
@@ -106,9 +111,7 @@ async def deep_research(
         else {"error": str(company_intel_result)}
     )
     exa_contacts: list[dict[str, Any]] = (
-        exa_contacts_result
-        if isinstance(exa_contacts_result, list)
-        else []
+        exa_contacts_result if isinstance(exa_contacts_result, list) else []
     )
 
     sources_used = ["gemini"]
@@ -150,7 +153,9 @@ async def deep_research(
         if duplicates:
             logger.debug(
                 "Skipping duplicate contact '%s' at '%s' — matched %d existing",
-                name, company, len(duplicates),
+                name,
+                company,
+                len(duplicates),
             )
             continue
 
@@ -182,7 +187,8 @@ async def deep_research(
     except Exception as e:
         logger.warning(
             "Enriched dossier generation failed for match %s: %s",
-            match.id, e,
+            match.id,
+            e,
         )
 
     return {

@@ -25,11 +25,7 @@ async def trigger_research(
     Runs Gemini Search grounding and Exa contact discovery in parallel,
     stores results, and auto-creates Contact records.
     """
-    match = (
-        db.query(Match)
-        .filter(Match.id == match_id, Match.user_id == user.id)
-        .first()
-    )
+    match = db.query(Match).filter(Match.id == match_id, Match.user_id == user.id).first()
     if not match:
         raise HTTPException(status_code=404, detail="Match not found")
 

@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict
 
 # ── Signal ───────────────────────────────────────────────────────────
 
+
 class SignalCreate(BaseModel):
     project_id: UUID
     source_type: str = "user"
@@ -41,6 +42,7 @@ class SignalResponse(BaseModel):
 
 # ── Observation ──────────────────────────────────────────────────────
 
+
 class ObservationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -65,6 +67,7 @@ class ObservationResponse(BaseModel):
 
 # ── Evidence ─────────────────────────────────────────────────────────
 
+
 class EvidenceResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -79,6 +82,7 @@ class EvidenceResponse(BaseModel):
 
 
 # ── Insight ──────────────────────────────────────────────────────────
+
 
 class InsightResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -102,6 +106,7 @@ class InsightResponse(BaseModel):
 
 
 # ── Recommendation ───────────────────────────────────────────────────
+
 
 class RecommendationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -131,6 +136,7 @@ class RecommendationUpdate(BaseModel):
 
 # ── Entity Alias ─────────────────────────────────────────────────────
 
+
 class EntityAliasCreate(BaseModel):
     alias_type: str
     alias_value: str
@@ -151,6 +157,7 @@ class EntityAliasResponse(BaseModel):
 
 
 # ── Entity Relationship ──────────────────────────────────────────────
+
 
 class EntityRelationshipCreate(BaseModel):
     project_id: UUID

@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict
 
 # ── Request schemas ──────────────────────────────────────────────────
 
+
 class ReportCreate(BaseModel):
     mission_id: str
     report_type: str = "research_report"
@@ -24,6 +25,7 @@ class RegenerateSection(BaseModel):
 
 
 # ── Response schemas ─────────────────────────────────────────────────
+
 
 class ReportSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)

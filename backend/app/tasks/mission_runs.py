@@ -26,11 +26,14 @@ def execute_mission(self, mission_id: str, run_id: str) -> dict:
         if run:
             status_val = run.status.value if hasattr(run.status, "value") else str(run.status)
             if status_val in ("completed", "failed", "cancelled"):
-                logger.info("MissionRun %s already in terminal state (%s) — skipping", run_id, status_val)
+                logger.info(
+                    "MissionRun %s already in terminal state (%s) — skipping", run_id, status_val
+                )
                 return {"status": "skipped", "reason": "already_completed", "run_id": run_id}
 
         # Delegate to plan_and_start_mission for actual execution
         from .crew_tasks import plan_and_start_mission
+
         return plan_and_start_mission(mission_id)
     except Exception as exc:
         db.rollback()

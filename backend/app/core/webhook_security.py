@@ -15,6 +15,7 @@ The functions are framework-agnostic — they raise ``WebhookVerificationError``
 on failure and return ``None`` on success — so they can be reused from FastAPI
 dependencies, Celery tasks, or one-off scripts.
 """
+
 from __future__ import annotations
 
 import base64

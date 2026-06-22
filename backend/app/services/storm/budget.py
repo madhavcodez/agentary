@@ -10,6 +10,7 @@ The counter lives in Redis so concurrent workers synthesizing different
 sections in parallel share the same budget view. If Redis is unreachable
 the counter degrades gracefully to in-process state and logs a warning.
 """
+
 from __future__ import annotations
 
 import logging
@@ -41,9 +42,7 @@ def _get_redis() -> Any | None:
 
         from ...config import settings
 
-        _redis_client = redis.Redis.from_url(
-            settings.redis_url, decode_responses=True
-        )
+        _redis_client = redis.Redis.from_url(settings.redis_url, decode_responses=True)
         _redis_client.ping()
     except Exception as exc:
         logger.warning("StormBudget: Redis unavailable, falling back to in-process (%s)", exc)

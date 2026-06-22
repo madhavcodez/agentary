@@ -11,6 +11,7 @@ These prompt builders feed ``app.services.gemini.generate_structured``
 and return JSON that maps 1:1 onto the corresponding ``ResearchOutline``
 and ``SectionCitation`` schemas.
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
@@ -18,8 +19,7 @@ from typing import Any
 
 # ─── Perspective mining ───────────────────────────────────────────────────
 PERSPECTIVE_SCHEMA_HINT: str = (
-    '{"perspectives": [{"role": "...", "focus": "...", '
-    '"stakes": "...", "seed_query": "..."}]}'
+    '{"perspectives": [{"role": "...", "focus": "...", ' '"stakes": "...", "seed_query": "..."}]}'
 )
 
 
@@ -144,7 +144,7 @@ def build_outline_prompt(
         '  {"title": "section title",\n'
         '   "scope": "one-sentence description of what this section must answer",\n'
         '   "source_question_ids": [list of question ids this section answers, '
-        'at most 3],\n'
+        "at most 3],\n"
         '   "expected_evidence_types": ["fact", "trend", ...]}\n'
         " ]}\n\n"
         "Rules:\n"

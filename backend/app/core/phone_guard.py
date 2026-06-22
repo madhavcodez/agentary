@@ -19,6 +19,7 @@ Operators can override the lists by setting environment variables (parsed
 in ``config.py``) before this module is used — none of these defaults are
 load-bearing for tests.
 """
+
 from __future__ import annotations
 
 from typing import Final
@@ -88,14 +89,10 @@ def validate_outbound_number(raw: str) -> str:
 
     number_type = phonenumbers.number_type(parsed)
     if number_type not in ALLOWED_NUMBER_TYPES:
-        raise PhoneNumberRejected(
-            f"Number type {number_type} is not permitted for outbound calls"
-        )
+        raise PhoneNumberRejected(f"Number type {number_type} is not permitted for outbound calls")
 
     national = phonenumbers.national_significant_number(parsed)
     if region == "US" and any(national.startswith(p) for p in _BLOCKED_US_PREFIXES):
-        raise PhoneNumberRejected(
-            f"Premium-rate prefix +1-{national[:3]} is denied"
-        )
+        raise PhoneNumberRejected(f"Premium-rate prefix +1-{national[:3]} is denied")
 
     return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)

@@ -7,7 +7,9 @@ from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
-    Enum as SAEnum,
+)
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
@@ -52,7 +54,9 @@ class VoiceExtraction(Base):
     mission_id = Column(UUID(as_uuid=True), ForeignKey("missions.id"), nullable=True, index=True)
     name = Column(String(255), nullable=False)
     description = Column(Text)
-    status = Column(SAEnum(VoiceExtractionStatus), default=VoiceExtractionStatus.draft, nullable=False)
+    status = Column(
+        SAEnum(VoiceExtractionStatus), default=VoiceExtractionStatus.draft, nullable=False
+    )
     objective = Column(Text)
     persona = Column(JSONB, default=dict)  # {name, role, tone, company_context, opening_script}
     extraction_schema = Column(JSONB, default=dict)  # {fields: [{name, type, question}]}
@@ -66,7 +70,9 @@ class VoiceExtraction(Base):
     calls_successful = Column(Integer, default=0)
     data_points_extracted = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
 
     # Relationships
     project = relationship("Project", back_populates="voice_extractions")
@@ -77,7 +83,9 @@ class CallRecord(Base):
     __tablename__ = "call_records"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    voice_extraction_id = Column(UUID(as_uuid=True), ForeignKey("voice_extractions.id"), nullable=False, index=True)
+    voice_extraction_id = Column(
+        UUID(as_uuid=True), ForeignKey("voice_extractions.id"), nullable=False, index=True
+    )
     mission_id = Column(UUID(as_uuid=True), ForeignKey("missions.id"), nullable=True, index=True)
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=True, index=True)
     phone_number = Column(String(20))

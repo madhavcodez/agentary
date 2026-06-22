@@ -61,7 +61,6 @@ select = [
     "E",    # pycodestyle errors
     "W",    # pycodestyle warnings
     "F",    # pyflakes
-    "I",    # isort
     "B",    # bugbear
     "C4",   # comprehensions
     "UP",   # pyupgrade
@@ -73,6 +72,10 @@ select = [
     "PIE",  # misc lints
     "RET",  # return statements
 ]
+# Import sorting is owned by the dedicated `isort` step (profile = "black"),
+# which CI also checks, so ruff's overlapping `I` rule is intentionally NOT
+# selected — running both invites a tug-of-war where one tool's ordering
+# fails the other's check.
 # TCH (type-checking-only imports) is intentionally NOT selected: this is a
 # FastAPI + Pydantic + SQLAlchemy codebase that evaluates type annotations at
 # runtime (request/response validation, ORM mapping, DI), so moving those

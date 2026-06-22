@@ -8,7 +8,8 @@ from typing import Any
 from uuid import UUID
 
 from rapidfuzz import fuzz
-from sqlalchemy import func as sa_func, or_
+from sqlalchemy import func as sa_func
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from ...models.entity import Entity
@@ -52,9 +53,7 @@ def _merge_dicts(existing: dict, new: dict) -> dict:
 class EntityService:
     """Service for creating, deduplicating, merging, and searching entities."""
 
-    async def create_entity(
-        self, user_id: UUID, data: dict[str, Any], db: Session
-    ) -> Entity:
+    async def create_entity(self, user_id: UUID, data: dict[str, Any], db: Session) -> Entity:
         """Create a new entity."""
         entity = Entity(
             user_id=user_id,
@@ -91,9 +90,7 @@ class EntityService:
         if existing:
             # Merge any new canonical_data
             if "canonical_data" in identifiers:
-                merged = _merge_dicts(
-                    existing.canonical_data or {}, identifiers["canonical_data"]
-                )
+                merged = _merge_dicts(existing.canonical_data or {}, identifiers["canonical_data"])
                 existing.canonical_data = merged
                 db.commit()
                 db.refresh(existing)
@@ -160,9 +157,7 @@ class EntityService:
                 cd = c.canonical_data or {}
                 if (
                     fuzz.ratio(c.name.lower(), name.lower()) >= _MATCH_THRESHOLD
-                    and fuzz.ratio(
-                        (cd.get("company") or "").lower(), company.lower()
-                    )
+                    and fuzz.ratio((cd.get("company") or "").lower(), company.lower())
                     >= _MATCH_THRESHOLD
                 ):
                     return c
@@ -217,10 +212,14 @@ class EntityService:
                 cd = c.canonical_data or {}
                 if fuzz.ratio(c.name.lower(), name.lower()) >= _MATCH_THRESHOLD:
                     existing_addr = cd.get("address", "")
-                    if existing_addr and fuzz.ratio(
-                        _normalize_address(existing_addr),
-                        _normalize_address(address),
-                    ) >= 80:
+                    if (
+                        existing_addr
+                        and fuzz.ratio(
+                            _normalize_address(existing_addr),
+                            _normalize_address(address),
+                        )
+                        >= 80
+                    ):
                         return c
         return None
 
@@ -270,9 +269,7 @@ class EntityService:
         """
         # 1. Exact name match
         existing = (
-            db.query(Entity)
-            .filter(Entity.name == name, Entity.project_id == project_id)
-            .first()
+            db.query(Entity).filter(Entity.name == name, Entity.project_id == project_id).first()
         )
         if existing:
             return existing, False
@@ -280,12 +277,8 @@ class EntityService:
         # 2. Check aliases
         if aliases:
             for alias in aliases:
-                alias_type = (
-                    AliasType(alias["type"]) if alias.get("type") else None
-                )
-                found = self.find_by_alias(
-                    alias["value"], alias_type, project_id, db
-                )
+                alias_type = AliasType(alias["type"]) if alias.get("type") else None
+                found = self.find_by_alias(alias["value"], alias_type, project_id, db)
                 if found:
                     return found, False
 
@@ -293,8 +286,7 @@ class EntityService:
         fuzzy = (
             db.query(Entity)
             .filter(
-                sa_func.lower(sa_func.trim(Entity.name))
-                == name.lower().strip(),
+                sa_func.lower(sa_func.trim(Entity.name)) == name.lower().strip(),
                 Entity.project_id == project_id,
             )
             .first()
@@ -341,11 +333,7 @@ class EntityService:
         self, project_id: UUID, db: Session, min_confidence: float = 0.7
     ) -> list[dict]:
         """Find potential entity duplicates for review."""
-        entities = (
-            db.query(Entity)
-            .filter(Entity.project_id == project_id)
-            .all()
-        )
+        entities = db.query(Entity).filter(Entity.project_id == project_id).all()
 
         candidates: list[dict] = []
         seen: set[tuple[str, str]] = set()
@@ -440,9 +428,7 @@ class EntityService:
 
         # 2. Collect aliases being transferred
         secondary_aliases = (
-            db.query(EntityAlias)
-            .filter(EntityAlias.entity_id == secondary_id)
-            .all()
+            db.query(EntityAlias).filter(EntityAlias.entity_id == secondary_id).all()
         )
         merged_aliases_data = [
             {
@@ -456,11 +442,7 @@ class EntityService:
         ]
 
         # 3. Count observations to transfer
-        obs_count = (
-            db.query(Observation)
-            .filter(Observation.entity_id == secondary_id)
-            .count()
-        )
+        obs_count = db.query(Observation).filter(Observation.entity_id == secondary_id).count()
 
         # 4. Transfer aliases
         for alias in secondary_aliases:
@@ -468,32 +450,30 @@ class EntityService:
         db.flush()
 
         # 5. Transfer observations
-        db.query(Observation).filter(
-            Observation.entity_id == secondary_id
-        ).update({"entity_id": primary_id}, synchronize_session="fetch")
+        db.query(Observation).filter(Observation.entity_id == secondary_id).update(
+            {"entity_id": primary_id}, synchronize_session="fetch"
+        )
 
         # 6. Transfer insights
-        db.query(Insight).filter(
-            Insight.entity_id == secondary_id
-        ).update({"entity_id": primary_id}, synchronize_session="fetch")
+        db.query(Insight).filter(Insight.entity_id == secondary_id).update(
+            {"entity_id": primary_id}, synchronize_session="fetch"
+        )
 
         # 7. Transfer recommendations
-        db.query(Recommendation).filter(
-            Recommendation.entity_id == secondary_id
-        ).update({"entity_id": primary_id}, synchronize_session="fetch")
+        db.query(Recommendation).filter(Recommendation.entity_id == secondary_id).update(
+            {"entity_id": primary_id}, synchronize_session="fetch"
+        )
 
         # 8. Transfer relationships
         db.query(EntityRelationship).filter(
             EntityRelationship.from_entity_id == secondary_id
         ).update({"from_entity_id": primary_id}, synchronize_session="fetch")
-        db.query(EntityRelationship).filter(
-            EntityRelationship.to_entity_id == secondary_id
-        ).update({"to_entity_id": primary_id}, synchronize_session="fetch")
+        db.query(EntityRelationship).filter(EntityRelationship.to_entity_id == secondary_id).update(
+            {"to_entity_id": primary_id}, synchronize_session="fetch"
+        )
 
         # 9. Merge properties
-        merged_props = _merge_dicts(
-            primary.properties or {}, secondary.properties or {}
-        )
+        merged_props = _merge_dicts(primary.properties or {}, secondary.properties or {})
         primary.properties = merged_props
 
         # 10. Create MergeHistory record
@@ -572,9 +552,7 @@ class EntityService:
             "aliases_restored": len(alias_ids),
         }
 
-    async def update_entity(
-        self, entity_id: UUID, data: dict[str, Any], db: Session
-    ) -> Entity:
+    async def update_entity(self, entity_id: UUID, data: dict[str, Any], db: Session) -> Entity:
         """Merge new data into canonical_data (don't overwrite, merge)."""
         entity = db.query(Entity).filter(Entity.id == entity_id).first()
         if not entity:
@@ -605,19 +583,13 @@ class EntityService:
         db.refresh(entity)
         return entity
 
-    async def merge_entities(
-        self, entity_ids: list[UUID], primary_id: UUID, db: Session
-    ) -> Entity:
+    async def merge_entities(self, entity_ids: list[UUID], primary_id: UUID, db: Session) -> Entity:
         """Merge duplicates into one. Combine canonical_data, aliases, source_urls."""
         primary = db.query(Entity).filter(Entity.id == primary_id).first()
         if not primary:
             raise ValueError(f"Primary entity {primary_id} not found")
 
-        others = (
-            db.query(Entity)
-            .filter(Entity.id.in_(entity_ids), Entity.id != primary_id)
-            .all()
-        )
+        others = db.query(Entity).filter(Entity.id.in_(entity_ids), Entity.id != primary_id).all()
 
         all_aliases = set(primary.aliases or [])
         all_source_urls = set(primary.source_urls or [])
@@ -692,11 +664,7 @@ class EntityService:
         self, collection_id: UUID, entity_ids: list[UUID], db: Session
     ) -> EntityCollection:
         """Add entities to a collection."""
-        collection = (
-            db.query(EntityCollection)
-            .filter(EntityCollection.id == collection_id)
-            .first()
-        )
+        collection = db.query(EntityCollection).filter(EntityCollection.id == collection_id).first()
         if not collection:
             raise ValueError(f"Collection {collection_id} not found")
 
@@ -712,11 +680,7 @@ class EntityService:
         self, collection_id: UUID, entity_ids: list[UUID], db: Session
     ) -> EntityCollection:
         """Remove entities from a collection."""
-        collection = (
-            db.query(EntityCollection)
-            .filter(EntityCollection.id == collection_id)
-            .first()
-        )
+        collection = db.query(EntityCollection).filter(EntityCollection.id == collection_id).first()
         if not collection:
             raise ValueError(f"Collection {collection_id} not found")
 

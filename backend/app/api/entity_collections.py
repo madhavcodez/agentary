@@ -118,30 +118,26 @@ def export_collection_csv(
     if not collection:
         raise HTTPException(status_code=404, detail="Collection not found")
 
-    entities = (
-        db.query(Entity)
-        .filter(Entity.id.in_(collection.entity_ids or []))
-        .all()
-    )
+    entities = db.query(Entity).filter(Entity.id.in_(collection.entity_ids or [])).all()
 
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(["id", "type", "name", "description", "tags", "canonical_data"])
     for e in entities:
-        writer.writerow([
-            str(e.id),
-            e.entity_type,
-            e.name,
-            e.description or "",
-            ";".join(e.tags or []),
-            str(e.canonical_data or {}),
-        ])
+        writer.writerow(
+            [
+                str(e.id),
+                e.entity_type,
+                e.name,
+                e.description or "",
+                ";".join(e.tags or []),
+                str(e.canonical_data or {}),
+            ]
+        )
 
     output.seek(0)
     return StreamingResponse(
         iter([output.getvalue()]),
         media_type="text/csv",
-        headers={
-            "Content-Disposition": f'attachment; filename="{collection.name}.csv"'
-        },
+        headers={"Content-Disposition": f'attachment; filename="{collection.name}.csv"'},
     )

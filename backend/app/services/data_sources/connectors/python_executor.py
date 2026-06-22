@@ -31,12 +31,30 @@ logger = logging.getLogger(__name__)
 MAX_OUTPUT_BYTES: int = 1_048_576
 
 # Modules that user code is allowed to import
-_SAFE_MODULES = frozenset({
-    "math", "json", "datetime", "re", "collections", "itertools",
-    "statistics", "functools", "operator", "string", "textwrap",
-    "decimal", "fractions", "random", "copy", "pprint",
-    "pandas", "numpy", "pd", "np",
-})
+_SAFE_MODULES = frozenset(
+    {
+        "math",
+        "json",
+        "datetime",
+        "re",
+        "collections",
+        "itertools",
+        "statistics",
+        "functools",
+        "operator",
+        "string",
+        "textwrap",
+        "decimal",
+        "fractions",
+        "random",
+        "copy",
+        "pprint",
+        "pandas",
+        "numpy",
+        "pd",
+        "np",
+    }
+)
 
 # Patterns that indicate potentially dangerous code
 _DANGEROUS_PATTERNS = [
@@ -184,7 +202,8 @@ class PythonExecutorConnector:
         if len(stdout_text) > MAX_OUTPUT_BYTES:
             logger.warning(
                 "Python executor output truncated from %d to %d bytes",
-                len(stdout_text), MAX_OUTPUT_BYTES,
+                len(stdout_text),
+                MAX_OUTPUT_BYTES,
             )
             stdout_text = stdout_text[:MAX_OUTPUT_BYTES]
 
@@ -279,8 +298,7 @@ class PythonExecutorConnector:
         return {
             "name": "python_executor",
             "description": (
-                "Execute Python code for data analysis. Has pandas, numpy, "
-                "statistics available."
+                "Execute Python code for data analysis. Has pandas, numpy, " "statistics available."
             ),
             "parameters": {
                 "type": "object",
@@ -288,8 +306,7 @@ class PythonExecutorConnector:
                     "code": {
                         "type": "string",
                         "description": (
-                            "Python code to execute. Must assign result "
-                            "to 'result' variable."
+                            "Python code to execute. Must assign result " "to 'result' variable."
                         ),
                     },
                     "description": {

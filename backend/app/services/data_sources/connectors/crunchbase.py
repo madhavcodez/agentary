@@ -41,9 +41,7 @@ class CrunchbaseConnector:
         identifier = raw.get("identifier", {})
         return {
             "name": (
-                identifier.get("value")
-                or props.get("name")
-                or props.get("short_description", "")
+                identifier.get("value") or props.get("name") or props.get("short_description", "")
             ),
             "slug": identifier.get("permalink", props.get("permalink", "")),
             "short_description": props.get("short_description", ""),
@@ -51,9 +49,11 @@ class CrunchbaseConnector:
             "founded_on": props.get("founded_on"),
             "location": props.get("location_identifiers", props.get("location")),
             "num_employees": props.get("num_employees_enum"),
-            "funding_total_usd": props.get("funding_total", {}).get("value_usd")
-            if isinstance(props.get("funding_total"), dict)
-            else props.get("funding_total"),
+            "funding_total_usd": (
+                props.get("funding_total", {}).get("value_usd")
+                if isinstance(props.get("funding_total"), dict)
+                else props.get("funding_total")
+            ),
             "last_funding_type": props.get("last_funding_type"),
             "categories": [
                 c.get("value", c) if isinstance(c, dict) else c
@@ -106,16 +106,10 @@ class CrunchbaseConnector:
         if location is not None:
             location_lower = location.lower()
             companies = [
-                c
-                for c in companies
-                if location_lower in str(c.get("location", "")).lower()
+                c for c in companies if location_lower in str(c.get("location", "")).lower()
             ]
         if funding_min is not None:
-            companies = [
-                c
-                for c in companies
-                if (c.get("funding_total_usd") or 0) >= funding_min
-            ]
+            companies = [c for c in companies if (c.get("funding_total_usd") or 0) >= funding_min]
 
         return SourceResult(
             data=companies,
@@ -163,8 +157,7 @@ class CrunchbaseConnector:
         return {
             "name": "crunchbase_search",
             "description": (
-                "Search for companies and startups. Returns funding, "
-                "leadership, industry info."
+                "Search for companies and startups. Returns funding, " "leadership, industry info."
             ),
             "parameters": {
                 "type": "object",

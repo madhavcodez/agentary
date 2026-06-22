@@ -66,20 +66,14 @@ async def _try_openclaw(url: str) -> str:
                     # Handle various response shapes
                     if isinstance(data, dict):
                         return (
-                            data.get("text", "")
-                            or data.get("content", "")
-                            or data.get("body", "")
+                            data.get("text", "") or data.get("content", "") or data.get("body", "")
                         )
                     if isinstance(data, str):
                         return data
             except httpx.ConnectError:
-                logger.debug(
-                    "OpenClaw not reachable at %s", endpoint
-                )
+                logger.debug("OpenClaw not reachable at %s", endpoint)
             except Exception as e:
-                logger.debug(
-                    "OpenClaw endpoint %s failed: %s", endpoint, e
-                )
+                logger.debug("OpenClaw endpoint %s failed: %s", endpoint, e)
 
     return ""
 

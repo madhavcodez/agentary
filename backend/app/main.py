@@ -91,7 +91,8 @@ async def lifespan(app: FastAPI):
     # binding we'd hit UnboundLocalError on the failure path.
     stop_scheduler = lambda: None  # noqa: E731
     with readiness.optional("scheduler"):
-        from .services.scheduler import start_scheduler, stop_scheduler as _stop_scheduler
+        from .services.scheduler import start_scheduler
+        from .services.scheduler import stop_scheduler as _stop_scheduler
 
         start_scheduler()
         stop_scheduler = _stop_scheduler
@@ -101,12 +102,11 @@ async def lifespan(app: FastAPI):
     redis_task: asyncio.Task | None = None
     close_redis = None
     with readiness.optional("redis_bridge"):
-        from .core.redis_bridge import close_redis as _close_redis, subscribe_and_forward
+        from .core.redis_bridge import close_redis as _close_redis
+        from .core.redis_bridge import subscribe_and_forward
         from .core.websocket_manager import ws_manager
 
-        redis_task = asyncio.create_task(
-            subscribe_and_forward(ws_manager), name="redis-ws-bridge"
-        )
+        redis_task = asyncio.create_task(subscribe_and_forward(ws_manager), name="redis-ws-bridge")
         close_redis = _close_redis
 
     yield

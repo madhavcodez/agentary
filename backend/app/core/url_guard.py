@@ -23,6 +23,7 @@ target URL on each redirect. This is required because a benign-looking
 hostname can redirect to ``169.254.169.254`` once contacted — disabling
 auto-follow and validating each Location header closes the gap.
 """
+
 from __future__ import annotations
 
 import ipaddress
@@ -91,9 +92,7 @@ def assert_safe_url(url: str) -> None:
     parsed = urlparse(url)
 
     if parsed.scheme not in ALLOWED_SCHEMES:
-        raise UnsafeURLError(
-            f"Scheme {parsed.scheme!r} is not allowed; only http/https permitted"
-        )
+        raise UnsafeURLError(f"Scheme {parsed.scheme!r} is not allowed; only http/https permitted")
 
     host = parsed.hostname
     if not host:

@@ -273,9 +273,16 @@ class PDFExporter:
 
     # Colors used for matplotlib chart rendering
     _CHART_COLORS: ClassVar[list[str]] = [
-        "#6c63ff", "#ff6584", "#43aa8b", "#f9c74f",
-        "#90be6d", "#577590", "#f3722c", "#4cc9f0",
-        "#7209b7", "#3a0ca3",
+        "#6c63ff",
+        "#ff6584",
+        "#43aa8b",
+        "#f9c74f",
+        "#90be6d",
+        "#577590",
+        "#f3722c",
+        "#4cc9f0",
+        "#7209b7",
+        "#3a0ca3",
     ]
 
     # ------------------------------------------------------------------ #
@@ -309,9 +316,7 @@ class PDFExporter:
         parts: list[str] = []
         parts.append("<!DOCTYPE html>")
         parts.append('<html lang="en"><head><meta charset="utf-8">')
-        parts.append(
-            '<meta name="viewport" content="width=device-width, initial-scale=1">'
-        )
+        parts.append('<meta name="viewport" content="width=device-width, initial-scale=1">')
         parts.append(f"<title>{_esc(report.title)}</title>")
         parts.append(
             '<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>'
@@ -323,7 +328,7 @@ class PDFExporter:
         # Header
         parts.append('<header class="header">')
         parts.append('<div class="brand">Agentary</div>')
-        parts.append(f'<h1>{_esc(report.title)}</h1>')
+        parts.append(f"<h1>{_esc(report.title)}</h1>")
         if report.description:
             parts.append(f'<p class="subtitle">{_esc(report.description)}</p>')
         parts.append(f'<p class="meta">{report_type_label} &middot; {created}</p>')
@@ -369,9 +374,7 @@ class PDFExporter:
                 parts.append('<div class="chart-container">')
                 if title:
                     parts.append(f'<div class="chart-title">{_esc(title)}</div>')
-                parts.append(
-                    f'<canvas id="{_esc(canvas_id)}" width="600" height="400"></canvas>'
-                )
+                parts.append(f'<canvas id="{_esc(canvas_id)}" width="600" height="400"></canvas>')
                 parts.append("</div>")
 
                 # Chart.js initialization script
@@ -491,9 +494,7 @@ class PDFExporter:
     #  Chart rendering (matplotlib)                                       #
     # ------------------------------------------------------------------ #
 
-    def _render_charts_as_images(
-        self, charts: list[dict] | None
-    ) -> dict[str, str]:
+    def _render_charts_as_images(self, charts: list[dict] | None) -> dict[str, str]:
         """Convert Chart.js config dicts to base64 PNG data-URI strings.
 
         Returns a mapping of ``chart_id`` to a full ``data:image/png;base64,...``
@@ -666,9 +667,7 @@ class PDFExporter:
             parts.append('<div class="toc">')
             parts.append("<h2>Table of Contents</h2><ul>")
             for num, title in toc_items:
-                parts.append(
-                    f'<li><span class="toc-number">{num}.</span> {_esc(title)}</li>'
-                )
+                parts.append(f'<li><span class="toc-number">{num}.</span> {_esc(title)}</li>')
             parts.append("</ul></div>")
 
         # ── Executive summary ───────────────────────────────────────── #
@@ -747,9 +746,7 @@ class PDFExporter:
     # ------------------------------------------------------------------ #
 
     @staticmethod
-    def _build_toc_items(
-        report: Report, sections: list[dict]
-    ) -> list[tuple[int, str]]:
+    def _build_toc_items(report: Report, sections: list[dict]) -> list[tuple[int, str]]:
         """Return numbered (index, title) pairs for the TOC."""
         items: list[tuple[int, str]] = []
         counter = 0
@@ -826,7 +823,11 @@ class PDFExporter:
                     # Single key-value pairs rendered as a simple table
                     tables.setdefault("_overview", [])
                     tables["_overview"].append({"Field": key, "Value": str(value)})
-        elif isinstance(structured_data, list) and structured_data and isinstance(structured_data[0], dict):
+        elif (
+            isinstance(structured_data, list)
+            and structured_data
+            and isinstance(structured_data[0], dict)
+        ):
             tables["Data"] = structured_data
 
         for table_name, rows in tables.items():
@@ -861,7 +862,9 @@ class PDFExporter:
             return lines
 
         # Build header
-        header_cols = ["Label"] + [ds.get("label", f"Dataset {i+1}") for i, ds in enumerate(datasets)]
+        header_cols = ["Label"] + [
+            ds.get("label", f"Dataset {i+1}") for i, ds in enumerate(datasets)
+        ]
         lines.append("| " + " | ".join(header_cols) + " |")
         lines.append("| " + " | ".join(["---"] * len(header_cols)) + " |")
 
@@ -889,7 +892,11 @@ class PDFExporter:
                 else:
                     tables.setdefault("_overview", [])
                     tables["_overview"].append({"Field": key, "Value": str(value)})
-        elif isinstance(structured_data, list) and structured_data and isinstance(structured_data[0], dict):
+        elif (
+            isinstance(structured_data, list)
+            and structured_data
+            and isinstance(structured_data[0], dict)
+        ):
             tables["Data"] = structured_data
 
         for table_name, rows in tables.items():

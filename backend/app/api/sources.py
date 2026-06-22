@@ -16,6 +16,4 @@ def list_sources(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return db.query(Source).filter(
-        (Source.user_id == user.id) | (Source.is_system.is_(True))
-    ).all()
+    return db.query(Source).filter((Source.user_id == user.id) | (Source.is_system.is_(True))).all()

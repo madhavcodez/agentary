@@ -54,9 +54,7 @@ class WebSocketManager:
         """Remove a specific WebSocket for *user_id*, cleaning up gracefully."""
         async with self._lock:
             conns = self._connections.get(user_id, [])
-            self._connections[user_id] = [
-                c for c in conns if c.websocket is not websocket
-            ]
+            self._connections[user_id] = [c for c in conns if c.websocket is not websocket]
             if not self._connections[user_id]:
                 del self._connections[user_id]
 
@@ -64,9 +62,7 @@ class WebSocketManager:
 
     # ── Project subscriptions ────────────────────────────────────────
 
-    async def subscribe_project(
-        self, websocket: WebSocket, user_id: str, project_id: str
-    ) -> None:
+    async def subscribe_project(self, websocket: WebSocket, user_id: str, project_id: str) -> None:
         """Add a project subscription to an existing connection."""
         async with self._lock:
             for conn in self._connections.get(user_id, []):
@@ -97,11 +93,7 @@ class WebSocketManager:
         dead: list[tuple[str, WebSocket]] = []
 
         async with self._lock:
-            targets = [
-                conn
-                for conns in self._connections.values()
-                for conn in conns
-            ]
+            targets = [conn for conns in self._connections.values() for conn in conns]
 
         for client in targets:
             try:
@@ -112,9 +104,7 @@ class WebSocketManager:
         for uid, ws in dead:
             await self.disconnect(ws, uid)
 
-    async def broadcast_to_project(
-        self, project_id: str, data: dict[str, Any]
-    ) -> None:
+    async def broadcast_to_project(self, project_id: str, data: dict[str, Any]) -> None:
         """Send *data* to every client subscribed to *project_id*."""
         dead: list[tuple[str, WebSocket]] = []
 

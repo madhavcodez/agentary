@@ -111,12 +111,18 @@ def trigger_mission_run(
     # Dispatch Celery task with run_id for idempotent execution
     try:
         from ..tasks.crew_tasks import plan_and_start_mission
-        plan_and_start_mission.delay(str(mission.id), str(run.id), correlation_id=get_correlation_id())
+
+        plan_and_start_mission.delay(
+            str(mission.id), str(run.id), correlation_id=get_correlation_id()
+        )
     except Exception as exc:
         import logging
+
         logging.getLogger(__name__).warning(
             "Celery dispatch failed for mission %s, run %s: %s — task will need manual retry",
-            mission_id, run.id, exc,
+            mission_id,
+            run.id,
+            exc,
         )
 
     return JSONResponse(
@@ -137,11 +143,7 @@ def list_mission_runs(
     user enumerate runs across the whole platform by guessing UUIDs. See
     SECURITY review IDOR #7.
     """
-    mission = (
-        db.query(Mission)
-        .filter(Mission.id == mission_id, Mission.user_id == user.id)
-        .first()
-    )
+    mission = db.query(Mission).filter(Mission.id == mission_id, Mission.user_id == user.id).first()
     if not mission:
         raise HTTPException(status_code=404, detail="Mission not found")
     return (
@@ -170,7 +172,9 @@ async def start_mission(
         raise HTTPException(status_code=404, detail="Mission not found")
 
     if mission.status.value not in ("draft", "failed", "paused"):
-        raise HTTPException(status_code=400, detail=f"Cannot start mission in {mission.status.value} status")
+        raise HTTPException(
+            status_code=400, detail=f"Cannot start mission in {mission.status.value} status"
+        )
 
     try:
         # Assemble crew
@@ -184,6 +188,7 @@ async def start_mission(
         # Enqueue Celery task (with fallback to inline execution)
         try:
             from ..tasks.crew_tasks import execute_crew_run
+
             execute_crew_run.delay(str(run.id), correlation_id=get_correlation_id())
         except Exception as celery_exc:
             logger.warning("Celery unavailable, falling back to inline execution: %s", celery_exc)
@@ -191,12 +196,15 @@ async def start_mission(
 
             async def _run_inline():
                 from ..database import SessionLocal
+
                 inline_db = SessionLocal()
                 try:
                     runner = CrewRunner(inline_db)
                     await runner.execute_run(run.id)
                 except Exception as exc:
-                    logger.error("Inline crew run failed for run %s: %s", run.id, exc, exc_info=True)
+                    logger.error(
+                        "Inline crew run failed for run %s: %s", run.id, exc, exc_info=True
+                    )
                     try:
                         run_obj = inline_db.query(MissionRun).filter_by(id=run.id).first()
                         if run_obj and run_obj.status not in ("completed", "failed", "cancelled"):
@@ -217,7 +225,9 @@ async def start_mission(
         db.rollback()
         mission.status = MissionStatus.failed
         db.commit()
-        raise HTTPException(status_code=500, detail="Failed to start mission. Please try again.") from exc
+        raise HTTPException(
+            status_code=500, detail="Failed to start mission. Please try again."
+        ) from exc
 
     return {
         "mission_id": str(mission.id),
@@ -281,11 +291,17 @@ def get_mission_findings(
             {
                 "id": str(f.id),
                 # Keep "category" key for frontend compatibility.
-                "category": f.finding_type.value if hasattr(f.finding_type, "value") else str(f.finding_type),
+                "category": (
+                    f.finding_type.value
+                    if hasattr(f.finding_type, "value")
+                    else str(f.finding_type)
+                ),
                 "title": f.title,
                 "content": f.content,
                 "structured_data": f.structured_data,
-                "source_type": f.source_type.value if hasattr(f.source_type, "value") else f.source_type,
+                "source_type": (
+                    f.source_type.value if hasattr(f.source_type, "value") else f.source_type
+                ),
                 "source_url": f.source_url,
                 "source_name": f.source_name,
                 "confidence": f.confidence,
@@ -318,7 +334,11 @@ def get_structured_findings(
             {
                 "id": str(f.id),
                 "title": f.title,
-                "category": f.finding_type.value if hasattr(f.finding_type, "value") else str(f.finding_type),
+                "category": (
+                    f.finding_type.value
+                    if hasattr(f.finding_type, "value")
+                    else str(f.finding_type)
+                ),
                 "confidence": f.confidence,
                 "source": f.source_name or f.source_url or "N/A",
                 "content": f.content[:200] if f.content else "",
@@ -368,7 +388,11 @@ def get_mission_status(
         "activities": [
             {
                 "id": str(a.id),
-                "activity_type": a.activity_type.value if hasattr(a.activity_type, "value") else str(a.activity_type),
+                "activity_type": (
+                    a.activity_type.value
+                    if hasattr(a.activity_type, "value")
+                    else str(a.activity_type)
+                ),
                 "content": a.content,
                 "metadata": a.metadata_json,
                 "confidence": a.confidence,
@@ -402,6 +426,7 @@ async def rerun_mission(
 
         try:
             from ..tasks.crew_tasks import execute_crew_run
+
             execute_crew_run.delay(str(run.id), correlation_id=get_correlation_id())
         except Exception as celery_exc:
             logger.warning("Celery unavailable for rerun, falling back to inline: %s", celery_exc)
@@ -409,12 +434,15 @@ async def rerun_mission(
 
             async def _run_inline():
                 from ..database import SessionLocal
+
                 inline_db = SessionLocal()
                 try:
                     runner = CrewRunner(inline_db)
                     await runner.execute_run(run.id)
                 except Exception as exc:
-                    logger.error("Inline crew rerun failed for run %s: %s", run.id, exc, exc_info=True)
+                    logger.error(
+                        "Inline crew rerun failed for run %s: %s", run.id, exc, exc_info=True
+                    )
                     try:
                         run_obj = inline_db.query(MissionRun).filter_by(id=run.id).first()
                         if run_obj and run_obj.status not in ("completed", "failed", "cancelled"):
@@ -435,7 +463,9 @@ async def rerun_mission(
         db.rollback()
         mission.status = MissionStatus.failed
         db.commit()
-        raise HTTPException(status_code=500, detail="Failed to rerun mission. Please try again.") from exc
+        raise HTTPException(
+            status_code=500, detail="Failed to rerun mission. Please try again."
+        ) from exc
 
     return {
         "mission_id": str(mission.id),
@@ -484,9 +514,7 @@ async def synthesize_report(
             )
             if outline is not None:
                 try:
-                    report = await synthesize_report_from_outline(
-                        mission, outline, user.id, db
-                    )
+                    report = await synthesize_report_from_outline(mission, outline, user.id, db)
                 except Exception as exc:
                     logger.warning(
                         "STORM synthesis failed for mission %s, falling back to legacy: %s",
@@ -499,11 +527,15 @@ async def synthesize_report(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
-        raise HTTPException(status_code=502, detail="AI report synthesis failed. Please try again.") from exc
+        raise HTTPException(
+            status_code=502, detail="AI report synthesis failed. Please try again."
+        ) from exc
     except Exception as exc:
         db.rollback()
         logger.error("Failed to save synthesized report for mission %s: %s", mission_id, exc)
-        raise HTTPException(status_code=500, detail="Failed to save report. Please try again.") from exc
+        raise HTTPException(
+            status_code=500, detail="Failed to save report. Please try again."
+        ) from exc
 
     return {
         "report": {

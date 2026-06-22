@@ -1,4 +1,5 @@
 """Log every data source request for cost/usage tracking."""
+
 from __future__ import annotations
 
 import logging

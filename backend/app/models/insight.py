@@ -7,7 +7,9 @@ from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
-    Enum as SAEnum,
+)
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
@@ -47,7 +49,9 @@ class Insight(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     superseded_by = Column(UUID(as_uuid=True), ForeignKey("insights.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
 
     # Relationships
     project = relationship("Project")

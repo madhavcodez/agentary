@@ -25,11 +25,7 @@ def create_finding(
     if project_id is None:
         raise HTTPException(status_code=400, detail="project_id is required")
 
-    project = (
-        db.query(Project)
-        .filter(Project.id == project_id, Project.user_id == user.id)
-        .first()
-    )
+    project = db.query(Project).filter(Project.id == project_id, Project.user_id == user.id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -64,9 +60,4 @@ def list_findings(
         query = query.filter(Finding.project_id == project_id)
     if mission_id:
         query = query.filter(Finding.mission_id == mission_id)
-    return (
-        query.order_by(Finding.created_at.desc())
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
+    return query.order_by(Finding.created_at.desc()).offset(offset).limit(limit).all()

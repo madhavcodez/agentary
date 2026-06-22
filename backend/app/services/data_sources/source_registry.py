@@ -1,4 +1,5 @@
 """Central registry for all data source connectors."""
+
 from __future__ import annotations
 
 import asyncio
@@ -32,17 +33,17 @@ class SourceRegistry:
         ]
 
     def get_tool_definitions(
-        self, providers: list[str] | None = None,
+        self,
+        providers: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         targets = providers or list(self._connectors.keys())
-        return [
-            self._connectors[p].get_tool_definition()
-            for p in targets
-            if p in self._connectors
-        ]
+        return [self._connectors[p].get_tool_definition() for p in targets if p in self._connectors]
 
     async def query(
-        self, provider: str, method: str = "search", **kwargs: Any,
+        self,
+        provider: str,
+        method: str = "search",
+        **kwargs: Any,
     ) -> SourceResult:
         connector = self.get(provider)
         if not connector:

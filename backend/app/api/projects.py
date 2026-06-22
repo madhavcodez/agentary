@@ -33,13 +33,17 @@ def _mission_response(project: Project, mission) -> dict:
             "id": str(project.id),
             "name": project.name,
             "domain_context": project.domain_context,
-            "status": project.status.value if hasattr(project.status, "value") else str(project.status),
+            "status": (
+                project.status.value if hasattr(project.status, "value") else str(project.status)
+            ),
             "total_missions": project.total_missions,
         },
         "mission": {
             "id": str(mission.id),
             "name": mission.name,
-            "status": mission.status.value if hasattr(mission.status, "value") else str(mission.status),
+            "status": (
+                mission.status.value if hasattr(mission.status, "value") else str(mission.status)
+            ),
             "objective": mission.objective,
             "created_at": mission.created_at.isoformat() if mission.created_at else None,
         },
@@ -156,12 +160,18 @@ async def configure_and_start(
     dedup_cutoff = datetime.now(UTC) - timedelta(seconds=30)
     recent_mission = (
         db.query(Mission)
-        .filter(Mission.project_id == project.id, Mission.user_id == user.id, Mission.created_at >= dedup_cutoff)
+        .filter(
+            Mission.project_id == project.id,
+            Mission.user_id == user.id,
+            Mission.created_at >= dedup_cutoff,
+        )
         .order_by(Mission.created_at.desc())
         .first()
     )
     if recent_mission is not None:
-        logger.info("Dedup: returning existing mission %s for project %s", recent_mission.id, project_id)
+        logger.info(
+            "Dedup: returning existing mission %s for project %s", recent_mission.id, project_id
+        )
         return _mission_response(project, recent_mission)
 
     # Synthesize domain context + create mission via service layer
@@ -179,6 +189,7 @@ async def configure_and_start(
         # Enqueue Celery task with fallback
         try:
             from ..tasks.crew_tasks import execute_crew_run
+
             execute_crew_run.delay(str(run.id), correlation_id=get_correlation_id())
         except Exception as celery_exc:
             logger.warning("Celery unavailable, falling back to inline execution: %s", celery_exc)
@@ -187,12 +198,15 @@ async def configure_and_start(
 
             async def _run_inline():
                 from ..database import SessionLocal
+
                 inline_db = SessionLocal()
                 try:
                     runner = CrewRunner(inline_db)
                     await runner.execute_run(run.id)
                 except Exception as exc:
-                    logger.error("Inline crew run failed for run %s: %s", run.id, exc, exc_info=True)
+                    logger.error(
+                        "Inline crew run failed for run %s: %s", run.id, exc, exc_info=True
+                    )
                     try:
                         run_obj = inline_db.query(MissionRun).filter_by(id=run.id).first()
                         if run_obj and run_obj.status not in ("completed", "failed", "cancelled"):

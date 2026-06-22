@@ -6,7 +6,9 @@ import uuid
 from sqlalchemy import (
     Column,
     DateTime,
-    Enum as SAEnum,
+)
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,

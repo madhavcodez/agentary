@@ -5,6 +5,7 @@ for schema. Instead it confirms the database is reachable and raises early if
 not — replacing the previous ``except Exception: pass`` that hid wrong DSN /
 permission / network failures behind a successful boot.
 """
+
 from __future__ import annotations
 
 import logging
