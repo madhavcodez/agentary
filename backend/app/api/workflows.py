@@ -257,9 +257,12 @@ async def create_from_description(
         workflow = await wf_service.create_from_natural_language(
             db, user.id, body.description, project_id=body.project_id,
         )
-    except Exception as e:
-        logger.error("NL workflow generation failed: %s", e)
-        raise HTTPException(status_code=500, detail=f"Workflow generation failed: {e}")
+    except Exception:
+        logger.exception("NL workflow generation failed")
+        raise HTTPException(
+            status_code=500,
+            detail="Workflow generation failed; see server logs (correlation id)",
+        )
     return workflow
 
 

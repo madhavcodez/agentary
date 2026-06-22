@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from ..deps import get_current_user, get_db
@@ -14,14 +14,23 @@ router = APIRouter(prefix="/api/runs", tags=["runs"])
 @router.get("/{run_id}/steps")
 def get_run_steps(
     run_id: str,
+    limit: int = Query(200, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ) -> list[dict]:
-    """Return every RunStep for the given run, ordered by start time."""
+    """Return RunSteps for a run, ordered by start time.
+
+    A DeerFlow run with 6 iterations × 6 experts generates ~36 tool-call
+    steps + phase steps; bounded at 1000 per page so a long-running mission
+    doesn't return a multi-MB JSON blob.
+    """
     steps = (
         db.query(RunStep)
         .filter(RunStep.run_id == run_id)
         .order_by(RunStep.started_at.asc())
+        .offset(offset)
+        .limit(limit)
         .all()
     )
     return [

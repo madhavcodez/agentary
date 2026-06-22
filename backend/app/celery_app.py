@@ -22,6 +22,16 @@ celery_app.conf.update(
     task_acks_late=True,
     task_reject_on_worker_lost=True,
     worker_prefetch_multiplier=1,
+    # Recycle each worker process after N tasks so accumulated heap (LLM
+    # context, finding lists, logging contexts that workers do not free
+    # between tasks) is released. Without this, a research-heavy worker
+    # grows several GB of RSS over a day. See PERF review #7.
+    worker_max_tasks_per_child=10,
+    # Soft + hard time limits on every task. Without these, a Celery worker
+    # can hang indefinitely on a stuck HTTP call (Gemini latency spikes,
+    # Twilio webhook timeouts) and block its queue.
+    task_soft_time_limit=300,  # 5 min — task can clean up
+    task_time_limit=360,  # 6 min — SIGKILL
     task_default_queue="default",
     task_routes={
         "app.tasks.crew_tasks.*": {"queue": "research"},

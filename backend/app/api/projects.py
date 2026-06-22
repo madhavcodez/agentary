@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
+from ..core.background_tasks import spawn_background_task as _spawn_background_task
 from ..core.rate_limiter import limiter
 from ..deps import get_db, get_current_user
 from ..models.user import User
@@ -202,7 +203,7 @@ async def configure_and_start(
                 finally:
                     inline_db.close()
 
-            asyncio.ensure_future(_run_inline())
+            _spawn_background_task(_run_inline(), "project-inline-run")
     except Exception as exc:
         db.rollback()
         logger.error("Failed to start mission %s: %s", mission.id, exc)
